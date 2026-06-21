@@ -35,6 +35,8 @@ final class MainWindowController: NSObject, NSWindowDelegate {
         if !window.isVisible { window.center() }
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
+        let n = window.windowNumber
+        FileLog("MainWindow").debug("window shown — windowNumber=\(n)")
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {

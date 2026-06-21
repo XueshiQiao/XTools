@@ -153,6 +153,11 @@ struct LaunchManagerView: View {
                 }
                 Text(String(format: L("launch.residual.helperSummary"), group.helperCount))
                     .font(.caption).foregroundStyle(.secondary)
+                // The actual lingering process names, e.g. "node_repl, codex".
+                Text(group.helpers.map { $0.name }.joined(separator: ", "))
+                    .font(.system(size: 10)).foregroundStyle(.tertiary)
+                    .lineLimit(2).truncationMode(.middle)
+                    .textSelection(.enabled)
             }
             Spacer(minLength: 8)
             if store.hasRule(for: group) {
