@@ -49,10 +49,18 @@ scripts/run.sh          # kill old → build → relaunch (Debug)
 - Logs: `~/Library/Logs/XTools/XTools.log` (`tail -F` it).
 - `XTOOLS_AUTOOPEN=1` opens the window on launch (dev/screenshot affordance; inert otherwise).
 
-## Placeholders to fill before shipping
-- `XTools/Info.plist`: `SUPublicEDKey` (Sparkle EdDSA public key) and set `SUEnableAutomaticChecks` to `<true/>`; confirm `SUFeedURL` repo.
+## Release / CI
+- `.github/workflows/build.yml` (modeled on AnyDrag): PRs to `main` and manual `workflow_dispatch` validate an unsigned universal build; pushing a `v*` tag does the full **sign → notarize → DMG → Sparkle-sign → appcast.xml → GitHub Release**. Steps degrade gracefully when secrets are absent.
+- Cut a release with `scripts/bump-version.sh` (bumps `project.yml`, commits, tags `vYY.MM.<build>`), then push the tag.
+- **Sparkle auto-update is wired**: dedicated EdDSA key (keychain account `xtools`); public key in `Info.plist` (`SUPublicEDKey`); private key is the GitHub secret `SPARKLE_EDDSA_KEY` (set). `SUEnableAutomaticChecks` is on; the feed is published to the GitHub release's `appcast.xml`.
+
+### Secrets still required for a SIGNED public release (add in repo Settings → Secrets)
+- `MAC_CERTS_P12_BASE64` + `MAC_CERTS_P12_PASSWORD` — Developer ID Application cert (.p12 → base64).
+- `APPLE_ID`, `APPLE_TEAM_ID` (`584KQTRF3B`), `APP_SPECIFIC_PASSWORD` — for `notarytool`.
+- Without these, a tag build still produces a DMG but **unsigned/un-notarized** (Gatekeeper-blocked → Sparkle updates won't install).
+
+## Other placeholders
 - `XTools/Sources/Core/Analytics.swift`: real Aptabase `appKey` (currently `A-XX-…` → inert).
-- A distinct app icon (currently borrows AnyDrag's as a placeholder).
 
 ## Conventions
 - Truthfulness: only claim "works" for paths actually run & observed. Root continuous-reap is explicitly NOT implemented (v2).

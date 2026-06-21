@@ -76,5 +76,7 @@ use one canonical form. (Found and fixed during verification.)
 - Privileged helper (`SMAppService` daemon) for continuous root reaping.
 - Per-rule grace period + helper-match override in the Guardian rule model.
 - Richer inventory: load/enable state via `launchctl print`, search across all fields.
-- Replace the placeholder app icon; fill Sparkle key + Aptabase appKey; flip
-  `SUEnableAutomaticChecks` to true.
+- DONE: app icon (Swiss-army multitool), Sparkle EdDSA key wired + auto-update on,
+  CI workflow (build/sign/notarize/appcast/release).
+- Remaining before a signed public release: add the Apple Developer ID + notarization
+  GitHub secrets (see AGENTS.md), and a real Aptabase appKey.
