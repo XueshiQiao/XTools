@@ -1,0 +1,99 @@
+/* Menu Bar */
+"Open XTools…" = "打开 XTools…";
+"Check for Updates…" = "检查更新…";
+"Feedback…" = "反馈…";
+"More Apps by Author…" = "作者的更多 App…";
+"Quit XTools" = "退出 XTools";
+
+/* Sidebar / chrome */
+"General" = "通用";
+"About" = "关于";
+"nav.toggleSidebar" = "切换侧栏";
+"status.ready" = "XTools 已就绪";
+"Cancel" = "取消";
+
+/* General page */
+"Launch at Login" = "登录时启动";
+"Language" = "语言";
+"language.followSystem" = "跟随系统";
+"Diagnostics" = "诊断";
+"diagnostics.log.title" = "日志文件";
+"diagnostics.log.subtitle" = "XTools 会把诊断日志写到 ~/Library/Logs/XTools/XTools.log。";
+"diagnostics.revealLog" = "在访达中显示";
+
+/* About page */
+"GitHub Repository" = "GitHub 仓库";
+"about.website.description" = "作者网站 —";
+"about.analytics.toggle" = "分享匿名使用统计";
+"about.analytics.subtitle" = "帮助改进 XTools。进程名、路径和任何个人数据都不会离开你的设备。";
+"about.copyright" = "© 2026 乔学诗。保留所有权利。";
+"about.version.format" = "版本 %1$@ (%2$@)";
+
+/* ───────────── Launch 管理器 ───────────── */
+"tool.launch.title" = "Launch 管理器";
+"launch.search.prompt" = "搜索自启项";
+"launch.refresh" = "重新扫描";
+"launch.scanning" = "扫描中…";
+
+/* Guardian */
+"launch.guardian.title" = "Guardian 守护";
+"launch.guardian.header" = "Guardian 守护";
+"launch.guardian.footer" = "Guardian 规则会在某个 App 自身没有运行时,清理它残留的 helper 进程 —— 你一退出它就立即清理,并配合短间隔轮询兜住被 launchd 重新拉起的进程。这样治本,又不用删它的 LaunchAgent(删了厂商下次还会加回来)。持续清理覆盖用户级进程;root daemon 需要用你的密码做按需清理。";
+"launch.guardian.activeCount" = "%ld 条生效";
+"launch.guardian.none" = "暂无规则";
+"launch.guardian.lastReap" = "上次清理:%ld 个进程";
+"launch.guardian.add" = "加守护";
+"launch.guardian.added" = "已守护";
+
+/* Residual processes */
+"launch.apple.group" = "Apple 系统服务 (%ld)";
+"launch.residual.header" = "残留进程";
+"launch.residual.footer" = "主 App 已退出、但仍跑在其 App 包里的后台进程。标红的是已知会留残留的 App;标灰的多半是正常后台服务 —— 由你判断。";
+"launch.residual.empty" = "未发现残留进程。";
+"launch.residual.helperSummary" = "%ld 个后台进程仍在运行 —— 主 App 未运行";
+"launch.reap" = "清理";
+
+/* Reap confirmation */
+"launch.reap.confirm.title" = "清理残留进程?";
+"launch.reap.confirm.action" = "清理";
+"launch.reap.confirm.message" = "结束「%2$@」的 %1$ld 个后台进程?之后你仍可正常重新启动该 App。";
+
+/* Guardian rules list */
+"launch.rules.header" = "Guardian 规则";
+"launch.rules.empty" = "还没有规则。在上方某个残留 App 上点「加守护」,即可自动清理它的残留。";
+
+/* Orphans */
+"launch.orphans.header" = "孤儿自启项";
+"launch.orphans.footer" = "这些自启项指向的程序已不存在 —— 是卸载后残留的,可安全停用。";
+
+/* Inventory */
+"launch.inventory.title" = "自启项";
+"launch.inventory.empty" = "没有自启项。";
+"launch.inventory.noMatch" = "没有匹配的自启项。";
+"launch.inventory.footer" = "对带 KeepAlive 的自启项,用「彻底停用」从源头停掉 —— 光清理进程没用,launchd 会立刻把它重启。停用会把 plist 备份成 .bak(可恢复)。";
+
+/* Badges */
+"launch.badge.orphan" = "孤儿";
+"launch.badge.keepAlive" = "KeepAlive";
+"launch.class.offender" = "会留残留";
+"launch.class.benign" = "后台服务";
+"launch.class.appleSystem" = "Apple 系统";
+"launch.class.unknown" = "未知";
+"launch.domain.userAgent" = "用户 Agent";
+"launch.domain.systemAgent" = "系统 Agent";
+"launch.domain.systemDaemon" = "系统 Daemon";
+
+/* Item actions */
+"launch.action.disableCompletely" = "彻底停用(停止并移走 plist)…";
+"launch.action.bootout" = "立即停止 (bootout)";
+"launch.action.disable" = "移走 plist…";
+"launch.action.revealPlist" = "在访达中显示 plist";
+"launch.action.revealProgram" = "在访达中显示程序";
+
+/* Action result messages */
+"launch.msg.reaped" = "已清理「%2$@」的 %1$ld 个进程。";
+"launch.msg.reapPartial" = "已清理「%@」的用户级部分;root 部分未完成。";
+"launch.msg.ruleCreated" = "已为「%@」创建 Guardian 规则。";
+"launch.msg.ruleCreatedReaped" = "已为「%1$@」创建守护,并清理了 %2$ld 个残留进程。";
+"launch.msg.itemDone" = "完成:%@。";
+"launch.msg.itemFailed" = "失败:%@";

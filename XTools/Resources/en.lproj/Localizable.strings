@@ -1,0 +1,99 @@
+/* Menu Bar */
+"Open XTools…" = "Open XTools…";
+"Check for Updates…" = "Check for Updates…";
+"Feedback…" = "Feedback…";
+"More Apps by Author…" = "More Apps by Author…";
+"Quit XTools" = "Quit XTools";
+
+/* Sidebar / chrome */
+"General" = "General";
+"About" = "About";
+"nav.toggleSidebar" = "Toggle Sidebar";
+"status.ready" = "XTools is ready";
+"Cancel" = "Cancel";
+
+/* General page */
+"Launch at Login" = "Launch at Login";
+"Language" = "Language";
+"language.followSystem" = "Follow System";
+"Diagnostics" = "Diagnostics";
+"diagnostics.log.title" = "Log file";
+"diagnostics.log.subtitle" = "XTools writes a diagnostic log to ~/Library/Logs/XTools/XTools.log.";
+"diagnostics.revealLog" = "Reveal in Finder";
+
+/* About page */
+"GitHub Repository" = "GitHub Repository";
+"about.website.description" = "Author website —";
+"about.analytics.toggle" = "Share anonymous usage statistics";
+"about.analytics.subtitle" = "Helps improve XTools. No process names, paths, or personal data ever leave your device.";
+"about.copyright" = "© 2026 Xueshi Qiao. All rights reserved.";
+"about.version.format" = "Version %1$@ (%2$@)";
+
+/* ───────────── Launch Manager ───────────── */
+"tool.launch.title" = "Launch Manager";
+"launch.search.prompt" = "Search launch items";
+"launch.refresh" = "Rescan";
+"launch.scanning" = "Scanning…";
+
+/* Guardian */
+"launch.guardian.title" = "Guardian";
+"launch.guardian.header" = "Guardian";
+"launch.guardian.footer" = "A Guardian rule reaps an app's leftover helper processes whenever the app itself isn't running — instantly when you quit it, and on a short poll to catch helpers that launchd re-spawns. This treats the root cause without deleting the app's LaunchAgent (which the vendor would re-add). Continuous reaping covers user-level processes; root daemons need on-demand cleanup with your password.";
+"launch.guardian.activeCount" = "%ld active";
+"launch.guardian.none" = "No rules";
+"launch.guardian.lastReap" = "Last reap: %ld process(es)";
+"launch.guardian.add" = "Add Guardian";
+"launch.guardian.added" = "Guarded";
+
+/* Residual processes */
+"launch.apple.group" = "Apple System Services (%ld)";
+"launch.residual.header" = "Residual Processes";
+"launch.residual.footer" = "Background processes still running inside an app bundle whose main app has been quit. Highlighted apps are known to leave junk behind; gray ones are likely legitimate background services — you decide.";
+"launch.residual.empty" = "No residual processes found.";
+"launch.residual.helperSummary" = "%ld helper process(es) still running — main app not running";
+"launch.reap" = "Reap";
+
+/* Reap confirmation */
+"launch.reap.confirm.title" = "Reap residual processes?";
+"launch.reap.confirm.action" = "Reap";
+"launch.reap.confirm.message" = "Kill %1$ld helper process(es) of %2$@? You can relaunch the app normally afterwards.";
+
+/* Guardian rules list */
+"launch.rules.header" = "Guardian Rules";
+"launch.rules.empty" = "No rules yet. Add Guardian on a residual app above to auto-reap its leftovers.";
+
+/* Orphans */
+"launch.orphans.header" = "Orphaned Launch Items";
+"launch.orphans.footer" = "These launch items point to a program that no longer exists — leftovers from an uninstalled app, safe to disable.";
+
+/* Inventory */
+"launch.inventory.title" = "Launch Items";
+"launch.inventory.empty" = "No launch items found.";
+"launch.inventory.noMatch" = "No matching launch items.";
+"launch.inventory.footer" = "For a KeepAlive item, use “Disable completely” to stop it at the source — just reaping its process won't work because launchd relaunches it instantly. Disabling backs the plist up to .bak (reversible).";
+
+/* Badges */
+"launch.badge.orphan" = "Orphan";
+"launch.badge.keepAlive" = "KeepAlive";
+"launch.class.offender" = "Leaves junk";
+"launch.class.benign" = "Background svc";
+"launch.class.appleSystem" = "Apple system";
+"launch.class.unknown" = "Unknown";
+"launch.domain.userAgent" = "User Agent";
+"launch.domain.systemAgent" = "System Agent";
+"launch.domain.systemDaemon" = "System Daemon";
+
+/* Item actions */
+"launch.action.disableCompletely" = "Disable completely (stop + remove)…";
+"launch.action.bootout" = "Stop now (bootout)";
+"launch.action.disable" = "Move plist aside…";
+"launch.action.revealPlist" = "Reveal plist in Finder";
+"launch.action.revealProgram" = "Reveal program in Finder";
+
+/* Action result messages */
+"launch.msg.reaped" = "Reaped %1$ld process(es) of %2$@.";
+"launch.msg.reapPartial" = "Reaped the user-level part of %@; the root part did not complete.";
+"launch.msg.ruleCreated" = "Guardian rule created for %@.";
+"launch.msg.ruleCreatedReaped" = "Guardian created for %1$@ — reaped %2$ld leftover process(es).";
+"launch.msg.itemDone" = "Done: %@.";
+"launch.msg.itemFailed" = "Failed: %@";

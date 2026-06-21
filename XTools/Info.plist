@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>en</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>XTools</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>$(MARKETING_VERSION)</string>
+    <key>CFBundleVersion</key>
+    <string>$(CURRENT_PROJECT_VERSION)</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+    <key>LSUIElement</key>
+    <true/>
+    <key>NSPrincipalClass</key>
+    <string>NSApplication</string>
+    <!-- Sparkle auto-update (PLACEHOLDER — replace once the GitHub repo + EdDSA
+         signing key exist; until then "Check for Updates" will fail to find a feed). -->
+    <key>SUFeedURL</key>
+    <string>https://github.com/XueshiQiao/XTools/releases/latest/download/appcast.xml</string>
+    <key>SUPublicEDKey</key>
+    <string>REPLACE_WITH_SPARKLE_PUBLIC_ED_KEY</string>
+    <!-- PLACEHOLDER PHASE: automatic update checks are OFF so the placeholder
+         feed URL doesn't pop an "Unable to Check for Updates" error on launch.
+         Set this to <true/> once the real GitHub repo + EdDSA key are configured
+         so users get background update checks. "Check for Updates…" works manually. -->
+    <key>SUEnableAutomaticChecks</key>
+    <false/>
+</dict>
+</plist>
