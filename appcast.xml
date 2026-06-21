@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>XTools Updates</title>
+    <link>https://github.com/XueshiQiao/XTools</link>
+    <language>en</language>
+    <item>
+      <title>Version 26.06.2</title>
+      <description><![CDATA[<ul>Bug fixes and improvements.</ul>]]></description>
+      <pubDate>Sun, 21 Jun 2026 13:34:24 +0000</pubDate>
+      <sparkle:version>2</sparkle:version>
+      <sparkle:shortVersionString>26.06.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/XueshiQiao/XTools/releases/download/v26.06.2/XTools.dmg" length="5260329" type="application/octet-stream" sparkle:edSignature="t1RorSzU/s53N2nJpgNoVs5Cho/kYTbu4gPFvg/A+gl/J+esk+RYHMusEVh1Y8YuA7VDArexG+jeb2Db0qguAw==" />
+    </item>
+  </channel>
+</rss>
