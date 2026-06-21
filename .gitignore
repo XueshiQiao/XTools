@@ -33,3 +33,8 @@ Package.resolved
 
 # Private handoff notes (machine-specific; kept local, never published)
 HANDOFF.md
+
+# Icon design scratch — keep only the GPT Image 2 originals + chosen master
+docs/icon-concepts/png/rounded/
+docs/icon-concepts/png/contact*.png
+docs/icon-concepts/png/test-*.png
