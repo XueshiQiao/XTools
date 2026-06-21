@@ -10,6 +10,7 @@ enum ToolRegistry {
             LaunchManagerTool(),
             WakeLocksTool(),
             PowerInsightsTool(),
+            DNSToolsTool(),
             // Add future tools here.
         ]
     }

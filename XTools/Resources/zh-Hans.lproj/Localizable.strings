@@ -111,6 +111,43 @@
 "power.duration.hm" = "%1$ld 小时 %2$ld 分";
 "power.duration.m" = "%ld 分钟";
 
+/* ───────────── DNS 与 hosts ───────────── */
+"tool.dns.title" = "DNS 与 hosts";
+
+/* 解析器 */
+"dns.section.resolvers" = "当前 DNS";
+"dns.resolvers.nameserver" = "DNS 服务器";
+"dns.resolvers.search" = "搜索域";
+"dns.resolvers.empty" = "无法读取 DNS 配置。";
+"dns.resolvers.footer" = "你的 Mac 当前正在使用的 DNS 服务器,来自 scutil --dns(只读)。这些就是负责解析你的域名查询的服务器。";
+
+/* 刷新缓存 */
+"dns.section.flush" = "DNS 缓存";
+"dns.flush.title" = "刷新 DNS 缓存";
+"dns.flush.button" = "刷新";
+"dns.flush.footer" = "清空系统 DNS 缓存(dscacheutil -flushcache; killall -HUP mDNSResponder)。需要输入管理员密码。";
+"dns.flush.confirm.title" = "刷新 DNS 缓存?";
+"dns.flush.confirm.action" = "刷新";
+"dns.flush.confirm.message" = "这会清空 macOS 缓存的 DNS 解析结果。系统会要求你输入管理员密码。";
+"dns.flush.success" = "DNS 缓存已刷新。";
+"dns.flush.cancelled" = "已取消刷新。";
+"dns.flush.failed" = "无法刷新 DNS 缓存:%@";
+
+/* /etc/hosts */
+"dns.hosts.header" = "/etc/hosts";
+"dns.hosts.empty" = "没有 host 记录——/etc/hosts 中没有生效的映射。";
+"dns.hosts.footer" = "/etc/hosts 中的自定义「主机名 → IP」映射。编辑并保存需要管理员密码;保存前会先把当前文件备份到 /etc/hosts.bak。";
+"dns.hosts.editor.label" = "编辑 /etc/hosts";
+"dns.hosts.revert" = "还原";
+"dns.hosts.save" = "保存";
+"dns.hosts.save.confirm.title" = "保存 /etc/hosts?";
+"dns.hosts.save.confirm.action" = "保存";
+"dns.hosts.save.confirm.message" = "这会覆盖 /etc/hosts(并先把当前文件备份到 /etc/hosts.bak)。系统会要求你输入管理员密码。";
+"dns.hosts.save.success" = "已保存 /etc/hosts(备份在 /etc/hosts.bak)。";
+"dns.hosts.save.cancelled" = "已取消保存。";
+"dns.hosts.save.tempFailed" = "无法准备要保存的文件:%@";
+"dns.hosts.save.failed" = "无法保存 /etc/hosts:%@";
+
 /* ───────────── Launch 管理器 ───────────── */
 "tool.launch.title" = "Launch 管理器";
 "launch.search.prompt" = "搜索自启项";

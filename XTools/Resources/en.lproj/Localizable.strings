@@ -111,6 +111,43 @@
 "power.duration.hm" = "%1$ld h %2$ld min";
 "power.duration.m" = "%ld min";
 
+/* ───────────── DNS & hosts ───────────── */
+"tool.dns.title" = "DNS & hosts";
+
+/* Resolvers */
+"dns.section.resolvers" = "Current DNS";
+"dns.resolvers.nameserver" = "Name server";
+"dns.resolvers.search" = "Search domains";
+"dns.resolvers.empty" = "Couldn't read the DNS configuration.";
+"dns.resolvers.footer" = "The DNS servers your Mac is using right now, read from scutil --dns (read-only). These are the resolvers handling your lookups.";
+
+/* Flush cache */
+"dns.section.flush" = "DNS Cache";
+"dns.flush.title" = "Flush DNS cache";
+"dns.flush.button" = "Flush";
+"dns.flush.footer" = "Clears the system DNS cache (dscacheutil -flushcache; killall -HUP mDNSResponder). Requires your admin password.";
+"dns.flush.confirm.title" = "Flush the DNS cache?";
+"dns.flush.confirm.action" = "Flush";
+"dns.flush.confirm.message" = "This clears macOS's cached DNS lookups. You'll be asked for your admin password.";
+"dns.flush.success" = "DNS cache flushed.";
+"dns.flush.cancelled" = "Flush cancelled.";
+"dns.flush.failed" = "Couldn't flush the DNS cache: %@";
+
+/* /etc/hosts */
+"dns.hosts.header" = "/etc/hosts";
+"dns.hosts.empty" = "No host entries — /etc/hosts has no active mappings.";
+"dns.hosts.footer" = "Custom host-name → IP mappings in /etc/hosts. Editing and saving requires your admin password; the current file is backed up to /etc/hosts.bak first.";
+"dns.hosts.editor.label" = "Edit /etc/hosts";
+"dns.hosts.revert" = "Revert";
+"dns.hosts.save" = "Save";
+"dns.hosts.save.confirm.title" = "Save /etc/hosts?";
+"dns.hosts.save.confirm.action" = "Save";
+"dns.hosts.save.confirm.message" = "This overwrites /etc/hosts (backing the current file up to /etc/hosts.bak first). You'll be asked for your admin password.";
+"dns.hosts.save.success" = "Saved /etc/hosts (backup at /etc/hosts.bak).";
+"dns.hosts.save.cancelled" = "Save cancelled.";
+"dns.hosts.save.tempFailed" = "Couldn't prepare the file to save: %@";
+"dns.hosts.save.failed" = "Couldn't save /etc/hosts: %@";
+
 /* ───────────── Launch Manager ───────────── */
 "tool.launch.title" = "Launch Manager";
 "launch.search.prompt" = "Search launch items";
