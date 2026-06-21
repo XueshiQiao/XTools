@@ -11,6 +11,7 @@ enum ToolRegistry {
             WakeLocksTool(),
             PowerInsightsTool(),
             DNSToolsTool(),
+            DefaultAppsTool(),
             // Add future tools here.
         ]
     }

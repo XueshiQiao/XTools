@@ -148,6 +148,46 @@
 "dns.hosts.save.tempFailed" = "Couldn't prepare the file to save: %@";
 "dns.hosts.save.failed" = "Couldn't save /etc/hosts: %@";
 
+/* ───────────── Default Apps ───────────── */
+"tool.defaultapps.title" = "Default Apps";
+"defaultapps.empty" = "Couldn't read the default handlers.";
+"defaultapps.none" = "None";
+
+/* Sections */
+"defaultapps.section.fileTypes" = "File Types";
+"defaultapps.section.urlSchemes" = "URL Schemes";
+"defaultapps.fileTypes.footer" = "Which app opens each file type by default (the “Open with…” default). Pick a different app from the menu — the change is per-user and takes effect immediately, no password needed.";
+"defaultapps.urlSchemes.footer" = "Which app handles each URL scheme — e.g. which browser opens http/https links, which app handles mailto:. macOS may not expose the full candidate list for every scheme; you can still see the current handler.";
+
+/* Result messages */
+"defaultapps.msg.set" = "%1$@ now opens %2$@.";
+"defaultapps.msg.failed" = "Couldn't change the default for %@.";
+
+/* File type labels */
+"defaultapps.type.plainText" = "Plain text";
+"defaultapps.type.rtf" = "Rich text (RTF)";
+"defaultapps.type.html" = "HTML";
+"defaultapps.type.markdown" = "Markdown";
+"defaultapps.type.json" = "JSON";
+"defaultapps.type.xml" = "XML";
+"defaultapps.type.csv" = "CSV";
+"defaultapps.type.plist" = "Property list";
+"defaultapps.type.swift" = "Swift source";
+"defaultapps.type.shell" = "Shell script";
+"defaultapps.type.pdf" = "PDF";
+"defaultapps.type.png" = "PNG image";
+"defaultapps.type.jpeg" = "JPEG image";
+"defaultapps.type.zip" = "ZIP archive";
+"defaultapps.type.mp4" = "MP4 video";
+"defaultapps.type.mp3" = "MP3 audio";
+
+/* URL scheme labels */
+"defaultapps.scheme.http" = "Web (HTTP)";
+"defaultapps.scheme.https" = "Web (HTTPS)";
+"defaultapps.scheme.mailto" = "Email (mailto)";
+"defaultapps.scheme.tel" = "Phone (tel)";
+"defaultapps.scheme.ftp" = "FTP";
+
 /* ───────────── Launch Manager ───────────── */
 "tool.launch.title" = "Launch Manager";
 "launch.search.prompt" = "Search launch items";

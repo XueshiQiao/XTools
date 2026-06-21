@@ -148,6 +148,46 @@
 "dns.hosts.save.tempFailed" = "无法准备要保存的文件:%@";
 "dns.hosts.save.failed" = "无法保存 /etc/hosts:%@";
 
+/* ───────────── 默认打开方式 ───────────── */
+"tool.defaultapps.title" = "默认打开方式";
+"defaultapps.empty" = "无法读取默认处理程序。";
+"defaultapps.none" = "无";
+
+/* 分区 */
+"defaultapps.section.fileTypes" = "文件类型";
+"defaultapps.section.urlSchemes" = "URL 协议";
+"defaultapps.fileTypes.footer" = "每种文件类型默认用哪个 App 打开(即「打开方式…」的默认项)。在菜单里选另一个 App 即可更改 —— 仅对当前用户生效、立即生效,无需密码。";
+"defaultapps.urlSchemes.footer" = "每种 URL 协议由哪个 App 处理 —— 例如哪个浏览器打开 http/https 链接、哪个 App 处理 mailto:。macOS 不一定会给出每种协议的完整候选列表;但你仍可看到当前的处理程序。";
+
+/* 结果提示 */
+"defaultapps.msg.set" = "现在由「%1$@」打开「%2$@」。";
+"defaultapps.msg.failed" = "无法更改「%@」的默认打开方式。";
+
+/* 文件类型标签 */
+"defaultapps.type.plainText" = "纯文本";
+"defaultapps.type.rtf" = "富文本 (RTF)";
+"defaultapps.type.html" = "HTML";
+"defaultapps.type.markdown" = "Markdown";
+"defaultapps.type.json" = "JSON";
+"defaultapps.type.xml" = "XML";
+"defaultapps.type.csv" = "CSV";
+"defaultapps.type.plist" = "属性列表 (plist)";
+"defaultapps.type.swift" = "Swift 源码";
+"defaultapps.type.shell" = "Shell 脚本";
+"defaultapps.type.pdf" = "PDF";
+"defaultapps.type.png" = "PNG 图片";
+"defaultapps.type.jpeg" = "JPEG 图片";
+"defaultapps.type.zip" = "ZIP 压缩包";
+"defaultapps.type.mp4" = "MP4 视频";
+"defaultapps.type.mp3" = "MP3 音频";
+
+/* URL 协议标签 */
+"defaultapps.scheme.http" = "网页 (HTTP)";
+"defaultapps.scheme.https" = "网页 (HTTPS)";
+"defaultapps.scheme.mailto" = "邮件 (mailto)";
+"defaultapps.scheme.tel" = "电话 (tel)";
+"defaultapps.scheme.ftp" = "FTP";
+
 /* ───────────── Launch 管理器 ───────────── */
 "tool.launch.title" = "Launch 管理器";
 "launch.search.prompt" = "搜索自启项";
