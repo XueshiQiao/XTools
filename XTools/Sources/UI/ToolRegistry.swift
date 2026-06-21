@@ -12,6 +12,7 @@ enum ToolRegistry {
             PowerInsightsTool(),
             DNSToolsTool(),
             DefaultAppsTool(),
+            PortsTool(),
             // Add future tools here.
         ]
     }

@@ -256,3 +256,22 @@
 "launch.msg.ruleCreatedReaped" = "Guardian created for %1$@ — reaped %2$ld leftover process(es).";
 "launch.msg.itemDone" = "Done: %@.";
 "launch.msg.itemFailed" = "Failed: %@";
+
+/* Ports & Connections */
+"tool.ports.title" = "Ports & Connections";
+"ports.search.prompt" = "Search process, PID, port, or address";
+"ports.status.title" = "Open sockets";
+"ports.status.count" = "%1$ld listening · %2$ld active";
+"ports.empty" = "No listening ports or active connections found.";
+"ports.listeners.header" = "Listening Ports";
+"ports.listeners.footer" = "Processes accepting incoming connections (who's on :3000). A local address of * means all interfaces.";
+"ports.connections.header" = "Active Connections";
+"ports.pidLabel" = "PID %d";
+"ports.kill" = "Kill";
+"ports.root.hint" = "Not owned by you — killing it needs an admin password.";
+"ports.kill.confirm.title" = "Kill this process?";
+"ports.kill.confirm.action" = "Kill";
+"ports.kill.confirm.message" = "Kill %1$@ on %2$@? Any unsaved work it has will be lost.";
+"ports.msg.killed" = "Killed %@.";
+"ports.msg.failed" = "Couldn't kill %@.";
+"ports.msg.changed" = "%@ changed since the scan — refreshed.";

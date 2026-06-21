@@ -256,3 +256,22 @@
 "launch.msg.ruleCreatedReaped" = "已为「%1$@」创建守护,并清理了 %2$ld 个残留进程。";
 "launch.msg.itemDone" = "完成:%@。";
 "launch.msg.itemFailed" = "失败:%@";
+
+/* 端口与连接 */
+"tool.ports.title" = "端口与连接";
+"ports.search.prompt" = "搜索进程、PID、端口或地址";
+"ports.status.title" = "打开的 socket";
+"ports.status.count" = "%1$ld 个监听 · %2$ld 个活动";
+"ports.empty" = "未发现监听端口或活动连接。";
+"ports.listeners.header" = "监听端口";
+"ports.listeners.footer" = "正在接受入站连接的进程(谁占用了 :3000)。本地地址为 * 表示所有网络接口。";
+"ports.connections.header" = "活动连接";
+"ports.pidLabel" = "PID %d";
+"ports.kill" = "结束";
+"ports.root.hint" = "该进程不属于你 —— 结束它需要管理员密码。";
+"ports.kill.confirm.title" = "结束该进程?";
+"ports.kill.confirm.action" = "结束";
+"ports.kill.confirm.message" = "结束占用 %2$@ 的「%1$@」?它未保存的内容将会丢失。";
+"ports.msg.killed" = "已结束「%@」。";
+"ports.msg.failed" = "无法结束「%@」。";
+"ports.msg.changed" = "「%@」自上次扫描后已发生变化 —— 已刷新。";
