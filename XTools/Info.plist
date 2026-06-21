@@ -28,13 +28,13 @@
          signing key exist; until then "Check for Updates" will fail to find a feed). -->
     <key>SUFeedURL</key>
     <string>https://github.com/XueshiQiao/XTools/releases/latest/download/appcast.xml</string>
+    <!-- XTools' dedicated Sparkle EdDSA public key (keychain account "xtools";
+         private key is the GitHub secret SPARKLE_EDDSA_KEY). -->
     <key>SUPublicEDKey</key>
-    <string>REPLACE_WITH_SPARKLE_PUBLIC_ED_KEY</string>
-    <!-- PLACEHOLDER PHASE: automatic update checks are OFF so the placeholder
-         feed URL doesn't pop an "Unable to Check for Updates" error on launch.
-         Set this to <true/> once the real GitHub repo + EdDSA key are configured
-         so users get background update checks. "Check for Updates…" works manually. -->
+    <string>KL9GQksqlNEUTISeFlPRNvKzHXmKgOJ1B5wq9ZlcpVo=</string>
+    <!-- Background update checks. Until the first release publishes appcast.xml,
+         scheduled checks fail silently; once a release exists they pick it up. -->
     <key>SUEnableAutomaticChecks</key>
-    <false/>
+    <true/>
 </dict>
 </plist>
