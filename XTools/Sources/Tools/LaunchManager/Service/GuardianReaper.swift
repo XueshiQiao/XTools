@@ -155,9 +155,11 @@ final class GuardianReaper: ObservableObject {
             let rootHelpers = helpers.filter { $0.runsAsRoot || $0.uid != myUID }
 
             if !userHelpers.isEmpty {
-                ProcessReaper.reapUser(userHelpers, on: queue)
-                reaped += userHelpers.count
-                Self.log.info("[\(trigger)] reaped \(userHelpers.count) user helper(s) of \(rule.appName)")
+                let signalled = ProcessReaper.reapUser(userHelpers, on: queue)
+                reaped += signalled.count
+                if !signalled.isEmpty {
+                    Self.log.info("[\(trigger)] reaped \(signalled.count) user helper(s) of \(rule.appName)")
+                }
             }
             if !rootHelpers.isEmpty {
                 skippedRoot += rootHelpers.count

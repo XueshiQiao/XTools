@@ -103,6 +103,18 @@ enum ProcessScanner {
     /// hasn't been recycled before force-killing). Public wrapper over the resolver.
     static func currentExecutablePath(pid: pid_t) -> String? { executablePath(pid: pid) }
 
+    /// A process's start time (microseconds since epoch) — a per-instance
+    /// fingerprint. Combined with the pid and executable path, it uniquely
+    /// identifies a running process instance, so a recycled pid (even one running
+    /// the same binary) won't be mistaken for the original. nil if unavailable.
+    static func processStartTime(pid: pid_t) -> UInt64? {
+        var info = proc_bsdinfo()
+        let size = Int32(MemoryLayout<proc_bsdinfo>.size)
+        let ret = proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size)
+        guard ret == size else { return nil }
+        return UInt64(info.pbi_start_tvsec) &* 1_000_000 &+ UInt64(info.pbi_start_tvusec)
+    }
+
     private static func executablePath(pid: pid_t) -> String? {
         var buffer = [CChar](repeating: 0, count: 4096) // 4 * MAXPATHLEN
         let length = proc_pidpath(pid, &buffer, UInt32(buffer.count))

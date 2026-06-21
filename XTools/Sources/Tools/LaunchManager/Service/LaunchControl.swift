@@ -59,10 +59,15 @@ enum LaunchControl {
                 .map { _ in dest }.mapError { $0 as Error }
 
         case .systemDaemon:
-            // One privileged session: bootout (ignore "not loaded"), then move the
-            // plist — the move's exit status decides success.
-            let inner = "/bin/launchctl bootout \(shellQuote(target)) 2>/dev/null; "
-                      + "/bin/mv \(shellQuote(item.plistPath)) \(shellQuote(dest))"
+            // One privileged session: bootout, then move the plist. Report failure
+            // if the move fails (exit 1) OR if bootout genuinely failed — i.e. a
+            // non-zero status other than 3 ("No such process" = already unloaded,
+            // which is fine). This avoids reporting success while the daemon is
+            // still running. The plist is still moved either way (so it won't load
+            // next boot), but a real bootout failure surfaces to the user.
+            let inner = "/bin/launchctl bootout \(shellQuote(target)) 2>/dev/null; bo=$?; "
+                      + "/bin/mv \(shellQuote(item.plistPath)) \(shellQuote(dest)) || exit 1; "
+                      + "[ \"$bo\" -eq 0 ] || [ \"$bo\" -eq 3 ] || exit 2"
             return PrivilegedRunner.run("/bin/sh", ["-c", inner])
                 .map { _ in dest }.mapError { $0 as Error }
         }

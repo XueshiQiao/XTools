@@ -48,10 +48,10 @@ final class LaunchManagerStore: ObservableObject {
         let myUID = getuid()
         let userProcs = group.helpers.filter { $0.uid == myUID && !$0.runsAsRoot }
         let rootPids = group.helpers.filter { $0.runsAsRoot || $0.uid != myUID }.map { $0.pid }
-        let userCount = userProcs.count
 
-        if !userProcs.isEmpty {
-            ProcessReaper.reapUser(userProcs)
+        // Count only the processes SIGTERM actually reached.
+        let userCount = userProcs.isEmpty ? 0 : ProcessReaper.reapUser(userProcs).count
+        if userCount > 0 {
             Analytics.trackLaunchAction(kind: "reap", scope: "user")
         }
 
@@ -90,14 +90,11 @@ final class LaunchManagerStore: ObservableObject {
         let rule = GuardianRule(appName: group.appName,
                                 appBundlePath: group.appBundlePath,
                                 appBundleID: group.appBundleID)
-        // addRule enforces immediately, reaping the user-level helpers right now.
-        let userHelperCount = group.helpers.filter { $0.uid == getuid() && !$0.runsAsRoot }.count
+        // addRule enforces asynchronously. We do NOT claim a reaped count here —
+        // the real number is published by the reaper (shown in the Guardian status
+        // row's "last reap"); claiming the snapshot count could overstate it.
         reaper.addRule(rule)
-        if userHelperCount > 0 {
-            actionMessage = String(format: L("launch.msg.ruleCreatedReaped"), group.appName, userHelperCount)
-        } else {
-            actionMessage = String(format: L("launch.msg.ruleCreated"), group.appName)
-        }
+        actionMessage = String(format: L("launch.msg.ruleCreated"), group.appName)
         // Re-scan after the reap lands so the now-clean group leaves the residual list.
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in self?.refresh() }
     }
