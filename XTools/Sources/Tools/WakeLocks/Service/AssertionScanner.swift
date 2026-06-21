@@ -51,7 +51,8 @@ enum AssertionScanner {
 
             holders.append(AssertionHolder(
                 pid: pid, processName: name, executablePath: path,
-                isApp: app != nil, runsAsRoot: uid(of: pid) == 0,
+                isApp: app != nil, uid: uid(of: pid),
+                startTime: ProcessScanner.processStartTime(pid: pid),
                 assertions: assertions))
         }
 
@@ -77,10 +78,11 @@ enum AssertionScanner {
         }
     }
 
-    private static func uid(of pid: pid_t) -> uid_t {
+    /// Owning uid, or nil if the lookup fails (so callers don't assume ownership).
+    private static func uid(of pid: pid_t) -> uid_t? {
         var info = proc_bsdinfo()
         let sz = Int32(MemoryLayout<proc_bsdinfo>.size)
-        guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, sz) == sz else { return getuid() }
+        guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, sz) == sz else { return nil }
         return info.pbi_uid
     }
 }

@@ -48,7 +48,9 @@
 "wake.end.confirm.message" = "Quit/end %@ to release its wake lock?";
 "wake.msg.quit" = "Asked %@ to quit.";
 "wake.msg.ended" = "Ended %@.";
-"wake.msg.rootSkip" = "%@ runs as root — end it manually (needs privileges).";
+"wake.msg.rootSkip" = "%@ isn't owned by you (root/other user) — end it manually.";
+"wake.msg.changed" = "%@ changed since the scan — refreshed.";
+"wake.msg.failed" = "Couldn't end %@.";
 
 /* ───────────── Launch Manager ───────────── */
 "tool.launch.title" = "Launch Manager";

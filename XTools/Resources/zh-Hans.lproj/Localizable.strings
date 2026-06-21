@@ -48,7 +48,9 @@
 "wake.end.confirm.message" = "退出/结束「%@」以解除它的唤醒锁?";
 "wake.msg.quit" = "已请求「%@」退出。";
 "wake.msg.ended" = "已结束「%@」。";
-"wake.msg.rootSkip" = "「%@」以 root 运行——请手动结束(需要权限)。";
+"wake.msg.rootSkip" = "「%@」不归你所有(root/其他用户)——请手动结束。";
+"wake.msg.changed" = "「%@」自上次扫描后已变化——已刷新。";
+"wake.msg.failed" = "无法结束「%@」。";
 
 /* ───────────── Launch 管理器 ───────────── */
 "tool.launch.title" = "Launch 管理器";

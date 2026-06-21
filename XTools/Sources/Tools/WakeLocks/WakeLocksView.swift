@@ -116,8 +116,8 @@ struct WakeLocksView: View {
                 Label(L("wake.end"), systemImage: "stop.circle")
             }
             .controlSize(.small)
-            .disabled(holder.runsAsRoot)
-            .help(holder.runsAsRoot ? L("wake.root.hint") : L("wake.end"))
+            .disabled(!holder.canEnd)
+            .help(holder.canEnd ? L("wake.end") : L("wake.root.hint"))
         }
         .padding(.vertical, 2)
     }

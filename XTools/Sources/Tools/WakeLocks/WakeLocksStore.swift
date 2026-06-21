@@ -29,18 +29,29 @@ final class WakeLocksStore: ObservableObject {
     /// (`NSRunningApplication.terminate`); other user-owned processes get SIGTERM.
     /// Root/system processes are left alone (need manual handling).
     func release(_ holder: AssertionHolder) {
-        if holder.runsAsRoot {
+        // Only end processes owned by the current user (root/other-user/unknown skipped).
+        guard holder.canEnd else {
             actionMessage = String(format: L("wake.msg.rootSkip"), holder.processName)
             return
         }
+        // Guard against PID reuse since the scan: re-verify the pid is still the
+        // SAME process instance (start time + executable path) before ending it.
+        let curStart = ProcessScanner.processStartTime(pid: holder.pid)
+        let curPath = ProcessScanner.currentExecutablePath(pid: holder.pid)
+        guard curStart == holder.startTime, curPath == holder.executablePath else {
+            actionMessage = String(format: L("wake.msg.changed"), holder.processName)
+            refresh()
+            return
+        }
+
         if holder.isApp, let app = NSRunningApplication(processIdentifier: holder.pid) {
-            app.terminate()
-            actionMessage = String(format: L("wake.msg.quit"), holder.processName)
+            let ok = app.terminate()
+            actionMessage = String(format: L(ok ? "wake.msg.quit" : "wake.msg.failed"), holder.processName)
         } else {
-            let proc = ManagedProcess(pid: holder.pid, ppid: 0, uid: getuid(),
+            let proc = ManagedProcess(pid: holder.pid, ppid: 0, uid: holder.uid ?? getuid(),
                                       executablePath: holder.executablePath)
-            ProcessReaper.reapUser([proc])
-            actionMessage = String(format: L("wake.msg.ended"), holder.processName)
+            let signalled = ProcessReaper.reapUser([proc])
+            actionMessage = String(format: L(signalled.isEmpty ? "wake.msg.failed" : "wake.msg.ended"), holder.processName)
         }
         Analytics.trackLaunchAction(kind: "wake_release", scope: "user")
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in self?.refresh() }
