@@ -52,6 +52,65 @@
 "wake.msg.changed" = "%@ changed since the scan — refreshed.";
 "wake.msg.failed" = "Couldn't end %@.";
 
+/* ───────────── Power & Battery Insights ───────────── */
+"tool.power.title" = "Power & Battery";
+
+/* Sections */
+"power.section.battery" = "Battery";
+"power.section.settings" = "Sleep & Power Settings";
+"power.section.wake" = "Recent Wake & Sleep";
+
+/* Battery rows */
+"power.battery.charge" = "Charge";
+"power.battery.source" = "Power Source";
+"power.battery.timeToFull" = "Time to Full";
+"power.battery.timeToEmpty" = "Time Remaining";
+"power.battery.health" = "Battery Health";
+"power.battery.condition" = "Condition";
+"power.battery.cycles" = "Cycle Count";
+"power.battery.temperature" = "Temperature";
+"power.battery.capacity" = "Full-Charge / Design";
+"power.noBattery" = "No battery detected — this Mac runs on AC power only.";
+
+/* Power state */
+"power.state.charged" = "Plugged in, fully charged";
+"power.state.charging" = "Charging";
+"power.state.ac" = "On AC power";
+"power.state.battery" = "On battery";
+
+/* Condition */
+"power.condition.normal" = "Normal";
+"power.condition.service" = "Service Recommended";
+
+/* Settings */
+"power.settings.empty" = "Couldn't read pmset settings.";
+"power.settings.footer" = "Active power-management settings reported by pmset (read-only). Values like sleep timers are in minutes; 0 usually means “never”. Change these in System Settings ▸ Battery / Lock Screen.";
+
+/* Known pmset setting labels */
+"power.setting.displaysleep" = "Display sleep (min)";
+"power.setting.sleep" = "System sleep (min)";
+"power.setting.disksleep" = "Disk sleep (min)";
+"power.setting.disablesleep" = "Sleep disabled";
+"power.setting.powernap" = "Power Nap";
+"power.setting.lowpowermode" = "Low Power Mode";
+"power.setting.hibernatemode" = "Hibernate mode";
+"power.setting.standby" = "Standby";
+"power.setting.ttyskeepawake" = "Stay awake for remote sessions";
+"power.setting.womp" = "Wake for network access";
+"power.setting.tcpkeepalive" = "TCP keep-alive";
+
+/* Wake events */
+"power.wake.empty" = "No recent wake/sleep events found.";
+"power.wake.footer" = "Recent Sleep/Wake events parsed from the system power log (pmset -g log), newest first. Use this to see what woke your Mac.";
+"power.event.wake" = "Wake";
+"power.event.sleep" = "Sleep";
+"power.event.darkWake" = "Dark Wake";
+
+/* Misc */
+"power.value.unknown" = "Unknown";
+"power.duration.hm" = "%1$ld h %2$ld min";
+"power.duration.m" = "%ld min";
+
 /* ───────────── Launch Manager ───────────── */
 "tool.launch.title" = "Launch Manager";
 "launch.search.prompt" = "Search launch items";

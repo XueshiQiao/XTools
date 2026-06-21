@@ -52,6 +52,65 @@
 "wake.msg.changed" = "「%@」自上次扫描后已变化——已刷新。";
 "wake.msg.failed" = "无法结束「%@」。";
 
+/* ───────────── 电源与电池洞察 ───────────── */
+"tool.power.title" = "电源与电池";
+
+/* Sections */
+"power.section.battery" = "电池";
+"power.section.settings" = "睡眠与电源设置";
+"power.section.wake" = "近期唤醒与睡眠";
+
+/* Battery rows */
+"power.battery.charge" = "电量";
+"power.battery.source" = "电源";
+"power.battery.timeToFull" = "充满还需";
+"power.battery.timeToEmpty" = "剩余可用";
+"power.battery.health" = "电池健康度";
+"power.battery.condition" = "电池状况";
+"power.battery.cycles" = "循环次数";
+"power.battery.temperature" = "温度";
+"power.battery.capacity" = "满充 / 设计容量";
+"power.noBattery" = "未检测到电池 —— 这台 Mac 只靠交流电供电。";
+
+/* Power state */
+"power.state.charged" = "已接通电源,已充满";
+"power.state.charging" = "正在充电";
+"power.state.ac" = "使用交流电";
+"power.state.battery" = "使用电池";
+
+/* Condition */
+"power.condition.normal" = "正常";
+"power.condition.service" = "建议维修";
+
+/* Settings */
+"power.settings.empty" = "无法读取 pmset 设置。";
+"power.settings.footer" = "pmset 报告的当前电源管理设置(只读)。睡眠计时等数值以分钟计;0 通常表示「永不」。要修改请到「系统设置 ▸ 电池 / 锁定屏幕」。";
+
+/* Known pmset setting labels */
+"power.setting.displaysleep" = "显示器睡眠(分钟)";
+"power.setting.sleep" = "系统睡眠(分钟)";
+"power.setting.disksleep" = "硬盘睡眠(分钟)";
+"power.setting.disablesleep" = "已禁用睡眠";
+"power.setting.powernap" = "Power Nap 小憩";
+"power.setting.lowpowermode" = "低电量模式";
+"power.setting.hibernatemode" = "休眠模式";
+"power.setting.standby" = "待机";
+"power.setting.ttyskeepawake" = "远程会话期间保持唤醒";
+"power.setting.womp" = "为网络访问而唤醒";
+"power.setting.tcpkeepalive" = "TCP 保活";
+
+/* Wake events */
+"power.wake.empty" = "未找到近期的唤醒/睡眠事件。";
+"power.wake.footer" = "从系统电源日志(pmset -g log)解析出的近期睡眠/唤醒事件,最新在前。可用它查看是什么唤醒了你的 Mac。";
+"power.event.wake" = "唤醒";
+"power.event.sleep" = "睡眠";
+"power.event.darkWake" = "Dark Wake 暗唤醒";
+
+/* Misc */
+"power.value.unknown" = "未知";
+"power.duration.hm" = "%1$ld 小时 %2$ld 分";
+"power.duration.m" = "%ld 分钟";
+
 /* ───────────── Launch 管理器 ───────────── */
 "tool.launch.title" = "Launch 管理器";
 "launch.search.prompt" = "搜索自启项";
