@@ -29,6 +29,27 @@
 "about.copyright" = "© 2026 Xueshi Qiao. All rights reserved.";
 "about.version.format" = "Version %1$@ (%2$@)";
 
+/* ───────────── Wake Locks ───────────── */
+"tool.wake.title" = "Wake Locks";
+"wake.status.title" = "Display sleep";
+"wake.status.none" = "Nothing blocking it";
+"wake.status.count" = "%ld process(es) keeping it on";
+"wake.empty" = "Nothing is preventing your display or Mac from sleeping.";
+"wake.display.header" = "Keeping the Display On";
+"wake.system.header" = "Keeping the Mac Awake (display can still sleep)";
+"wake.footer" = "macOS doesn't let an app release another app's wake lock — the only way to clear one is to end the process holding it. Apps are asked to quit; system (root) processes are left alone.";
+"wake.badge.display" = "Display";
+"wake.badge.system" = "System";
+"wake.heldFor" = "held for %@";
+"wake.end" = "End";
+"wake.root.hint" = "System process — handle manually.";
+"wake.end.confirm.title" = "End this process?";
+"wake.end.confirm.action" = "End";
+"wake.end.confirm.message" = "Quit/end %@ to release its wake lock?";
+"wake.msg.quit" = "Asked %@ to quit.";
+"wake.msg.ended" = "Ended %@.";
+"wake.msg.rootSkip" = "%@ runs as root — end it manually (needs privileges).";
+
 /* ───────────── Launch Manager ───────────── */
 "tool.launch.title" = "Launch Manager";
 "launch.search.prompt" = "Search launch items";

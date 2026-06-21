@@ -8,8 +8,8 @@ enum ToolRegistry {
     static func makeAllTools() -> [any XToolModule] {
         [
             LaunchManagerTool(),
-            // Add future tools here, e.g.:
-            // SomeOtherTool(),
+            WakeLocksTool(),
+            // Add future tools here.
         ]
     }
 }

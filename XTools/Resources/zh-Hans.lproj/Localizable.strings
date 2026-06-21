@@ -29,6 +29,27 @@
 "about.copyright" = "© 2026 乔学诗。保留所有权利。";
 "about.version.format" = "版本 %1$@ (%2$@)";
 
+/* ───────────── 唤醒占用 ───────────── */
+"tool.wake.title" = "唤醒占用";
+"wake.status.title" = "显示器息屏";
+"wake.status.none" = "无进程阻止";
+"wake.status.count" = "%ld 个进程正让屏幕常亮";
+"wake.empty" = "当前没有任何进程阻止显示器或 Mac 睡眠。";
+"wake.display.header" = "正在阻止息屏";
+"wake.system.header" = "正在阻止系统睡眠(显示器仍可息屏)";
+"wake.footer" = "macOS 不允许一个 App 解除别的 App 的唤醒锁——唯一办法是结束持有它的进程。对 App 会请求其退出;系统(root)进程则不处理。";
+"wake.badge.display" = "息屏";
+"wake.badge.system" = "系统睡眠";
+"wake.heldFor" = "已持续 %@";
+"wake.end" = "结束";
+"wake.root.hint" = "系统进程——请手动处理。";
+"wake.end.confirm.title" = "结束此进程?";
+"wake.end.confirm.action" = "结束";
+"wake.end.confirm.message" = "退出/结束「%@」以解除它的唤醒锁?";
+"wake.msg.quit" = "已请求「%@」退出。";
+"wake.msg.ended" = "已结束「%@」。";
+"wake.msg.rootSkip" = "「%@」以 root 运行——请手动结束(需要权限)。";
+
 /* ───────────── Launch 管理器 ───────────── */
 "tool.launch.title" = "Launch 管理器";
 "launch.search.prompt" = "搜索自启项";

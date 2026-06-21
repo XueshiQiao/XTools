@@ -31,7 +31,14 @@ final class AppState: ObservableObject {
         self.updateController = updateController
         let tools = ToolRegistry.makeAllTools()
         self.tools = tools
-        self.selection = tools.first.map { SidebarItem.tool($0.id) } ?? .general
+        // Default to the first tool; `XTOOLS_TAB=<tool id>` overrides (dev/screenshot
+        // affordance, inert in normal use).
+        let envTab = ProcessInfo.processInfo.environment["XTOOLS_TAB"]
+        if let envTab, tools.contains(where: { $0.id == envTab }) {
+            self.selection = .tool(envTab)
+        } else {
+            self.selection = tools.first.map { SidebarItem.tool($0.id) } ?? .general
+        }
 
         // Start each tool's app-lifetime background work.
         tools.forEach { $0.activate() }
