@@ -9,7 +9,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBarController: MenuBarController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        NSApp.setActivationPolicy(.accessory)
+        // Regular app: show a Dock icon + the normal app menu, while ALSO keeping
+        // the menu-bar status item. (XTools is a windowed utility, not a pure agent.)
+        NSApp.setActivationPolicy(.regular)
 
         // Install the user's language override before anything reads a localized string.
         Preferences.applyLanguageOverride()
@@ -28,15 +30,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menuBarController = MenuBarController(appState: state, updateController: updateController)
 
-        // Dev affordance: open the window on launch when XTOOLS_AUTOOPEN is set
-        // (used for screenshots/verification). Inert in normal use.
-        if ProcessInfo.processInfo.environment["XTOOLS_AUTOOPEN"] != nil {
-            DispatchQueue.main.async { [weak self] in self?.menuBarController?.showMainWindow() }
-        }
+        // Show the main window on launch (normal windowed-app behavior).
+        DispatchQueue.main.async { [weak self] in self?.menuBarController?.showMainWindow() }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         appState?.shutdown()
         Analytics.flush()
+    }
+
+    /// Clicking the Dock icon (with no window open) re-opens the main window.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if !flag { menuBarController?.showMainWindow() }
+        return true
     }
 }

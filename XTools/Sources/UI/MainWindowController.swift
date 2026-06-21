@@ -127,7 +127,7 @@ struct MainView: View {
 
     private var brand: some View {
         HStack(spacing: 10) {
-            Image(nsImage: NSApp.applicationIconImage)
+            Image("AppLogo")
                 .resizable().frame(width: 34, height: 34)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 1) {

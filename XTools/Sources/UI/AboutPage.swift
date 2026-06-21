@@ -25,7 +25,7 @@ struct AboutPage: View {
         Form {
             Section {
                 VStack(spacing: 10) {
-                    Image(nsImage: NSApp.applicationIconImage)
+                    Image("AppLogo")
                         .resizable().frame(width: 84, height: 84)
                         .clipShape(RoundedRectangle(cornerRadius: 19, style: .continuous))
                     Text("XTools").font(.title2).fontWeight(.bold)
