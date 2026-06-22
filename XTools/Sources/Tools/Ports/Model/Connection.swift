@@ -32,6 +32,13 @@ struct Connection: Identifiable, Hashable {
     /// mDNS *:5353 socket per network interface → many identical lsof rows). 1 = unique.
     var dupCount: Int = 1
 
+    /// If this connection's destination is a port LISTENED by another local
+    /// process (a loopback connection), the peer is that listening process — so
+    /// the UI can show "this process → that local process". nil for remote peers.
+    var peerPid: pid_t?
+    var peerCommand: String?
+    var peerExecutablePath: String?
+
     /// We only offer to kill processes owned by the CURRENT user. Root, other
     /// users, and uid-unknown processes are not kill-eligible from the simple
     /// (no-prompt) path — they route through the privileged runner instead.

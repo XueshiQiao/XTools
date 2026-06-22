@@ -124,6 +124,14 @@ struct PortsView: View {
                             .font(.system(size: 11, design: .monospaced))
                             .foregroundStyle(.secondary)
                             .textSelection(.enabled)
+                        // If the destination is a local listening process, show it.
+                        if let peer = conn.peerCommand, let ppid = conn.peerPid {
+                            Image(systemName: "arrow.right").font(.system(size: 8)).foregroundStyle(.tertiary)
+                            Image(nsImage: store.icon(pid: ppid, path: conn.peerExecutablePath))
+                                .resizable().frame(width: 14, height: 14)
+                            Text(peer).font(.system(size: 11)).foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
                     }
                 }
                 .lineLimit(1).truncationMode(.middle)

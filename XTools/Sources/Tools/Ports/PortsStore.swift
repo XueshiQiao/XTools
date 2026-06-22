@@ -40,10 +40,31 @@ final class PortsStore: ObservableObject {
             }
             let deduped = order.compactMap { byEndpoint[$0] }
 
+            // Correlate loopback connections to the local process listening on the
+            // destination port, so the UI can show "this process → that local
+            // process". Only when the remote is a loopback address (genuinely local).
+            let listenersByPort = Dictionary(
+                deduped.filter { $0.isListening }.map { ($0.localPort, $0) },
+                uniquingKeysWith: { first, _ in first }
+            )
+            let loopback: Set<String> = ["127.0.0.1", "::1", "[::1]", "localhost"]
+            let annotated: [Connection] = deduped.map { conn in
+                guard !conn.isListening,
+                      let raddr = conn.remoteAddr, loopback.contains(raddr),
+                      let rport = conn.remotePort,
+                      let server = listenersByPort[rport], server.pid != conn.pid
+                else { return conn }
+                var c = conn
+                c.peerPid = server.pid
+                c.peerCommand = server.command
+                c.peerExecutablePath = server.executablePath
+                return c
+            }
+
             // Deterministic order so the List diffs cheaply across refreshes
             // (lsof output order varies run-to-run; an unstable order would make
             // every refresh look like a full reorder and re-render every row).
-            let result = deduped.sorted { a, b in
+            let result = annotated.sorted { a, b in
                 if a.command != b.command {
                     return a.command.localizedCaseInsensitiveCompare(b.command) == .orderedAscending
                 }
@@ -64,17 +85,19 @@ final class PortsStore: ObservableObject {
     /// per-row on every render/refresh — cache it. Called on the main thread.
     private var iconCache: [pid_t: NSImage] = [:]
 
-    func icon(for conn: Connection) -> NSImage {
-        if let cached = iconCache[conn.pid] { return cached }
+    func icon(for conn: Connection) -> NSImage { icon(pid: conn.pid, path: conn.executablePath) }
+
+    func icon(pid: pid_t, path: String?) -> NSImage {
+        if let cached = iconCache[pid] { return cached }
         let image: NSImage
-        if let app = NSRunningApplication(processIdentifier: conn.pid), let ic = app.icon {
+        if let app = NSRunningApplication(processIdentifier: pid), let ic = app.icon {
             image = ic
-        } else if let p = conn.executablePath {
+        } else if let p = path {
             image = NSWorkspace.shared.icon(forFile: p)
         } else {
             image = NSImage(systemSymbolName: "network", accessibilityDescription: nil) ?? NSImage()
         }
-        iconCache[conn.pid] = image
+        iconCache[pid] = image
         return image
     }
 
