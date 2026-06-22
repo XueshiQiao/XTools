@@ -9,35 +9,53 @@ struct PmsetSetting: Identifiable, Hashable {
     var id: String { key }
 
     /// A friendly localized label for the well-known keys, falling back to the
-    /// raw pmset token for anything we don't have a translation for.
+    /// raw pmset token for anything we don't have a translation for. The key is
+    /// space-stripped for the lookup so "Sleep On Power Button" maps to
+    /// `power.setting.SleepOnPowerButton`.
     var label: String {
-        let mapped = L("power.setting.\(key)")
-        return mapped == "power.setting.\(key)" ? key : mapped
+        let lookup = "power.setting.\(key.replacingOccurrences(of: " ", with: ""))"
+        let mapped = L(lookup)
+        return mapped == lookup ? key : mapped
     }
 
-    // pmset reports these as 0/1 booleans, not minute counts.
+    // 0/1 booleans (not minute counts).
     private static let booleanKeys: Set<String> = [
-        "disablesleep", "powernap", "lowpowermode", "standby",
-        "ttyskeepawake", "tcpkeepalive", "womp", "networkoversleep", "gpuswitch",
-        "Sleep On Power Button", "acwake", "lidwake", "halfdim",
+        "disablesleep", "SleepDisabled", "powernap", "lowpowermode", "standby",
+        "ttyskeepawake", "tcpkeepalive", "womp", "networkoversleep",
+        "Sleep On Power Button", "acwake", "lidwake", "halfdim", "proximitywake",
+        "autopoweroff", "ResetToDefaults",
     ]
-    // These are sleep timers in MINUTES (0 = never).
     private static let minuteKeys: Set<String> = ["displaysleep", "sleep", "disksleep"]
+    private static let secondKeys: Set<String> = ["standbydelaylow", "standbydelayhigh", "autopoweroffdelay"]
+    private static let percentKeys: Set<String> = ["highstandbythreshold"]
+    /// Enum settings → the L() prefix that maps a value to its meaning.
+    private static let enumPrefixes: [String: String] = [
+        "hibernatemode": "power.hibernate",
+        "powermode": "power.powermode",
+        "gpuswitch": "power.gpuswitch",
+    ]
 
-    /// Value formatted for humans: booleans → On/Off, timers → "N min"/"Never",
-    /// `hibernatemode` → its labeled meaning, everything else → the raw value.
+    /// Value formatted for humans, as "<text> (<raw>)" where the text replaces a
+    /// bare number (booleans, enums), or with a unit otherwise. Unknown keys show
+    /// the raw value verbatim.
     var displayValue: String {
         if Self.booleanKeys.contains(key) {
-            if value == "1" { return L("power.value.on") }
-            if value == "0" { return L("power.value.off") }
+            if value == "1" { return "\(L("power.value.on")) (1)" }
+            if value == "0" { return "\(L("power.value.off")) (0)" }
             return value
         }
-        if Self.minuteKeys.contains(key), let n = Int(value) {
-            return n == 0 ? L("power.value.never") : String(format: L("power.value.minutes"), n)
+        if let prefix = Self.enumPrefixes[key] {
+            let meaning = L("\(prefix).\(value)")
+            return meaning == "\(prefix).\(value)" ? value : "\(meaning) (\(value))"
         }
-        if key == "hibernatemode" {
-            let meaning = L("power.hibernate.\(value)")           // e.g. power.hibernate.3
-            return meaning == "power.hibernate.\(value)" ? value : "\(value) · \(meaning)"
+        if Self.minuteKeys.contains(key), let n = Int(value) {
+            return n == 0 ? "\(L("power.value.never")) (0)" : String(format: L("power.value.minutes"), n)
+        }
+        if Self.secondKeys.contains(key), let n = Int(value) {
+            return String(format: L("power.value.seconds"), n)
+        }
+        if Self.percentKeys.contains(key), Int(value) != nil {
+            return "\(value)%"
         }
         return value
     }

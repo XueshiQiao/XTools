@@ -12,35 +12,34 @@ enum PmsetReader {
     private static let log = FileLog("PmsetReader")
     private static let pmsetPath = "/usr/bin/pmset"
 
-    /// The subset of `pmset -g` keys worth surfacing, in display order.
-    private static let interestingKeys = [
-        "displaysleep", "sleep", "disksleep", "disablesleep",
-        "powernap", "lowpowermode", "hibernatemode", "standby",
-        "ttyskeepawake", "womp", "tcpkeepalive",
-    ]
-
     // MARK: - Settings
 
+    /// All settings `pmset -g` reports, in pmset's own order. Each line is
+    /// `<key>  <value>`, but the key can contain spaces ("Sleep On Power Button")
+    /// and the value can be followed by a "(…)" note ("0 (sleep prevented by …)"),
+    /// so: drop the parenthetical, take the LAST token as the value and everything
+    /// before it as the key. Section headers (ending in ":") are skipped.
     static func readSettings() -> [PmsetSetting] {
         guard let out = run(["-g"]) else { return [] }
 
-        // Lines look like:  "  displaysleep         10"
-        var parsed: [String: String] = [:]
-        for line in out.split(separator: "\n") {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
-            // First token = key, remainder = value. Skip the header line.
-            let parts = trimmed.split(separator: " ", maxSplits: 1).map(String.init)
-            guard parts.count == 2 else { continue }
-            let key = parts[0]
-            let value = parts[1].trimmingCharacters(in: .whitespaces)
-            if parsed[key] == nil { parsed[key] = value }
-        }
+        var settings: [PmsetSetting] = []
+        var seen = Set<String>()
+        for rawLine in out.split(separator: "\n") {
+            let trimmed = rawLine.trimmingCharacters(in: .whitespaces)
+            if trimmed.isEmpty || trimmed.hasSuffix(":") { continue }
 
-        // Emit only the interesting keys that are actually present, in our order.
-        return interestingKeys.compactMap { key in
-            guard let value = parsed[key] else { return nil }
-            return PmsetSetting(key: key, value: value)
+            var core = trimmed
+            if let paren = core.range(of: " (") { core = String(core[..<paren.lowerBound]) }
+            core = core.trimmingCharacters(in: .whitespaces)
+
+            let comps = core.split(whereSeparator: { $0 == " " || $0 == "\t" }).map(String.init)
+            guard comps.count >= 2, let value = comps.last else { continue }
+            let key = comps.dropLast().joined(separator: " ")
+            if seen.insert(key).inserted {
+                settings.append(PmsetSetting(key: key, value: value))
+            }
         }
+        return settings
     }
 
     // MARK: - Wake / Sleep log

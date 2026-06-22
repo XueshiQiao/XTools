@@ -98,6 +98,20 @@
 "power.setting.ttyskeepawake" = "远程会话期间保持唤醒";
 "power.setting.womp" = "为网络访问而唤醒";
 "power.setting.tcpkeepalive" = "TCP 保活";
+"power.setting.SleepDisabled" = "已禁用睡眠(系统级)";
+"power.setting.SleepOnPowerButton" = "电源键可让其睡眠";
+"power.setting.networkoversleep" = "睡眠期间网络访问";
+"power.setting.powermode" = "能耗模式";
+"power.setting.hibernatefile" = "休眠映像文件";
+"power.setting.acwake" = "接通电源时唤醒";
+"power.setting.lidwake" = "开盖唤醒";
+"power.setting.halfdim" = "睡眠前先调暗屏幕";
+"power.setting.proximitywake" = "邻近唤醒";
+"power.setting.autopoweroff" = "自动关机";
+"power.setting.autopoweroffdelay" = "自动关机延迟";
+"power.setting.standbydelaylow" = "待机延迟(低电量)";
+"power.setting.standbydelayhigh" = "待机延迟(高电量)";
+"power.setting.highstandbythreshold" = "高待机电量阈值";
 
 /* Wake events */
 "power.wake.empty" = "未找到近期的唤醒/睡眠事件。";
@@ -112,9 +126,16 @@
 "power.value.off" = "关闭";
 "power.value.never" = "永不";
 "power.value.minutes" = "%ld 分钟";
+"power.value.seconds" = "%ld 秒";
 "power.hibernate.0" = "仅内存(不写磁盘)";
 "power.hibernate.3" = "默认(安全睡眠)";
 "power.hibernate.25" = "仅写盘(深度休眠)";
+"power.powermode.0" = "自动";
+"power.powermode.1" = "低电量";
+"power.powermode.2" = "高性能";
+"power.gpuswitch.0" = "集成显卡";
+"power.gpuswitch.1" = "独立显卡";
+"power.gpuswitch.2" = "自动";
 "power.duration.hm" = "%1$ld 小时 %2$ld 分";
 "power.duration.m" = "%ld 分钟";
 

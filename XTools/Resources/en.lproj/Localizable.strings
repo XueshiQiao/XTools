@@ -98,6 +98,20 @@
 "power.setting.ttyskeepawake" = "Stay awake for remote sessions";
 "power.setting.womp" = "Wake for network access";
 "power.setting.tcpkeepalive" = "TCP keep-alive";
+"power.setting.SleepDisabled" = "Sleep disabled (system-wide)";
+"power.setting.SleepOnPowerButton" = "Sleep on power button";
+"power.setting.networkoversleep" = "Network access during sleep";
+"power.setting.powermode" = "Energy Mode";
+"power.setting.hibernatefile" = "Hibernate image file";
+"power.setting.acwake" = "Wake on AC";
+"power.setting.lidwake" = "Wake on lid open";
+"power.setting.halfdim" = "Dim display before sleep";
+"power.setting.proximitywake" = "Proximity wake";
+"power.setting.autopoweroff" = "Auto power off";
+"power.setting.autopoweroffdelay" = "Auto power-off delay";
+"power.setting.standbydelaylow" = "Standby delay (low battery)";
+"power.setting.standbydelayhigh" = "Standby delay (high battery)";
+"power.setting.highstandbythreshold" = "High-standby battery threshold";
 
 /* Wake events */
 "power.wake.empty" = "No recent wake/sleep events found.";
@@ -112,9 +126,16 @@
 "power.value.off" = "Off";
 "power.value.never" = "Never";
 "power.value.minutes" = "%ld min";
+"power.value.seconds" = "%ld sec";
 "power.hibernate.0" = "RAM only (no disk image)";
 "power.hibernate.3" = "Default (safe sleep)";
 "power.hibernate.25" = "Disk only (deep hibernate)";
+"power.powermode.0" = "Automatic";
+"power.powermode.1" = "Low Power";
+"power.powermode.2" = "High Power";
+"power.gpuswitch.0" = "Integrated GPU";
+"power.gpuswitch.1" = "Discrete GPU";
+"power.gpuswitch.2" = "Automatic";
 "power.duration.hm" = "%1$ld h %2$ld min";
 "power.duration.m" = "%ld min";
 
