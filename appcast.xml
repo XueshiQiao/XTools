@@ -5,13 +5,13 @@
     <link>https://github.com/XueshiQiao/XTools</link>
     <language>en</language>
     <item>
-      <title>Version 26.06.2</title>
+      <title>Version 26.06.3</title>
       <description><![CDATA[<ul>Bug fixes and improvements.</ul>]]></description>
-      <pubDate>Sun, 21 Jun 2026 13:34:24 +0000</pubDate>
-      <sparkle:version>2</sparkle:version>
-      <sparkle:shortVersionString>26.06.2</sparkle:shortVersionString>
+      <pubDate>Mon, 22 Jun 2026 03:12:58 +0000</pubDate>
+      <sparkle:version>3</sparkle:version>
+      <sparkle:shortVersionString>26.06.3</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://github.com/XueshiQiao/XTools/releases/download/v26.06.2/XTools.dmg" length="5260329" type="application/octet-stream" sparkle:edSignature="t1RorSzU/s53N2nJpgNoVs5Cho/kYTbu4gPFvg/A+gl/J+esk+RYHMusEVh1Y8YuA7VDArexG+jeb2Db0qguAw==" />
+      <enclosure url="https://github.com/XueshiQiao/XTools/releases/download/v26.06.3/XTools.dmg" length="5853437" type="application/octet-stream" sparkle:edSignature="w9mW9Asei0il0vGsuXYt2OxKfMWDoRXJyCSQdiEkxs//esMGUDHXRdTwUPp31NTKKR4IZoQdZgBf+RZbd3X3CQ==" />
     </item>
   </channel>
 </rss>
