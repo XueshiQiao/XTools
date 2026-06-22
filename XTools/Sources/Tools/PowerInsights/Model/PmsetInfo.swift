@@ -40,8 +40,8 @@ struct PmsetSetting: Identifiable, Hashable {
     /// the raw value verbatim.
     var displayValue: String {
         if Self.booleanKeys.contains(key) {
-            if value == "1" { return "\(L("power.value.on")) (1)" }
-            if value == "0" { return "\(L("power.value.off")) (0)" }
+            if value == "1" { return L("power.value.on") }
+            if value == "0" { return L("power.value.off") }
             return value
         }
         if let prefix = Self.enumPrefixes[key] {
@@ -49,7 +49,7 @@ struct PmsetSetting: Identifiable, Hashable {
             return meaning == "\(prefix).\(value)" ? value : "\(meaning) (\(value))"
         }
         if Self.minuteKeys.contains(key), let n = Int(value) {
-            return n == 0 ? "\(L("power.value.never")) (0)" : String(format: L("power.value.minutes"), n)
+            return n == 0 ? L("power.value.never") : String(format: L("power.value.minutes"), n)
         }
         if Self.secondKeys.contains(key), let n = Int(value) {
             return String(format: L("power.value.seconds"), n)
