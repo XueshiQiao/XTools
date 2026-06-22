@@ -108,6 +108,7 @@ struct PortsView: View {
                         .font(.system(size: 10)).foregroundStyle(.tertiary)
                     protoBadge(conn)
                     if let state = conn.state { stateBadge(state) }
+                    if let svc = serviceName(conn) { badge(svc, .purple) }
                     if conn.dupCount > 1 { badge("×\(conn.dupCount)", .gray) }
                     if conn.runsAsRoot {
                         Image(systemName: "lock.fill").font(.system(size: 9)).foregroundStyle(.secondary)
@@ -136,6 +137,13 @@ struct PortsView: View {
             .help(conn.isCurrentUser ? L("ports.kill") : L("ports.root.hint"))
         }
         .padding(.vertical, 2)
+    }
+
+    /// Service label for the row's meaningful port: the listening port for a
+    /// listener, the destination port for a connection.
+    private func serviceName(_ conn: Connection) -> String? {
+        let port = conn.isListening ? conn.localPort : (conn.remotePort ?? conn.localPort)
+        return PortServices.name(for: port)
     }
 
     private func protoBadge(_ conn: Connection) -> some View {
