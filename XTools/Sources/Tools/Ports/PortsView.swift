@@ -184,7 +184,8 @@ private struct ConnectionRow: View {
     }
 
     private var rowBackground: Color {
-        if isHovered { return Color.primary.opacity(0.09) }
+        // Hover uses the system accent (tint) color; zebra stays a neutral tint.
+        if isHovered { return Color.accentColor.opacity(0.18) }
         return zebra ? Color.primary.opacity(0.035) : Color.clear
     }
 
