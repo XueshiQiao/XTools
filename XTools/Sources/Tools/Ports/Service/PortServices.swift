@@ -29,7 +29,11 @@ enum PortServices {
 
     private static let etcServices: [Int: String] = loadEtcServices()
 
-    /// A short service label for a port, or nil if unknown.
+    /// A short service label for a port, or nil if unknown. Curated table first
+    /// (friendly labels for the ports we intentionally recognize), then the
+    /// system `/etc/services` (IANA list) as a fallback for everything else.
+    /// Note: some high-port /etc/services names are stale (e.g. 1234 →
+    /// "search-agent") — kept anyway, as the list is useful overall.
     static func name(for portString: String) -> String? {
         guard let p = Int(portString) else { return nil }
         if let c = curated[p] { return c }
