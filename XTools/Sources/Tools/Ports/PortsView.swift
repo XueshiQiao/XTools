@@ -15,7 +15,10 @@ struct PortsView: View {
     }
 
     var body: some View {
-        Form {
+        // List (not Form): on macOS it's NSTableView-backed, so rows are
+        // virtualized + reused — only visible rows render. A Form renders every
+        // row eagerly, which is what made a large connection list lag.
+        List {
             if let message = store.actionMessage {
                 Section { messageBanner(message) }
             }
@@ -23,7 +26,7 @@ struct PortsView: View {
             listenersSection
             connectionsSection
         }
-        .formStyle(.grouped)
+        .listStyle(.inset)
         .navigationTitle(L("tool.ports.title"))
         .searchable(text: $store.query, prompt: Text(L("ports.search.prompt")))
         .toolbar {
@@ -96,7 +99,7 @@ struct PortsView: View {
 
     private func connectionRow(_ conn: Connection) -> some View {
         HStack(spacing: 10) {
-            icon(for: conn)
+            Image(nsImage: store.icon(for: conn))
                 .resizable().frame(width: 26, height: 26)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
@@ -140,16 +143,6 @@ struct PortsView: View {
 
     private func stateBadge(_ state: String) -> some View {
         badge(state, state == "LISTEN" ? .green : .gray)
-    }
-
-    private func icon(for conn: Connection) -> Image {
-        if let app = NSRunningApplication(processIdentifier: conn.pid), let ic = app.icon {
-            return Image(nsImage: ic)
-        }
-        if let p = conn.executablePath {
-            return Image(nsImage: NSWorkspace.shared.icon(forFile: p))
-        }
-        return Image(systemName: "network")
     }
 
     // MARK: - Pieces

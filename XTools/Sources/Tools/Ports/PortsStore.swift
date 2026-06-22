@@ -23,12 +23,42 @@ final class PortsStore: ObservableObject {
     func refresh() {
         isScanning = true
         work.async { [weak self] in
-            let result = PortScanner.scan()
+            // Deterministic order so the List diffs cheaply across refreshes
+            // (lsof output order varies run-to-run; an unstable order would make
+            // every refresh look like a full reorder and re-render every row).
+            let result = PortScanner.scan().sorted { a, b in
+                if a.command != b.command {
+                    return a.command.localizedCaseInsensitiveCompare(b.command) == .orderedAscending
+                }
+                if a.pid != b.pid { return a.pid < b.pid }
+                return a.id < b.id
+            }
             DispatchQueue.main.async {
                 self?.connections = result
                 self?.isScanning = false
             }
         }
+    }
+
+    // MARK: - Icons (cached)
+
+    /// Memoized icon per pid. Resolving an app icon (`NSRunningApplication` /
+    /// `NSWorkspace.icon(forFile:)`) is a LaunchServices/disk hit that must NOT run
+    /// per-row on every render/refresh — cache it. Called on the main thread.
+    private var iconCache: [pid_t: NSImage] = [:]
+
+    func icon(for conn: Connection) -> NSImage {
+        if let cached = iconCache[conn.pid] { return cached }
+        let image: NSImage
+        if let app = NSRunningApplication(processIdentifier: conn.pid), let ic = app.icon {
+            image = ic
+        } else if let p = conn.executablePath {
+            image = NSWorkspace.shared.icon(forFile: p)
+        } else {
+            image = NSImage(systemSymbolName: "network", accessibilityDescription: nil) ?? NSImage()
+        }
+        iconCache[conn.pid] = image
+        return image
     }
 
     // MARK: - Filter
