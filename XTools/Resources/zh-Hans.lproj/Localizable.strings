@@ -108,6 +108,13 @@
 
 /* Misc */
 "power.value.unknown" = "未知";
+"power.value.on" = "打开";
+"power.value.off" = "关闭";
+"power.value.never" = "永不";
+"power.value.minutes" = "%ld 分钟";
+"power.hibernate.0" = "仅内存(不写磁盘)";
+"power.hibernate.3" = "默认(安全睡眠)";
+"power.hibernate.25" = "仅写盘(深度休眠)";
 "power.duration.hm" = "%1$ld 小时 %2$ld 分";
 "power.duration.m" = "%ld 分钟";
 

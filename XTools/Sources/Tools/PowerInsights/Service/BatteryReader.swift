@@ -105,9 +105,10 @@ enum BatteryReader {
         // fall back to "PermanentFailureStatus" (non-zero = failure).
         info.condition = readCondition(props)
 
-        // Temperature is reported in centi-kelvin on most Macs (e.g. 30150 → 28.5 °C).
+        // AppleSmartBattery "Temperature" is in centi-CELSIUS (e.g. 3067 → 30.67 °C).
+        // (It is NOT Kelvin — subtracting 273.15 was the bug that produced ~-242 °C.)
         if let raw = props["Temperature"] as? Int, raw > 0 {
-            info.temperatureCelsius = Double(raw) / 100.0 - 273.15
+            info.temperatureCelsius = Double(raw) / 100.0
         }
     }
 

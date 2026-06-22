@@ -108,6 +108,13 @@
 
 /* Misc */
 "power.value.unknown" = "Unknown";
+"power.value.on" = "On";
+"power.value.off" = "Off";
+"power.value.never" = "Never";
+"power.value.minutes" = "%ld min";
+"power.hibernate.0" = "RAM only (no disk image)";
+"power.hibernate.3" = "Default (safe sleep)";
+"power.hibernate.25" = "Disk only (deep hibernate)";
 "power.duration.hm" = "%1$ld h %2$ld min";
 "power.duration.m" = "%ld min";
 

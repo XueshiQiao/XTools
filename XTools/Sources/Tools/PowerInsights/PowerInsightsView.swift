@@ -128,7 +128,7 @@ struct PowerInsightsView: View {
             } else {
                 ForEach(store.settings) { setting in
                     LabeledContent {
-                        Text(setting.value).foregroundStyle(.secondary)
+                        Text(setting.displayValue).foregroundStyle(.secondary)
                             .font(.system(.body, design: .monospaced))
                     } label: {
                         Text(setting.label)
