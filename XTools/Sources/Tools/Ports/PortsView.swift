@@ -108,6 +108,7 @@ struct PortsView: View {
                         .font(.system(size: 10)).foregroundStyle(.tertiary)
                     protoBadge(conn)
                     if let state = conn.state { stateBadge(state) }
+                    if conn.dupCount > 1 { badge("×\(conn.dupCount)", .gray) }
                     if conn.runsAsRoot {
                         Image(systemName: "lock.fill").font(.system(size: 9)).foregroundStyle(.secondary)
                     }

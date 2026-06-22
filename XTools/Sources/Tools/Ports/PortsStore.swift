@@ -23,10 +23,27 @@ final class PortsStore: ObservableObject {
     func refresh() {
         isScanning = true
         work.async { [weak self] in
+            // Collapse identical sockets: a process that opens one mDNS *:5353
+            // socket per network interface shows up as many identical lsof rows.
+            // Group by logical endpoint (pid + proto + local + remote + state),
+            // keep one representative, and record how many it stands for.
+            var byEndpoint: [String: Connection] = [:]
+            var order: [String] = []
+            for conn in PortScanner.scan() {
+                let key = "\(conn.pid)|\(conn.proto)|\(conn.localAddr):\(conn.localPort)|\(conn.remoteAddr ?? "")|\(conn.remotePort ?? "")|\(conn.state ?? "")"
+                if byEndpoint[key] != nil {
+                    byEndpoint[key]?.dupCount += 1
+                } else {
+                    byEndpoint[key] = conn
+                    order.append(key)
+                }
+            }
+            let deduped = order.compactMap { byEndpoint[$0] }
+
             // Deterministic order so the List diffs cheaply across refreshes
             // (lsof output order varies run-to-run; an unstable order would make
             // every refresh look like a full reorder and re-render every row).
-            let result = PortScanner.scan().sorted { a, b in
+            let result = deduped.sorted { a, b in
                 if a.command != b.command {
                     return a.command.localizedCaseInsensitiveCompare(b.command) == .orderedAscending
                 }

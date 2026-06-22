@@ -28,6 +28,10 @@ struct Connection: Identifiable, Hashable {
 
     let isListening: Bool        // LISTEN state, or a bound UDP socket with no peer
 
+    /// How many identical sockets this row collapses (e.g. a process opening one
+    /// mDNS *:5353 socket per network interface → many identical lsof rows). 1 = unique.
+    var dupCount: Int = 1
+
     /// We only offer to kill processes owned by the CURRENT user. Root, other
     /// users, and uid-unknown processes are not kill-eligible from the simple
     /// (no-prompt) path — they route through the privileged runner instead.
