@@ -71,12 +71,14 @@ struct PortsView: View {
         }
     }
 
-    // MARK: - Sections
+    // MARK: - Sections (enumerated for zebra striping)
 
     @ViewBuilder private var listenersSection: some View {
         if !store.listeners.isEmpty {
             Section {
-                ForEach(store.listeners) { connectionRow($0) }
+                ForEach(Array(store.listeners.enumerated()), id: \.element.id) { idx, conn in
+                    ConnectionRow(conn: conn, zebra: idx % 2 == 1, store: store, pendingKill: $pendingKill)
+                }
             } header: {
                 Text(L("ports.listeners.header"))
             } footer: {
@@ -88,16 +90,42 @@ struct PortsView: View {
     @ViewBuilder private var connectionsSection: some View {
         if !store.active.isEmpty {
             Section {
-                ForEach(store.active) { connectionRow($0) }
+                ForEach(Array(store.active.enumerated()), id: \.element.id) { idx, conn in
+                    ConnectionRow(conn: conn, zebra: idx % 2 == 1, store: store, pendingKill: $pendingKill)
+                }
             } header: {
                 Text(L("ports.connections.header"))
             }
         }
     }
 
-    // MARK: - Row
+    // MARK: - Pieces
 
-    private func connectionRow(_ conn: Connection) -> some View {
+    private func messageBanner(_ message: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "info.circle.fill").foregroundStyle(.blue)
+            Text(message).font(.system(size: 11)).fixedSize(horizontal: false, vertical: true)
+            Spacer()
+            Button { store.actionMessage = nil } label: { Image(systemName: "xmark.circle.fill") }
+                .buttonStyle(.borderless).foregroundStyle(.secondary)
+        }
+    }
+}
+
+// MARK: - Row
+//
+// Its own View with row-local `@State isHovered`, so hovering re-renders ONLY this
+// row (not the whole list) — keeps scrolling/hover smooth. `zebra` tints odd rows;
+// hover takes precedence. The full-width `.listRowBackground` makes it easy to see
+// that a row's left (local) and right (remote / peer) belong to the same line.
+private struct ConnectionRow: View {
+    let conn: Connection
+    let zebra: Bool
+    let store: PortsStore
+    @Binding var pendingKill: Connection?
+    @State private var isHovered = false
+
+    var body: some View {
         HStack(spacing: 10) {
             Image(nsImage: store.icon(for: conn))
                 .resizable().frame(width: 26, height: 26)
@@ -106,7 +134,7 @@ struct PortsView: View {
                     Text(conn.command).fontWeight(.medium).lineLimit(1).truncationMode(.middle)
                     Text(String(format: L("ports.pidLabel"), conn.pid))
                         .font(.system(size: 10)).foregroundStyle(.tertiary)
-                    protoBadge(conn)
+                    protoBadge
                     if let state = conn.state { stateBadge(state) }
                     if conn.dupCount > 1 { badge("×\(conn.dupCount)", .gray) }
                     if conn.runsAsRoot {
@@ -117,7 +145,6 @@ struct PortsView: View {
                     Text(conn.localDisplay)
                         .font(.system(size: 11, design: .monospaced))
                         .textSelection(.enabled)
-                    // Service label sits right after the port it describes.
                     if let svc = PortServices.name(for: conn.localPort) { badge(svc, .purple) }
                     if !conn.isListening {
                         Image(systemName: "arrow.right").font(.system(size: 8)).foregroundStyle(.tertiary)
@@ -128,9 +155,9 @@ struct PortsView: View {
                         if let rport = conn.remotePort, let svc = PortServices.name(for: rport) {
                             badge(svc, .purple)
                         }
-                        // If the destination is a local listening process, show it
-                        // in parentheses (it's the OWNER of the remote endpoint,
-                        // not a further hop A→B→C).
+                        // Destination owned by a local listening process → show it
+                        // in parentheses (it's the owner of the remote endpoint,
+                        // not a further A→B→C hop).
                         if let peer = conn.peerCommand, let ppid = conn.peerPid {
                             Text("(").font(.system(size: 11)).foregroundStyle(.tertiary)
                             Image(nsImage: store.icon(pid: ppid, path: conn.peerExecutablePath))
@@ -151,26 +178,22 @@ struct PortsView: View {
             .help(conn.isCurrentUser ? L("ports.kill") : L("ports.root.hint"))
         }
         .padding(.vertical, 2)
+        .contentShape(Rectangle())                 // whole row width hit-tests for hover
+        .onHover { isHovered = $0 }
+        .listRowBackground(rowBackground)
     }
 
-    private func protoBadge(_ conn: Connection) -> some View {
+    private var rowBackground: Color {
+        if isHovered { return Color.primary.opacity(0.09) }
+        return zebra ? Color.primary.opacity(0.035) : Color.clear
+    }
+
+    private var protoBadge: some View {
         badge(conn.isIPv6 ? "\(conn.proto)6" : conn.proto, conn.proto == "TCP" ? .blue : .teal)
     }
 
     private func stateBadge(_ state: String) -> some View {
         badge(state, state == "LISTEN" ? .green : .gray)
-    }
-
-    // MARK: - Pieces
-
-    private func messageBanner(_ message: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "info.circle.fill").foregroundStyle(.blue)
-            Text(message).font(.system(size: 11)).fixedSize(horizontal: false, vertical: true)
-            Spacer()
-            Button { store.actionMessage = nil } label: { Image(systemName: "xmark.circle.fill") }
-                .buttonStyle(.borderless).foregroundStyle(.secondary)
-        }
     }
 
     private func badge(_ text: String, _ color: Color) -> some View {
