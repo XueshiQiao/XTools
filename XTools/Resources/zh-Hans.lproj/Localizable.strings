@@ -309,7 +309,7 @@
 "mem.empty" = "无法读取内存统计信息。";
 
 /* Sections */
-"mem.section.headline" = "内存压力";
+"mem.section.headline" = "概览";
 "mem.section.breakdown" = "当前明细";
 
 /* Composition (stacked bar) */

@@ -309,7 +309,7 @@
 "mem.empty" = "Couldn't read the memory statistics.";
 
 /* Sections */
-"mem.section.headline" = "Memory Pressure";
+"mem.section.headline" = "Overview";
 "mem.section.breakdown" = "Current Breakdown";
 
 /* Composition (stacked bar) */
