@@ -5,13 +5,31 @@
     <link>https://github.com/XueshiQiao/XTools</link>
     <language>en</language>
     <item>
-      <title>Version 26.06.3</title>
-      <description><![CDATA[<ul>Bug fixes and improvements.</ul>]]></description>
-      <pubDate>Mon, 22 Jun 2026 03:12:58 +0000</pubDate>
-      <sparkle:version>3</sparkle:version>
-      <sparkle:shortVersionString>26.06.3</sparkle:shortVersionString>
+      <title>Version 26.06.4</title>
+      <description><![CDATA[<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body>
+
+<h3>What's New in 26.06.4</h3>
+<ul>
+  <li><b>New tool — Memory:</b> See memory pressure at a glance, plus a stacked bar showing how your RAM is split up (Wired / App / Compressed / Cached / Free) and Swap on its own. Every metric has a plain-language explanation, so you don't need to know the jargon.</li>
+  <li><b>New — Dashboard:</b> A glanceable overview that's now the landing page. Cards for Memory, Battery, Wake Locks, Ports, Disk, and Swap — each one click away from its full tool.</li>
+</ul>
+
+<h3>26.06.4 更新内容</h3>
+<ul>
+  <li><b>新增工具 · 内存:</b>一眼看清内存压力,并用堆叠条展示内存是怎么分配的(锁定 / 应用 / 已压缩 / 已缓存 / 空闲),交换区单独列出。每一项指标都配了大白话解释,不用懂术语也看得明白。</li>
+  <li><b>新增 · 概览 Dashboard:</b>启动即见的总览页,内存、电池、唤醒占用、端口、磁盘、交换区都做成卡片,点一下就进入对应工具。</li>
+</ul>
+
+</body>
+</html>]]></description>
+      <pubDate>Wed, 24 Jun 2026 15:39:18 +0000</pubDate>
+      <sparkle:version>4</sparkle:version>
+      <sparkle:shortVersionString>26.06.4</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://github.com/XueshiQiao/XTools/releases/download/v26.06.3/XTools.dmg" length="5853437" type="application/octet-stream" sparkle:edSignature="w9mW9Asei0il0vGsuXYt2OxKfMWDoRXJyCSQdiEkxs//esMGUDHXRdTwUPp31NTKKR4IZoQdZgBf+RZbd3X3CQ==" />
+      <enclosure url="https://github.com/XueshiQiao/XTools/releases/download/v26.06.4/XTools.dmg" length="6076368" type="application/octet-stream" sparkle:edSignature="Nof5xJ9vmSYzwExmb7ksHZpCLqb9mGjMX6KIBd/AMfhg91iQQTaE8rNqD4+qHkzHdDfyj9Oi/7UoQ6PuITZAAw==" />
     </item>
   </channel>
 </rss>
