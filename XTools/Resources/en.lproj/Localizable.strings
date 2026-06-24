@@ -321,6 +321,12 @@
 "mem.cat.cached" = "Cached Files";
 "mem.cat.other" = "Other";
 "mem.cat.free" = "Free";
+"mem.cat.wired.sub" = "Locked by the kernel and critical services — can't be compressed or swapped out.";
+"mem.cat.app.sub" = "Memory apps are actively using (anonymous, not file cache).";
+"mem.cat.compressed.sub" = "Idle memory macOS compressed inside RAM — much faster than writing swap to disk.";
+"mem.cat.cached.sub" = "Recently-read files kept in RAM; reclaimed instantly when memory is needed.";
+"mem.cat.other.sub" = "Kernel and miscellaneous allocations.";
+"mem.cat.free.sub" = "Completely unused. macOS keeps RAM nearly full by design, so a low Free is normal.";
 "mem.compressed.savings" = "Physical %1$@ holds %2$@ (saved %3$@)";
 
 /* Swap (its own section) */

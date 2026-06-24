@@ -321,6 +321,12 @@
 "mem.cat.cached" = "已缓存文件";
 "mem.cat.other" = "其它";
 "mem.cat.free" = "空闲";
+"mem.cat.wired.sub" = "内核与关键服务占用、不能被压缩或换出的内存。";
+"mem.cat.app.sub" = "应用程序正在使用的内存(匿名内存,不是文件缓存)。";
+"mem.cat.compressed.sub" = "macOS 把不常用内存压缩存在 RAM 里——比写磁盘 swap 快得多,是省内存的正常手段。";
+"mem.cat.cached.sub" = "缓存最近读过的文件;内存紧张时可立即回收。";
+"mem.cat.other.sub" = "内核及其它杂项占用。";
+"mem.cat.free.sub" = "完全未使用的内存。macOS 倾向把内存用满,所以空闲少很正常。";
 "mem.compressed.savings" = "物理 %1$@ 装下 %2$@(省了 %3$@)";
 
 /* Swap (its own section) */

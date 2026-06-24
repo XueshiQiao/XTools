@@ -120,6 +120,10 @@ struct MemoryView: View {
                     .overlay(RoundedRectangle(cornerRadius: 3, style: .continuous).strokeBorder(.black.opacity(0.08)))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(L(cat.labelKey))
+                    Text(L(cat.labelKey + ".sub"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                     if cat.id == "compressed", snap.hasCompressionSavings {
                         Text(String(format: L("mem.compressed.savings"),
                                     byteText(snap.compressedPhysical),
