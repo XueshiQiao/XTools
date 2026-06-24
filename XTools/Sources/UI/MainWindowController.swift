@@ -54,6 +54,9 @@ struct MainView: View {
         NavigationSplitView {
             List(selection: $appState.selection) {
                 Section {
+                    builtinRow(.dashboard, symbol: "square.grid.2x2.fill", color: .blue, title: L("dashboard.title"))
+                }
+                Section {
                     ForEach(appState.tools, id: \.id) { tool in
                         toolRow(tool)
                     }
@@ -90,6 +93,8 @@ struct MainView: View {
     @ViewBuilder
     private var detail: some View {
         switch appState.selection {
+        case .dashboard:
+            DashboardView()
         case .tool(let id):
             if let tool = appState.tool(for: id) {
                 tool.makeRootView()

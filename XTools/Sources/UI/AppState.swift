@@ -31,13 +31,16 @@ final class AppState: ObservableObject {
         self.updateController = updateController
         let tools = ToolRegistry.makeAllTools()
         self.tools = tools
-        // Default to the first tool; `XTOOLS_TAB=<tool id>` overrides (dev/screenshot
-        // affordance, inert in normal use).
+        // Default to the Dashboard overview; `XTOOLS_TAB=<tool id>` overrides
+        // (dev/screenshot affordance, inert in normal use), and `XTOOLS_TAB=dashboard`
+        // is honored explicitly.
         let envTab = ProcessInfo.processInfo.environment["XTOOLS_TAB"]
-        if let envTab, tools.contains(where: { $0.id == envTab }) {
+        if let envTab, envTab == "dashboard" {
+            self.selection = .dashboard
+        } else if let envTab, tools.contains(where: { $0.id == envTab }) {
             self.selection = .tool(envTab)
         } else {
-            self.selection = tools.first.map { SidebarItem.tool($0.id) } ?? .general
+            self.selection = .dashboard
         }
 
         // Start each tool's app-lifetime background work.

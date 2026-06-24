@@ -376,3 +376,27 @@
 
 /* Misc */
 "mem.value.unknown" = "Unknown";
+
+/* ───────────── Dashboard ───────────── */
+"dashboard.title" = "Dashboard";
+"dashboard.card.memory" = "Memory";
+"dashboard.pressure" = "Pressure %@";
+"dashboard.memory.used" = "%1$@ of %2$@ used";
+"dashboard.free.label" = "available";
+"dashboard.free.short" = "free";
+"dashboard.card.battery" = "Battery";
+"dashboard.battery.charging" = "Charging";
+"dashboard.battery.onBattery" = "On battery";
+"dashboard.battery.health" = "Health %ld%%";
+"dashboard.card.wake" = "Wake Locks";
+"dashboard.wake.none" = "Nothing blocking display sleep";
+"dashboard.wake.count" = "%ld blocking display sleep";
+"dashboard.card.ports" = "Ports";
+"dashboard.ports.unit" = "listening";
+"dashboard.ports.sub" = "%ld active connections";
+"dashboard.card.disk" = "Disk";
+"dashboard.disk.freeUnit" = "free";
+"dashboard.disk.total" = "of %@ total";
+"dashboard.card.swap" = "Swap";
+"dashboard.swap.sub" = "on disk · not part of RAM";
+"dashboard.placeholder" = "Claude usage, CPU, network…\ncoming soon";

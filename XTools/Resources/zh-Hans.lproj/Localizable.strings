@@ -376,3 +376,27 @@
 
 /* Misc */
 "mem.value.unknown" = "未知";
+
+/* ───────────── 概览 Dashboard ───────────── */
+"dashboard.title" = "概览";
+"dashboard.card.memory" = "内存";
+"dashboard.pressure" = "压力 %@";
+"dashboard.memory.used" = "已用 %1$@ / %2$@";
+"dashboard.free.label" = "可用";
+"dashboard.free.short" = "可用";
+"dashboard.card.battery" = "电池";
+"dashboard.battery.charging" = "充电中";
+"dashboard.battery.onBattery" = "使用电池";
+"dashboard.battery.health" = "健康 %ld%%";
+"dashboard.card.wake" = "唤醒占用";
+"dashboard.wake.none" = "无进程阻止息屏";
+"dashboard.wake.count" = "%ld 个进程阻止息屏";
+"dashboard.card.ports" = "端口";
+"dashboard.ports.unit" = "监听";
+"dashboard.ports.sub" = "%ld 个活动连接";
+"dashboard.card.disk" = "磁盘";
+"dashboard.disk.freeUnit" = "可用";
+"dashboard.disk.total" = "共 %@";
+"dashboard.card.swap" = "交换区";
+"dashboard.swap.sub" = "在磁盘 · 不算进内存";
+"dashboard.placeholder" = "Claude usage、CPU、网络…\n即将加入";

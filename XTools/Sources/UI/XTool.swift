@@ -42,8 +42,10 @@ extension XToolModule {
     func shutdown() {}
 }
 
-/// What the sidebar can select: a tool (by id) or one of the built-in pages.
+/// What the sidebar can select: the dashboard, a tool (by id), or one of the
+/// built-in pages.
 enum SidebarItem: Hashable {
+    case dashboard
     case tool(String)
     case general
     case about
@@ -51,6 +53,7 @@ enum SidebarItem: Hashable {
     /// Stable id stem for accessibility identifiers.
     var axID: String {
         switch self {
+        case .dashboard:    return "dashboard"
         case .tool(let id): return "tool_\(id)"
         case .general:      return "general"
         case .about:        return "about"
