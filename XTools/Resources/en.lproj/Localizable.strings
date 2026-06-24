@@ -303,3 +303,53 @@
 "ports.msg.killed" = "Killed %@.";
 "ports.msg.failed" = "Couldn't kill %@.";
 "ports.msg.changed" = "%@ changed since the scan — refreshed.";
+
+/* ───────────── Memory ───────────── */
+"tool.memory.title" = "Memory";
+"mem.empty" = "Couldn't read the memory statistics.";
+
+/* Sections */
+"mem.section.headline" = "Memory Pressure";
+"mem.section.breakdown" = "Current Breakdown";
+
+/* Headline */
+"mem.pressure.title" = "Pressure Level";
+"mem.pressure.sub" = "How tight memory is overall — green = relaxed, nothing to worry about.";
+"mem.pressure.normal" = "Normal";
+"mem.pressure.warning" = "Warning";
+"mem.pressure.critical" = "Critical";
+"mem.free.title" = "System-wide Free";
+"mem.free.sub" = "The value at the bottom of Activity Monitor's Memory tab — higher is more headroom.";
+"mem.total.title" = "Total RAM";
+
+/* Breakdown rows */
+"mem.row.free" = "Free";
+"mem.row.free.sub" = "Completely unused RAM. macOS deliberately fills RAM with caches, so a low Free is normal — not a sign of trouble.";
+"mem.row.active" = "Active";
+"mem.row.active.sub" = "Memory currently in use.";
+"mem.row.inactive" = "Inactive";
+"mem.row.inactive.sub" = "Recently used; can be reclaimed and reused at any time.";
+"mem.row.wired" = "Wired";
+"mem.row.wired.sub" = "Locked by the kernel and critical services — can't be compressed or swapped out.";
+"mem.row.compressed" = "Compressed";
+"mem.row.compressed.sub" = "macOS compresses idle memory inside RAM (much faster than writing swap to disk) — its normal way to save memory.";
+"mem.row.purgeable" = "Purgeable";
+"mem.row.purgeable.sub" = "Cache-like pages that can be dropped instantly under pressure.";
+"mem.row.swap" = "Swap Used";
+"mem.row.swap.sub" = "Memory written out to disk. A little is fine; steady growth means memory is tight.";
+"mem.swap.usedOf" = "%1$@ used of %2$@";
+
+/* Cumulative counters (since boot) */
+"mem.counters.title" = "Cumulative counters (since boot — not current state)";
+"mem.counters.footer" = "Totals accumulated since boot — NOT the current state. The longer the Mac has been up, the bigger these get; don't be alarmed by the digit count. (Throttled 0 is best — no process was slowed by memory pressure.)";
+"mem.counter.pageins" = "Pageins";
+"mem.counter.pageouts" = "Pageouts";
+"mem.counter.swapins" = "Swapins";
+"mem.counter.swapouts" = "Swapouts";
+"mem.counter.compressions" = "Compressions";
+"mem.counter.decompressions" = "Decompressions";
+"mem.counter.purged" = "Purged";
+"mem.counter.throttled" = "Throttled";
+
+/* Misc */
+"mem.value.unknown" = "Unknown";

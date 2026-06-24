@@ -13,6 +13,7 @@ enum ToolRegistry {
             DNSToolsTool(),
             DefaultAppsTool(),
             PortsTool(),
+            MemoryTool(),
             // Add future tools here.
         ]
     }

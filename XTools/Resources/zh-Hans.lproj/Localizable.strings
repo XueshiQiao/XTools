@@ -303,3 +303,53 @@
 "ports.msg.killed" = "已结束「%@」。";
 "ports.msg.failed" = "无法结束「%@」。";
 "ports.msg.changed" = "「%@」自上次扫描后已发生变化 —— 已刷新。";
+
+/* ───────────── 内存压力 ───────────── */
+"tool.memory.title" = "内存压力";
+"mem.empty" = "无法读取内存统计信息。";
+
+/* Sections */
+"mem.section.headline" = "内存压力";
+"mem.section.breakdown" = "当前明细";
+
+/* Headline */
+"mem.pressure.title" = "压力等级";
+"mem.pressure.sub" = "系统对内存紧张程度的总判断;绿色=正常,完全不用担心。";
+"mem.pressure.normal" = "正常";
+"mem.pressure.warning" = "警告";
+"mem.pressure.critical" = "紧急";
+"mem.free.title" = "系统空闲百分比";
+"mem.free.sub" = "活动监视器 Memory 标签最底部那个值;越高越从容。";
+"mem.total.title" = "总内存";
+
+/* Breakdown rows */
+"mem.row.free" = "空闲 (Free)";
+"mem.row.free.sub" = "完全未使用的内存。macOS 倾向把内存用满(做缓存),所以 Free 低很正常,不代表紧张。";
+"mem.row.active" = "活跃 (Active)";
+"mem.row.active.sub" = "正在使用中的内存。";
+"mem.row.inactive" = "不活跃 (Inactive)";
+"mem.row.inactive.sub" = "最近用过、可随时回收挪作他用的内存。";
+"mem.row.wired" = "联动 (Wired)";
+"mem.row.wired.sub" = "内核与关键服务占用、不能被压缩或换出的内存。";
+"mem.row.compressed" = "已压缩 (Compressed)";
+"mem.row.compressed.sub" = "macOS 把不常用内存压缩存在 RAM 里(比写磁盘 swap 快得多),是省内存的正常手段。";
+"mem.row.purgeable" = "可清除 (Purgeable)";
+"mem.row.purgeable.sub" = "缓存类、内存紧张时可立即丢弃的内存。";
+"mem.row.swap" = "已用 Swap";
+"mem.row.swap.sub" = "被写到磁盘的内存。少量正常;持续增长说明内存吃紧。";
+"mem.swap.usedOf" = "已用 %1$@ / 共 %2$@";
+
+/* Cumulative counters (since boot) */
+"mem.counters.title" = "累计计数(自开机以来 —— 非当前状态)";
+"mem.counters.footer" = "自开机以来的累计次数,不是当前状态——开机越久数字越大,别被位数吓到。(被限速=0 最好,说明没有进程因内存压力被拖慢。)";
+"mem.counter.pageins" = "换入次数 (Pageins)";
+"mem.counter.pageouts" = "换出次数 (Pageouts)";
+"mem.counter.swapins" = "Swap 换入 (Swapins)";
+"mem.counter.swapouts" = "Swap 换出 (Swapouts)";
+"mem.counter.compressions" = "压缩次数";
+"mem.counter.decompressions" = "解压次数";
+"mem.counter.purged" = "已清除次数";
+"mem.counter.throttled" = "被限速次数";
+
+/* Misc */
+"mem.value.unknown" = "未知";
