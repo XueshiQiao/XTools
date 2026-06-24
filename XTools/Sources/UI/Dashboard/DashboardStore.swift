@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import Combine
 
 /// Aggregated, glanceable summaries for the Dashboard overview — one cheap-ish
@@ -29,6 +30,10 @@ final class DashboardStore: ObservableObject {
     private var scanning = false      // coalesce overlapping refreshes
 
     func refresh() {
+        // XTools is a menu-bar app: closing the window only hides it, so this
+        // view and its 8s timer stay alive. Skip the (lsof-spawning) scan whenever
+        // no window is visible, so we don't drain CPU/battery in the background.
+        guard NSApp.windows.contains(where: { $0.isVisible }) else { return }
         guard !scanning else { return }
         scanning = true
         isLoading = true

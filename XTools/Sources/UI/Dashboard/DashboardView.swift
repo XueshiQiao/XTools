@@ -80,7 +80,9 @@ private struct CardShell<Content: View>: View {
                         .strokeBorder(hover && destination != nil ? Color.accentColor.opacity(0.55) : Color.primary.opacity(0.06))
                 )
         )
-        .contentShape(Rectangle())
+        // Hit area matches the visible rounded card (no clickable dead zones at
+        // the corners) — only nav cards capture taps.
+        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .onTapGesture { if let destination { appState.selection = destination } }
         .onHover { hover = $0 }
     }
@@ -213,15 +215,22 @@ private struct CompositionRing: View {
                 let lw: CGFloat = 11
                 let r = (min(size.width, size.height) - lw) / 2
                 let c = CGPoint(x: size.width / 2, y: size.height / 2)
-                guard total > 0 else {
+                // Normalize against the actual sum of slices, not total RAM: the
+                // partition usually equals total (Other balances it), but a
+                // non-atomic read can overshoot — dividing by the sum keeps the
+                // ring exactly full with no overlap, and shows a gray placeholder
+                // when there's nothing to draw.
+                let active = categories.filter { $0.bytes > 0 }
+                let sum = active.reduce(UInt64(0)) { $0 + $1.bytes }
+                guard sum > 0 else {
                     var ring = Path()
                     ring.addArc(center: c, radius: r, startAngle: .degrees(0), endAngle: .degrees(360), clockwise: false)
                     ctx.stroke(ring, with: .color(.gray.opacity(0.3)), style: StrokeStyle(lineWidth: lw))
                     return
                 }
                 var start = -90.0
-                for cat in categories where cat.bytes > 0 {
-                    let sweep = Double(cat.bytes) / Double(total) * 360
+                for cat in active {
+                    let sweep = Double(cat.bytes) / Double(sum) * 360
                     var arc = Path()
                     arc.addArc(center: c, radius: r,
                                startAngle: .degrees(start), endAngle: .degrees(start + sweep), clockwise: false)
