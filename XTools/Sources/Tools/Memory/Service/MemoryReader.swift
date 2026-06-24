@@ -1,5 +1,6 @@
 import Foundation
 import Darwin
+import SwiftUI   // Color, for the composition palette
 
 /// Reads system memory state from two read-only sources (no sudo, no prompt):
 ///
@@ -15,6 +16,7 @@ enum MemoryReader {
 
     private static let log = FileLog("MemoryReader")
     private static let memoryPressurePath = "/usr/bin/memory_pressure"
+    private static let vmStatPath = "/usr/bin/vm_stat"
 
     static func read() -> MemorySnapshot {
         var snap = MemorySnapshot()
@@ -33,6 +35,12 @@ enum MemoryReader {
         // memory_pressure → page counts + headline free %.
         let pages = parseMemoryPressure()
         snap.freePercent = pages.freePercent
+
+        // vm_stat → the page counts memory_pressure doesn't expose: anonymous
+        // (app), file-backed (cached), and the compressor's logical/physical
+        // footprint (for the savings figure).
+        let vm = parseVMStat()
+        func vmBytes(_ key: String) -> UInt64 { (vm[key] ?? 0) * pageSize }
 
         func bytes(_ key: String) -> UInt64 { (pages.counts[key] ?? 0) * pageSize }
 
@@ -57,6 +65,33 @@ enum MemoryReader {
                       label: L("mem.row.purgeable"), subtitle: L("mem.row.purgeable.sub"),
                       bytes: bytes("Pages purgeable"), symbol: "trash.fill", color: .orange),
         ]
+
+        // Memory composition — a partition of total RAM. Categories (in bytes):
+        //   wired      = wired down
+        //   app        = anonymous (uncompressed)
+        //   compressed = compressor physical footprint
+        //   cached     = file-backed pages
+        //   free       = free + speculative
+        //   other      = whatever's left so the slices sum to total RAM
+        let wired      = bytes("Pages wired down")
+        let app        = vmBytes("Anonymous pages")
+        let compressed = bytes("Pages used by compressor")     // physical footprint
+        let cached     = vmBytes("File-backed pages")
+        let free       = bytes("Pages free") &+ bytes("Pages speculative")
+        let accounted  = wired &+ app &+ compressed &+ cached &+ free
+        let other      = snap.totalRAM > accounted ? snap.totalRAM - accounted : 0
+
+        snap.categories = [
+            MemoryCategory(id: "wired",      labelKey: "mem.cat.wired",      bytes: wired,      color: Color(hex: "#6366f1")),
+            MemoryCategory(id: "app",        labelKey: "mem.cat.app",        bytes: app,        color: Color(hex: "#3b82f6")),
+            MemoryCategory(id: "compressed", labelKey: "mem.cat.compressed", bytes: compressed, color: Color(hex: "#a855f7")),
+            MemoryCategory(id: "cached",     labelKey: "mem.cat.cached",     bytes: cached,     color: Color(hex: "#14b8a6")),
+            MemoryCategory(id: "other",      labelKey: "mem.cat.other",      bytes: other,      color: Color(hex: "#9ca3af")),
+            MemoryCategory(id: "free",       labelKey: "mem.cat.free",       bytes: free,       color: Color(hex: "#e5e7eb")),
+        ]
+        // Compression savings: physical footprint vs the logical data it holds.
+        snap.compressedPhysical = compressed
+        snap.compressedLogical  = vmBytes("Pages stored in compressor")
 
         // Cumulative since-boot counters (raw counts, not bytes).
         func count(_ key: String) -> UInt64 { pages.counts[key] ?? 0 }
@@ -127,6 +162,49 @@ enum MemoryReader {
             try proc.run()
         } catch {
             log.error("failed to run memory_pressure: \(error)")
+            return nil
+        }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        proc.waitUntilExit()
+        return String(data: data, encoding: .utf8)
+    }
+
+    // MARK: - vm_stat parsing
+
+    /// Label prefixes we pull out of `vm_stat` — the page counts memory_pressure
+    /// doesn't surface. (memory_pressure already gives us wired/free/speculative.)
+    private static let vmStatLabels: Set<String> = [
+        "Anonymous pages", "File-backed pages", "Pages stored in compressor",
+    ]
+
+    /// Parses `vm_stat` lines like `Anonymous pages:    1243375.` into a
+    /// label→page-count map. The trailing `.` and surrounding whitespace are
+    /// stripped; we keep the leading run of digits.
+    private static func parseVMStat() -> [String: UInt64] {
+        var counts: [String: UInt64] = [:]
+        guard let out = runVMStat() else { return counts }
+        for rawLine in out.split(separator: "\n") {
+            let line = rawLine.trimmingCharacters(in: .whitespaces)
+            guard let colon = line.firstIndex(of: ":") else { continue }
+            let label = String(line[..<colon]).trimmingCharacters(in: .whitespaces)
+            guard vmStatLabels.contains(label) else { continue }
+            let rest = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
+            let digits = rest.prefix { $0.isNumber }
+            if let n = UInt64(digits) { counts[label] = n }
+        }
+        return counts
+    }
+
+    private static func runVMStat() -> String? {
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: vmStatPath)
+        let pipe = Pipe()
+        proc.standardOutput = pipe
+        proc.standardError = Pipe()   // swallow stderr
+        do {
+            try proc.run()
+        } catch {
+            log.error("failed to run vm_stat: \(error)")
             return nil
         }
         let data = pipe.fileHandleForReading.readDataToEndOfFile()

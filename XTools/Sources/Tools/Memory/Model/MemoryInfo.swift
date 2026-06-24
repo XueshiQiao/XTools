@@ -53,6 +53,36 @@ struct MemoryRow: Identifiable {
     let color: Color
 }
 
+/// One slice of the "Memory Composition" stacked bar — a partition of total
+/// physical RAM into Wired / App / Compressed / Cached / Other / Free. These
+/// sum to ≈ total RAM, so each slice's width is `bytes / totalRAM`. `id` doubles
+/// as the localization key suffix (`mem.cat.<id>`).
+struct MemoryCategory: Identifiable {
+    let id: String          // "wired", "app", "compressed", "cached", "other", "free"
+    let labelKey: String    // localized label key, e.g. "mem.cat.wired"
+    let bytes: UInt64
+    let color: Color
+}
+
+extension Color {
+    /// Builds a Color from a 6-digit hex string (`"#6366f1"` or `"6366f1"`),
+    /// used for the fixed composition palette. Falls back to gray on a malformed
+    /// string so a typo can't crash the bar.
+    init(hex: String) {
+        let s = hex.hasPrefix("#") ? String(hex.dropFirst()) : hex
+        var rgb: UInt64 = 0
+        guard s.count == 6, Scanner(string: s).scanHexInt64(&rgb) else {
+            self = .gray
+            return
+        }
+        self.init(.sRGB,
+                  red:   Double((rgb >> 16) & 0xFF) / 255,
+                  green: Double((rgb >>  8) & 0xFF) / 255,
+                  blue:  Double( rgb        & 0xFF) / 255,
+                  opacity: 1)
+    }
+}
+
 /// One cumulative since-boot counter (pageins, swapouts, …). These are monotonic
 /// totals, NOT current state, so they're shown as plain counts in a collapsed
 /// disclosure to avoid alarming the user with the big digit counts.
@@ -71,6 +101,12 @@ struct MemorySnapshot {
     var freePercent: Int?                 // "System-wide memory free percentage"
     var totalRAM: UInt64 = 0              // hw.memsize
 
+    // Composition: a partition of total RAM into Wired/App/Compressed/Cached/
+    // Other/Free, in display order. Drives the stacked bar + legend.
+    var categories: [MemoryCategory] = []
+    var compressedPhysical: UInt64 = 0   // bytes the compressor actually occupies
+    var compressedLogical: UInt64 = 0    // logical bytes those compressed pages hold
+
     var rows: [MemoryRow] = []           // Free / Active / Inactive / Wired / …
     var swapUsed: UInt64 = 0
     var swapTotal: UInt64 = 0
@@ -81,4 +117,11 @@ struct MemorySnapshot {
     // one non-zero breakdown row (memory_pressure). Otherwise the breakdown would
     // render as a wall of "0 bytes" and we should show the placeholder instead.
     var isValid: Bool { totalRAM > 0 && rows.contains { $0.bytes > 0 } }
+
+    // The composition bar needs total RAM plus at least one non-zero category.
+    var hasComposition: Bool { totalRAM > 0 && categories.contains { $0.bytes > 0 } }
+
+    // Show the "physical holds logical" savings line only when the compressor is
+    // actually holding more logical data than it physically occupies.
+    var hasCompressionSavings: Bool { compressedLogical > compressedPhysical && compressedPhysical > 0 }
 }

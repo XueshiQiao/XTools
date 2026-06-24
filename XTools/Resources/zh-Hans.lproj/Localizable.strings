@@ -312,6 +312,23 @@
 "mem.section.headline" = "内存压力";
 "mem.section.breakdown" = "当前明细";
 
+/* Composition (stacked bar) */
+"mem.composition.header" = "内存构成";
+"mem.composition.footer" = "这些类别是对物理内存的一次划分。macOS 会尽量把内存用满,所以空闲少很正常。";
+"mem.cat.wired" = "锁定";
+"mem.cat.app" = "应用";
+"mem.cat.compressed" = "已压缩";
+"mem.cat.cached" = "已缓存文件";
+"mem.cat.other" = "其它";
+"mem.cat.free" = "空闲";
+"mem.compressed.savings" = "物理 %1$@ 装下 %2$@(省了 %3$@)";
+
+/* Swap (its own section) */
+"mem.swap.header" = "交换区(磁盘)";
+
+/* Raw page counts (collapsed) */
+"mem.raw.header" = "原始页计数";
+
 /* Headline */
 "mem.pressure.title" = "压力等级";
 "mem.pressure.sub" = "系统对内存紧张程度的总判断;绿色=正常,完全不用担心。";

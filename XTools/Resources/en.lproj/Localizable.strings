@@ -312,6 +312,23 @@
 "mem.section.headline" = "Memory Pressure";
 "mem.section.breakdown" = "Current Breakdown";
 
+/* Composition (stacked bar) */
+"mem.composition.header" = "Memory Composition";
+"mem.composition.footer" = "These categories partition your total RAM. macOS keeps RAM nearly full by design — a low Free is normal.";
+"mem.cat.wired" = "Wired";
+"mem.cat.app" = "App";
+"mem.cat.compressed" = "Compressed";
+"mem.cat.cached" = "Cached Files";
+"mem.cat.other" = "Other";
+"mem.cat.free" = "Free";
+"mem.compressed.savings" = "Physical %1$@ holds %2$@ (saved %3$@)";
+
+/* Swap (its own section) */
+"mem.swap.header" = "Swap (on disk)";
+
+/* Raw page counts (collapsed) */
+"mem.raw.header" = "Raw page counts";
+
 /* Headline */
 "mem.pressure.title" = "Pressure Level";
 "mem.pressure.sub" = "How tight memory is overall — green = relaxed, nothing to worry about.";
