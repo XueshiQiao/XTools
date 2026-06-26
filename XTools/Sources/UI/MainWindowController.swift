@@ -32,18 +32,16 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     }
 
     func show() {
-        // Dispatch so an invoking status-bar menu finishes tracking first;
-        // activating mid-menu-tracking is what intermittently left the window
-        // behind other apps (e.g. Chrome). `orderFrontRegardless` then forces it
-        // above other apps' windows even if cooperative activation is denied.
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            if !self.window.isVisible { self.window.center() }
-            NSApp.activate(ignoringOtherApps: true)
-            self.window.makeKeyAndOrderFront(nil)
-            self.window.orderFrontRegardless()
-            FileLog("MainWindow").debug("window shown — windowNumber=\(self.window.windowNumber)")
-        }
+        // NOTE: keep this simple — activate the app, then makeKeyAndOrderFront so
+        // the window becomes KEY and its text fields can receive input. An earlier
+        // attempt to also force front via `orderFrontRegardless` showed the window
+        // without keying it, which broke text-field focus app-wide (keystrokes
+        // leaked to the previously-active app). Don't reintroduce that.
+        if !window.isVisible { window.center() }
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+        let n = window.windowNumber
+        FileLog("MainWindow").debug("window shown — windowNumber=\(n)")
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
