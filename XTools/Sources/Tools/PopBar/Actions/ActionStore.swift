@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import SwiftUI   // for Array.move(fromOffsets:toOffset:) used by reorder
 
 /// Owns the user's configurable capsule actions, persisted as a JSON array under
 /// Application Support. Seeds the defaults on first run. Shared by the settings
