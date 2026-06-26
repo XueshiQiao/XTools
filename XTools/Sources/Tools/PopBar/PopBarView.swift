@@ -123,13 +123,21 @@ struct PopBarView: View {
                 Button(L("popbar.actions.reset")) { actions.resetToDefaults() }
                     .foregroundStyle(.secondary)
             }
+            Toggle(isOn: Binding(get: { store.autoExpandHeight },
+                                 set: { store.setAutoExpandHeight($0) })) {
+                iconLabel("arrow.up.and.down.text.horizontal", .indigo, L("popbar.autoheight.label"))
+            }
             Button { store.showPreview() } label: {
                 Label(L("popbar.preview.button"), systemImage: "eye")
             }
         } header: {
             Text(L("popbar.actions.header"))
         } footer: {
-            Text(L("popbar.actions.footer2")).fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L("popbar.actions.footer2"))
+                Text(L("popbar.autoheight.footer"))
+            }
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
 

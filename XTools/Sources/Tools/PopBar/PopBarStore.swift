@@ -7,6 +7,7 @@ import AppKit
 final class PopBarStore: ObservableObject {
 
     @Published var isEnabled: Bool
+    @Published var autoExpandHeight: Bool
     @Published private(set) var isTrusted: Bool
 
     private let controller: PopBarController
@@ -14,6 +15,7 @@ final class PopBarStore: ObservableObject {
     init(controller: PopBarController) {
         self.controller = controller
         self.isEnabled = PopBarPreferences.isEnabled
+        self.autoExpandHeight = PopBarPreferences.autoExpandHeight
         self.isTrusted = AccessibilityAuthorizer.isTrusted
     }
 
@@ -32,6 +34,15 @@ final class PopBarStore: ObservableObject {
         } else {
             controller.stop()
         }
+    }
+
+    /// Toggle whether the result panel auto-grows its height to fit content.
+    /// Persisted in PopBar's own prefs; the controller pushes it to a live panel
+    /// so an already-open result honors the change immediately.
+    func setAutoExpandHeight(_ on: Bool) {
+        autoExpandHeight = on
+        PopBarPreferences.autoExpandHeight = on
+        controller.setAutoExpandHeight(on)
     }
 
     /// Re-check the Accessibility grant (the user may toggle it in System

@@ -43,6 +43,23 @@ final class PopBarPanel {
     /// doesn't get mistaken for a user drag in the move observer.
     private var repositioning = false
     private var moveObserver: NSObjectProtocol?
+    /// Last window height we fit to. Used to coalesce auto-expand re-fits: a
+    /// content-height change only re-fits if the measured window size actually
+    /// changed, so steady text costs nothing.
+    private var lastFitHeight: CGFloat = 0
+
+    /// Auto-expand (issue #12) bounds for the result scroll area. The content
+    /// grows within `[min, max]`; beyond `max` it scrolls. `max` is further capped
+    /// at run time to ~60% of the popup's own screen so a tall result can't exceed
+    /// a small display.
+    private let resultMinHeight: CGFloat = 120
+    private let resultMaxHeight: CGFloat = 560
+    private let resultScreenFraction: CGFloat = 0.6
+    /// Latest natural content height SwiftUI reported, cached regardless of the
+    /// auto-expand flag so toggling the setting ON for an already-open result can
+    /// clamp + apply it immediately (the content size may not change, so the
+    /// measurement callback would not fire again on its own).
+    private var lastMeasuredContentHeight: CGFloat = 0
 
     init() {
         panel = NSPanel(
@@ -83,6 +100,13 @@ final class PopBarPanel {
             guard let self, !self.repositioning else { return }
             self.userMoved = true
         }
+
+        // SwiftUI reports the result content's natural height here; we clamp it
+        // against the popup's screen and re-fit. This single path drives every
+        // auto-expand resize (streaming deltas, one-shot results, error results).
+        model.onMeasuredContentHeight = { [weak self] measured in
+            self?.applyMeasuredContentHeight(measured)
+        }
     }
 
     deinit {
@@ -111,6 +135,11 @@ final class PopBarPanel {
     func show(at screenPoint: CGPoint) {
         anchor = screenPoint
         userMoved = false   // a fresh popup re-anchors to the cursor
+        // Pick up the current auto-expand preference for this show (the user may
+        // have toggled it in settings since the last popup).
+        model.autoExpandHeight = PopBarPreferences.autoExpandHeight
+        model.resultContentHeight = nil   // re-measure for this popup's content
+        lastMeasuredContentHeight = 0     // drop the previous popup's measurement
         model.phase = .actions
         model.streamingText = ""
         setPinned(false)   // a fresh popup always starts unpinned
@@ -130,11 +159,58 @@ final class PopBarPanel {
         DispatchQueue.main.async { [weak self] in self?.fitAndPlace() }
     }
 
-    /// Push a streaming delta into an already-showing result panel. Does NOT re-fit
-    /// (the result frame is fixed at 300×130, so the window stays put); only the
-    /// text inside the scroll view changes. Caller guarantees we're in `.result`.
+    /// Push a streaming delta into an already-showing result panel. Caller
+    /// guarantees we're in `.result`.
+    ///
+    /// With auto-expand OFF (issue #7 behavior) the result frame is fixed, so the
+    /// window stays put — only the text inside the scroll view changes. With
+    /// auto-expand ON, the resulting content-height change is reported back through
+    /// `onMeasuredContentHeight`, which clamps + re-fits the window; we don't have
+    /// to do anything extra here.
     func updateResultText(_ text: String) {
         model.updateStreamingText(text)
+    }
+
+    /// Apply a live change to the auto-expand preference (from settings) onto an
+    /// already-open panel, then re-fit so the change takes effect immediately.
+    func setAutoExpandHeight(_ on: Bool) {
+        model.autoExpandHeight = on
+        // Turning ON: clamp the last-measured content and apply it so an already-open
+        // result grows immediately, even though its content size hasn't changed (the
+        // measurement callback wouldn't fire again on its own). Turning OFF: the view
+        // reverts to the fixed height.
+        if on { model.resultContentHeight = clampedResultHeight(forContent: lastMeasuredContentHeight) }
+        guard panel.isVisible else { return }
+        DispatchQueue.main.async { [weak self] in self?.fitAndPlace() }
+    }
+
+    /// SwiftUI measured the result content's natural height. Cache it (always),
+    /// then — when auto-expand is ON — clamp it against the popup's own screen +
+    /// the min/max, store it for the view to apply, and re-fit the window (coalesced
+    /// so an unchanged height costs nothing). When OFF we only cache, so a later
+    /// settings toggle can apply it without waiting for the next layout change.
+    private func applyMeasuredContentHeight(_ measured: CGFloat) {
+        lastMeasuredContentHeight = measured
+        guard model.autoExpandHeight else { return }
+        let clamped = clampedResultHeight(forContent: measured)
+        if let current = model.resultContentHeight, abs(current - clamped) < 0.5 { return }
+        model.resultContentHeight = clamped
+        // Let SwiftUI apply the new frame height, then size the window to it.
+        DispatchQueue.main.async { [weak self] in self?.fitAndPlace(coalesce: true) }
+    }
+
+    /// Clamp a measured content height to `[min, cap]`, where `cap` is the smaller
+    /// of `resultMaxHeight` and a fraction of the popup screen's visible height so a
+    /// tall result never exceeds the display it's shown on (issue #12).
+    private func clampedResultHeight(forContent measured: CGFloat) -> CGFloat {
+        // Use the screen the popup is actually on: its current frame center once the
+        // user has dragged it (issue #11), otherwise the anchor point.
+        let probe = userMoved ? CGPoint(x: panel.frame.midX, y: panel.frame.midY) : anchor
+        let screen = NSScreen.screens.first { $0.frame.contains(probe) } ?? NSScreen.main
+        let screenCap = (screen?.visibleFrame.height).map { $0 * resultScreenFraction } ?? resultMaxHeight
+        let cap = min(resultMaxHeight, screenCap)
+        let lower = min(resultMinHeight, cap)   // never above the cap on a tiny screen
+        return min(max(measured, lower), cap)
     }
 
     func hide() {
@@ -146,10 +222,18 @@ final class PopBarPanel {
 
     // MARK: - Sizing / placement
 
-    private func fitAndPlace() {
+    /// Size the window to its content and place it.
+    ///
+    /// `coalesce` (used by streaming re-fits) skips all work when the fitted height
+    /// is unchanged from the last fit, so a delta that doesn't grow the window
+    /// costs nothing beyond measuring.
+    private func fitAndPlace(coalesce: Bool = false) {
         guard let content = panel.contentView else { return }
         content.layoutSubtreeIfNeeded()
         let size = content.fittingSize
+
+        if coalesce && abs(size.height - lastFitHeight) < 0.5 { return }
+        lastFitHeight = size.height
 
         // Where to keep the popup as it resizes: by default re-anchor to the cursor;
         // once the user has dragged it, keep it pinned to where they put it (resize

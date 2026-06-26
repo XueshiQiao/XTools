@@ -14,6 +14,22 @@ final class PopBarPanelModel: ObservableObject {
     @Published var phase: Phase = .actions
     /// Whether the capsule is pinned open (ignores auto-dismiss).
     @Published var isPinned = false
+    /// Whether the result panel auto-grows its height to fit the content (issue
+    /// #12). When false (default), the result keeps its fixed compact size. Seeded
+    /// from `PopBarPreferences` and kept in sync so an already-open panel honors a
+    /// toggle change. Width is always fixed regardless of this flag.
+    @Published var autoExpandHeight = PopBarPreferences.autoExpandHeight
+    /// The height the result scroll area should use when auto-expand is ON. The
+    /// panel computes this (clamping the view's measured content height against the
+    /// popup's own screen — issue #12) and pushes it here; the view applies it.
+    /// `nil` means "not yet measured" → fall back to the fixed height.
+    @Published var resultContentHeight: CGFloat?
+
+    /// Reports the result content's natural (unclamped) height as SwiftUI measures
+    /// it. Wired by the panel, which knows the popup's screen and does the clamping
+    /// + window re-fit. This is the single trigger for auto-expand re-fits, so it
+    /// covers streaming deltas, one-shot results, and error results alike.
+    var onMeasuredContentHeight: ((CGFloat) -> Void)?
     /// Live text shown by the result panel. Kept separate from `phase` so streaming
     /// tokens can update the text WITHOUT re-entering `.result` (which would trigger
     /// a full window re-fit on every token). The result frame is fixed, so the
@@ -45,6 +61,11 @@ struct PopBarContentView: View {
     @ObservedObject var model: PopBarPanelModel
 
     private let cornerRadius: CGFloat = 11
+
+    /// The result content area's fixed width (always) and its fixed height when
+    /// auto-expand is OFF (today's behavior — issue #7).
+    private let resultWidth: CGFloat = 300
+    private let resultFixedHeight: CGFloat = 130
 
     var body: some View {
         content
@@ -141,10 +162,23 @@ struct PopBarContentView: View {
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    // Measure the rendered content's natural height so the panel can
+                    // grow to fit it when auto-expand is ON. The probe sits in a
+                    // background so it never affects layout; it only reports a size.
+                    .background(
+                        GeometryReader { geo in
+                            Color.clear.preference(key: ResultContentHeightKey.self,
+                                                   value: geo.size.height)
+                        }
+                    )
                     // Anchor used to keep the view pinned to the bottom as text grows.
                     Color.clear.frame(height: 1).id(Self.bottomAnchor)
                 }
-                .frame(width: 300, height: 130)
+                .frame(width: resultWidth, height: resultHeight)
+                // Report the measured natural height to the panel (it clamps against
+                // the popup's screen + re-fits the window). This is what makes a
+                // one-shot/error result grow too, not just streaming deltas.
+                .onPreferenceChange(ResultContentHeightKey.self) { model.onMeasuredContentHeight?($0) }
                 .onChange(of: text) { _ in
                     withAnimation(.linear(duration: 0.1)) { proxy.scrollTo(Self.bottomAnchor, anchor: .bottom) }
                 }
@@ -153,7 +187,26 @@ struct PopBarContentView: View {
         .padding(10)
     }
 
+    /// The result scroll area's height. OFF (default): exactly today's fixed
+    /// `resultFixedHeight`. ON: the panel-computed clamped height (which already
+    /// accounts for the popup's screen + min/max), falling back to the fixed height
+    /// until the first measurement lands — beyond the cap the content scrolls.
+    private var resultHeight: CGFloat {
+        guard model.autoExpandHeight else { return resultFixedHeight }
+        return model.resultContentHeight ?? resultFixedHeight
+    }
+
     private static let bottomAnchor = "popbar.result.bottom"
+}
+
+/// Reports the result content's natural height up to the parent so the panel can
+/// size to fit it when auto-expand is ON. Takes the max of reported values within
+/// a layout pass (only one probe exists, so this is effectively a pass-through).
+private struct ResultContentHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
 }
 
 // MARK: - Markdown image provider

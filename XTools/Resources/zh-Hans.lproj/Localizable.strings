@@ -469,6 +469,8 @@
 "popbar.actions.add" = "添加动作";
 "popbar.actions.reset" = "恢复默认";
 "popbar.actions.footer2" = "用箭头调整顺序 · 点击编辑 · 右键删除。每个动作可用默认模型，也可单独指定模型。";
+"popbar.autoheight.label" = "结果高度自适应内容";
+"popbar.autoheight.footer" = "开启后，结果面板会随内容变高以容纳更多文字（达到上限后改为滚动）；关闭则保持固定的紧凑尺寸。宽度始终不变。";
 "popbar.action.moveUp" = "上移";
 "popbar.action.moveDown" = "下移";
 "popbar.tag.needsKey" = "需密钥";

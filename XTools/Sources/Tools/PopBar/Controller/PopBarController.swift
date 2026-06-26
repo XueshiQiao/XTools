@@ -252,4 +252,10 @@ final class PopBarController {
         panel.show(at: center)
         Self.log.info("showing preview capsule")
     }
+
+    /// Push a live auto-expand preference change (from settings) onto the panel so
+    /// an already-open result honors it without waiting for the next popup.
+    func setAutoExpandHeight(_ on: Bool) {
+        panel.setAutoExpandHeight(on)
+    }
 }
