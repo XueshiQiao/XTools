@@ -33,15 +33,7 @@ struct LLMClient {
     /// trace (`reasoning_content`) is intentionally not read — we only want the
     /// answer — and any inline `<think>…</think>` is stripped defensively.
     func complete(system: String, user: String) async throws -> String {
-        var systemPrompt = system
-        if config.provider == "ollama" && config.reasoningEffort == "none" {
-            systemPrompt = "/no_think\n\(systemPrompt)"
-        }
-        let messages: [[String: String]] = [
-            ["role": "system", "content": systemPrompt],
-            ["role": "user", "content": user],
-        ]
-        let request = try buildRequest(messages: messages)
+        let request = try buildRequest(messages: messages(system: systemPrompt(system), user: user), stream: false)
         let (data, response) = try await URLSession.shared.data(for: request)
         try validate(response, data: data)
 
@@ -55,13 +47,92 @@ struct LLMClient {
         return Self.stripThinkTags(content).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// Streaming completion: same inputs/output as `complete()`, but the assistant
+    /// text is delivered incrementally via `onDelta` as Server-Sent Events arrive.
+    /// `onDelta` receives the *displayed* text so far (RAW accumulation with
+    /// `<think>…</think>` stripped — think tags can straddle deltas, so we re-strip
+    /// the whole buffer each flush). UI updates are throttled (~50ms) here so the
+    /// caller never has to; a final flush guarantees the last tokens are delivered.
+    /// Returns the final stripped + trimmed text, identical in shape to `complete()`.
+    /// Honors Swift `Task` cancellation — `URLSession.bytes` aborts the connection.
+    func stream(system: String, user: String, onDelta: @escaping (String) -> Void) async throws -> String {
+        let request = try buildRequest(messages: messages(system: systemPrompt(system), user: user), stream: true)
+        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        try await validate(streamingResponse: response, bytes: bytes)
+
+        var raw = ""
+        var lastFlushed = ""
+        var lastFlush = Date.distantPast
+        let flushInterval: TimeInterval = 0.05
+
+        // Strip complete `<think>…</think>` pairs, then hide everything from a
+        // complete-but-unclosed `<think>` onward (an open block still arriving).
+        func stripped() -> String {
+            let text = Self.stripThinkTags(raw)
+            if let open = text.range(of: "<think>") { return String(text[..<open.lowerBound]) }
+            return text
+        }
+        // LIVE display only: additionally hold back any trailing *partial* prefix of
+        // `<think>` (e.g. a half-arrived `<thi`) so the opener never flickers
+        // half-rendered. Not used for the final result, where a trailing `<` is real
+        // content, not an incomplete tag.
+        func displayed() -> String { Self.dropTrailingPartial(of: "<think>", in: stripped()) }
+        func flush(force: Bool) {
+            let text = displayed()
+            guard text != lastFlushed else { return }
+            if !force && Date().timeIntervalSince(lastFlush) < flushInterval { return }
+            lastFlushed = text
+            lastFlush = Date()
+            onDelta(text)
+        }
+
+        var sawSSE = false   // any `data:` line at all → this really is an SSE stream
+        for try await line in bytes.lines {
+            try Task.checkCancellation()
+            guard line.hasPrefix("data:") else { continue }
+            sawSSE = true
+            let payload = line.dropFirst(5).trimmingCharacters(in: .whitespaces)
+            if payload == "[DONE]" { break }
+            if payload.isEmpty { continue }
+            guard let data = payload.data(using: .utf8),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let choices = json["choices"] as? [[String: Any]],
+                  let delta = choices.first?["delta"] as? [String: Any],
+                  let chunk = delta["content"] as? String,
+                  !chunk.isEmpty
+            else { continue }   // role-only / finish / reasoning-only chunks → skip
+            raw += chunk
+            flush(force: false)
+        }
+        // A 200 response that wasn't actually SSE (no `data:` lines) means the
+        // provider/proxy ignored `stream: true` and returned a one-shot body. Throw
+        // so `runStreaming` falls back to `complete()` instead of showing "(empty)".
+        guard sawSSE else { throw LLMError.badResponse("Response was not a stream") }
+        flush(force: true)
+        // Final text: drop a never-closed think block, but keep any trailing `<…`
+        // (the stream is done, so it's real content, not an incomplete opener).
+        return stripped().trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     // MARK: - Request building (Flowy's per-provider thinking logic)
 
-    private func buildRequest(messages: [[String: String]]) throws -> URLRequest {
+    /// Prepend Ollama's `/no_think` directive when reasoning is off (mirrors `complete()`).
+    private func systemPrompt(_ system: String) -> String {
+        if config.provider == "ollama" && config.reasoningEffort == "none" {
+            return "/no_think\n\(system)"
+        }
+        return system
+    }
+
+    private func messages(system: String, user: String) -> [[String: String]] {
+        [["role": "system", "content": system], ["role": "user", "content": user]]
+    }
+
+    private func buildRequest(messages: [[String: String]], stream: Bool) throws -> URLRequest {
         var body: [String: Any] = [
             "model": config.model,
             "messages": messages,
-            "stream": false,
+            "stream": stream,
         ]
 
         let effort = LLMConfig.clampThinking(config.reasoningEffort, for: config.provider)
@@ -101,6 +172,36 @@ struct LLMClient {
             let snippet = body.count > 300 ? String(body.prefix(300)) + "…" : body
             throw LLMError.http(status: http.statusCode, message: snippet)
         }
+    }
+
+    /// Streaming variant: the body is an SSE byte stream, so on a non-2xx status
+    /// we drain it to recover the API's JSON error message before throwing.
+    private func validate(streamingResponse response: URLResponse, bytes: URLSession.AsyncBytes) async throws {
+        guard let http = response as? HTTPURLResponse else { return }
+        guard (200...299).contains(http.statusCode) else {
+            var body = ""
+            for try await line in bytes.lines {
+                body += line
+                if body.count > 300 { break }
+            }
+            let snippet = body.count > 300 ? String(body.prefix(300)) + "…" : body
+            throw LLMError.http(status: http.statusCode, message: snippet)
+        }
+    }
+
+    /// If `text` ends with a non-empty *partial* prefix of `marker` (e.g. text ends
+    /// with `<thi` where marker is `<think>`), drop that trailing fragment. Used so a
+    /// `<think>` opener split across SSE chunks never flickers half-rendered. A full
+    /// `marker` is left intact here (the caller handles complete tags separately).
+    private static func dropTrailingPartial(of marker: String, in text: String) -> String {
+        // Longest proper prefix of `marker` (excluding the full marker) that the
+        // text ends with → that's an incomplete opener still arriving.
+        var prefix = String(marker.dropLast())
+        while !prefix.isEmpty {
+            if text.hasSuffix(prefix) { return String(text.dropLast(prefix.count)) }
+            prefix = String(prefix.dropLast())
+        }
+        return text
     }
 
     /// Remove any inline chain-of-thought some models emit despite the off-switch.

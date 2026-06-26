@@ -13,6 +13,11 @@ final class PopBarPanelModel: ObservableObject {
     @Published var phase: Phase = .actions
     /// Whether the capsule is pinned open (ignores auto-dismiss).
     @Published var isPinned = false
+    /// Live text shown by the result panel. Kept separate from `phase` so streaming
+    /// tokens can update the text WITHOUT re-entering `.result` (which would trigger
+    /// a full window re-fit on every token). The result frame is fixed, so the
+    /// window stays put; only this string changes as deltas arrive.
+    @Published var streamingText = ""
 
     /// Buttons to show (set by the controller from the user's ActionStore).
     var actions: [PopBarActionConfig] = []
@@ -22,6 +27,9 @@ final class PopBarPanelModel: ObservableObject {
     var onCopyResult: ((String) -> Void)?
     var onClose: (() -> Void)?
     var onTogglePin: (() -> Void)?
+
+    /// Push a streaming delta into the live result text (no phase change → no re-fit).
+    func updateStreamingText(_ text: String) { streamingText = text }
 }
 
 /// The capsule's content: a row of action buttons that transitions to a loading
@@ -51,8 +59,10 @@ struct PopBarContentView: View {
             actionsBar
         case .loading:
             loadingBar
-        case .result(let text):
-            resultPanel(text)
+        case .result:
+            // Text comes from the live `streamingText`, not the phase payload, so
+            // streaming deltas update in place without re-fitting the window.
+            resultPanel(model.streamingText)
         }
     }
 
@@ -101,16 +111,36 @@ struct PopBarContentView: View {
                     model.onClose?()
                 }
             }
-            ScrollView {
-                Text(text)
-                    .font(.system(size: 12))
-                    .textSelection(.enabled)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    Group {
+                        if text.isEmpty {
+                            // Pre-first-token: a quiet placeholder so the chrome is
+                            // visible immediately without a blank void.
+                            HStack(spacing: 6) {
+                                ProgressView().controlSize(.small)
+                                Text(L("popbar.loading")).font(.system(size: 12)).foregroundStyle(.secondary)
+                            }
+                        } else {
+                            Text(text)
+                                .font(.system(size: 12))
+                                .textSelection(.enabled)
+                        }
+                    }
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    // Anchor used to keep the view pinned to the bottom as text grows.
+                    Color.clear.frame(height: 1).id(Self.bottomAnchor)
+                }
+                .frame(width: 300, height: 130)
+                .onChange(of: text) { _ in
+                    withAnimation(.linear(duration: 0.1)) { proxy.scrollTo(Self.bottomAnchor, anchor: .bottom) }
+                }
             }
-            .frame(width: 300, height: 130)
         }
         .padding(10)
     }
+
+    private static let bottomAnchor = "popbar.result.bottom"
 }
 
 /// A single capsule action button: icon over a tiny caption. The WHOLE tile

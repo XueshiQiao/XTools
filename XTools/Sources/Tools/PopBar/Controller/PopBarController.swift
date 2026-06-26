@@ -28,6 +28,14 @@ final class PopBarController {
     private let sameSelectionRadius: CGFloat = 40
     private var running = false
     private var resolveTask: Task<Void, Never>?
+    /// The in-flight AI action (streaming). Canceled when a new action/trigger
+    /// starts or the panel is dismissed, so old tokens never bleed into a new popup.
+    private var actionTask: Task<Void, Never>?
+    /// Bumped on every action run. A second action tapped on the SAME visible
+    /// capsule (so `panelGeneration` is unchanged) must not have the prior stream's
+    /// already-enqueued MainActor delta tasks overwrite the new result — they check
+    /// this token too and bail.
+    private var actionGeneration = 0
     /// Bumped per trigger so a slow/canceled resolve can't act on the panel after
     /// a newer trigger has taken over.
     private var resolveGeneration = 0
@@ -76,6 +84,7 @@ final class PopBarController {
     func stop() {
         running = false
         resolveTask?.cancel()
+        actionTask?.cancel()
         monitor.stop()
         hidePanel()
         Self.log.info("stopped")
@@ -128,6 +137,8 @@ final class PopBarController {
                     self.currentText = result.text
                     self.lastAnchor = loc
                     self.panelGeneration &+= 1
+                    self.actionTask?.cancel()   // abort any prior AI stream
+                    self.actionTask = nil
                     self.panel.model.actions = self.actionStore.actions
                     self.panel.show(at: loc)
                 }
@@ -147,6 +158,8 @@ final class PopBarController {
     /// result is discarded rather than re-showing a dismissed popup.
     private func hidePanel() {
         panelGeneration &+= 1
+        actionTask?.cancel()
+        actionTask = nil
         panel.hide()
     }
 
@@ -164,19 +177,49 @@ final class PopBarController {
 
     private func runAction(_ action: PopBarActionConfig) {
         let text = currentText
-        // AI actions need a model config + a loading state; local actions don't.
-        let llm: LLMConfig?
-        if action.isAI {
-            panel.applyPhase(.loading)
-            llm = llmStore.config(for: action.modelOverride)
-        } else {
-            llm = nil
-        }
         let generation = panelGeneration
-        Task { [weak self] in
-            let outcome = await ActionRegistry.run(action, on: text, llm: llm)
+        actionTask?.cancel()   // a tap replaces any prior in-flight action
+        actionGeneration &+= 1
+        let action0 = actionGeneration
+        // A run is current only if BOTH the panel hasn't been replaced/dismissed
+        // AND no newer action was tapped on this same capsule.
+        func isCurrent(_ controller: PopBarController) -> Bool {
+            generation == controller.panelGeneration && action0 == controller.actionGeneration
+        }
+
+        guard action.isAI else {
+            // Local actions (copy) have no loading/result UI — run and apply.
+            actionTask = Task { [weak self] in
+                let outcome = await ActionRegistry.run(action, on: text, llm: nil)
+                await MainActor.run {
+                    guard let self, isCurrent(self) else { return }
+                    self.applyOutcome(outcome)
+                }
+            }
+            return
+        }
+
+        // AI: show the result chrome IMMEDIATELY (empty → placeholder), then stream
+        // tokens into it. No `.loading` blocking state; the window is up at once.
+        let llm = llmStore.config(for: action.modelOverride)
+        panel.applyPhase(.result(""))
+        actionTask = Task { [weak self] in
+            let outcome = await ActionRegistry.runStreaming(action, on: text, llm: llm) { displayed in
+                // Every delta hops to main and bails if a newer popup OR a newer
+                // action on this same capsule took over, so stale tokens never leak.
+                Task { @MainActor [weak self] in
+                    guard let self, isCurrent(self) else { return }
+                    self.panel.updateResultText(displayed)
+                }
+            }
             await MainActor.run {
-                guard let self, generation == self.panelGeneration else { return }
+                guard let self, isCurrent(self) else { return }
+                // The per-delta `Task { @MainActor }` updates above aren't ordered
+                // relative to this final apply, so a straggler could otherwise land
+                // AFTER it and revert the text to an earlier partial. Bump the token
+                // FIRST: any delta still queued now fails `isCurrent` and is dropped,
+                // then apply the canonical final outcome.
+                self.actionGeneration &+= 1
                 self.applyOutcome(outcome)
             }
         }

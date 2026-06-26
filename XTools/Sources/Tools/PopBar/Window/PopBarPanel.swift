@@ -71,6 +71,7 @@ final class PopBarPanel {
     func show(at screenPoint: CGPoint) {
         anchor = screenPoint
         model.phase = .actions
+        model.streamingText = ""
         setPinned(false)   // a fresh popup always starts unpinned
         // Let SwiftUI lay out the actions row, then size + place the window.
         DispatchQueue.main.async { [weak self] in
@@ -79,15 +80,26 @@ final class PopBarPanel {
         }
     }
 
-    /// Switch the capsule's content (e.g. to loading / result) and re-fit.
+    /// Switch the capsule's content (e.g. to loading / result) and re-fit. When
+    /// entering `.result`, seed the live `streamingText` with the phase's text so
+    /// the result view (which reads `streamingText`) shows the initial value.
     func applyPhase(_ phase: PopBarPanelModel.Phase) {
+        if case .result(let text) = phase { model.streamingText = text }
         model.phase = phase
         DispatchQueue.main.async { [weak self] in self?.fitAndPlace() }
+    }
+
+    /// Push a streaming delta into an already-showing result panel. Does NOT re-fit
+    /// (the result frame is fixed at 300×130, so the window stays put); only the
+    /// text inside the scroll view changes. Caller guarantees we're in `.result`.
+    func updateResultText(_ text: String) {
+        model.updateStreamingText(text)
     }
 
     func hide() {
         panel.orderOut(nil)
         model.phase = .actions
+        model.streamingText = ""
         setPinned(false)
     }
 
