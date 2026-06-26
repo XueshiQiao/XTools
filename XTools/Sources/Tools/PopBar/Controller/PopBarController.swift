@@ -19,6 +19,12 @@ final class PopBarController {
 
     /// The text the visible capsule is acting on.
     private var currentText = ""
+    /// Screen point the visible capsule is anchored to (the selection's mouse-up
+    /// location), used to suppress flicker from a double→triple-click re-trigger.
+    private var lastAnchor: CGPoint = .zero
+    /// How close a new trigger must be to the current capsule to be treated as
+    /// the same selection (keep it, don't re-read/re-show).
+    private let sameSelectionRadius: CGFloat = 40
     private var running = false
     private var resolveTask: Task<Void, Never>?
     /// Bumped per trigger so a slow/canceled resolve can't act on the panel after
@@ -39,7 +45,7 @@ final class PopBarController {
             DoubleClickGesture(),
         ])
         monitor.onTrigger = { [weak self] in self?.handleTrigger() }
-        monitor.onDismiss = { [weak self] in self?.handleDismiss() }
+        monitor.onDismiss = { [weak self] event in self?.handleDismiss(event) }
         wirePanel()
     }
 
@@ -78,6 +84,15 @@ final class PopBarController {
     private func handleTrigger() {
         // A pinned capsule stays put — don't replace it on a new selection.
         if panel.isPinned { return }
+        // If a capsule is already showing for ~this spot, keep it exactly as is.
+        // A double-click then an accidental triple-click fire two triggers at the
+        // same point; without this they'd hide+re-resolve+reshow (flicker). Per
+        // the user, the existing result is fine — no need to re-read the range.
+        let loc = monitor.lastMouseUpLocation
+        if panel.isVisible,
+           hypot(loc.x - lastAnchor.x, loc.y - lastAnchor.y) < sameSelectionRadius {
+            return
+        }
         // `frontmostApplication` can momentarily return nil; fall back to the
         // menu-bar-owning app so the Electron AX-enable + self-skip still work.
         let front = NSWorkspace.shared.frontmostApplication
@@ -100,14 +115,19 @@ final class PopBarController {
                 guard generation == self.resolveGeneration else { return }
                 guard self.running, let result, !result.text.isEmpty else { self.hidePanel(); return }
                 self.currentText = result.text
+                self.lastAnchor = context.mouseLocation
                 self.panelGeneration &+= 1
                 self.panel.show(at: context.mouseLocation)
             }
         }
     }
 
-    private func handleDismiss() {
-        if panel.isVisible && !panel.isPinned { hidePanel() }
+    private func handleDismiss(_ event: InputEvent) {
+        guard panel.isVisible, !panel.isPinned else { return }
+        // A multi-click continuation (e.g. double-click then an accidental triple)
+        // shouldn't dismiss — that would hide then immediately reshow (flicker).
+        if case let .mouseDown(nsEvent) = event, nsEvent.clickCount >= 2 { return }
+        hidePanel()
     }
 
     /// Hide the capsule and bump the panel generation so any in-flight action

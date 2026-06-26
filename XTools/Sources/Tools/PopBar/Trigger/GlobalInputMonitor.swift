@@ -22,8 +22,9 @@ final class GlobalInputMonitor {
 
     /// Fired (on main) after a gesture completes and the debounce elapses.
     var onTrigger: (() -> Void)?
-    /// Fired (on main) for events that should dismiss an open popup.
-    var onDismiss: (() -> Void)?
+    /// Fired (on main) for events that may dismiss an open popup. Carries the
+    /// event so the controller can ignore multi-click continuations.
+    var onDismiss: ((InputEvent) -> Void)?
 
     /// Screen-coordinate location of the last mouse-up — where the gesture ended.
     private(set) var lastMouseUpLocation: CGPoint = .zero
@@ -69,7 +70,7 @@ final class GlobalInputMonitor {
 
         // Any of these, happening in another app, should close an open popup.
         switch input {
-        case .mouseDown, .scroll, .keyDown: onDismiss?()
+        case .mouseDown, .scroll, .keyDown: onDismiss?(input)
         default: break
         }
 
