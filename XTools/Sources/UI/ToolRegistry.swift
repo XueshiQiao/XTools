@@ -7,6 +7,7 @@ import Foundation
 enum ToolRegistry {
     static func makeAllTools() -> [any XToolModule] {
         [
+            PopBarTool(),
             LaunchManagerTool(),
             WakeLocksTool(),
             PowerInsightsTool(),

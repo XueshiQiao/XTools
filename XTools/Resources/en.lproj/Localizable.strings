@@ -400,3 +400,41 @@
 "dashboard.card.swap" = "Swap";
 "dashboard.swap.sub" = "on disk · not part of RAM";
 "dashboard.placeholder" = "Claude usage, CPU, network…\ncoming soon";
+
+/* ───────────── PopBar (划词胶囊) ───────────── */
+"tool.popbar.title" = "Pop Bar";
+
+"popbar.enable.title" = "Selection pop bar";
+"popbar.enable.subtitle" = "Select text in any app to pop up a capsule of quick actions at the cursor.";
+
+"popbar.status.title" = "Status";
+"popbar.status.on" = "Active";
+"popbar.status.off" = "Off";
+"popbar.status.needsPermission" = "Needs permission";
+
+"popbar.perm.header" = "Permission";
+"popbar.perm.title" = "Accessibility access required";
+"popbar.perm.body" = "Pop Bar needs Accessibility access to detect selections and read the selected text. No data leaves your Mac.";
+"popbar.perm.grant" = "Grant Access…";
+"popbar.perm.open" = "Open Settings";
+
+"popbar.actions.header" = "Actions";
+"popbar.actions.footer" = "Copy is real. Translate, Polish and Explain return placeholder text for now — wiring a real model in is a one-file change.";
+"popbar.action.copy" = "Copy";
+"popbar.action.translate" = "Translate";
+"popbar.action.polish" = "Polish";
+"popbar.action.explain" = "Explain";
+"popbar.tag.real" = "REAL";
+"popbar.tag.fake" = "DEMO";
+
+"popbar.preview.button" = "Preview capsule";
+"popbar.preview.sample" = "The quick brown fox jumps over the lazy dog.";
+
+"popbar.loading" = "Working…";
+
+"popbar.about.body" = "How it works: a global input monitor detects a drag- or double-click selection, an ordered chain of strategies reads the selected text (Accessibility first, a clipboard copy as fallback), and a non-activating floating panel shows the actions — without stealing focus from the source app.";
+
+"popbar.fake.translate" = "Translation (demo)";
+"popbar.fake.polish" = "Polished (demo)";
+"popbar.fake.explain" = "Explanation (demo)";
+"popbar.fake.note" = "This is placeholder output. Connect a real model to replace it.";

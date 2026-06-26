@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PopBar — 划词胶囊工具条 · 架构设计</title>
+<style>
+  :root {
+    --bg: #faf9f5; --surface: #ffffff; --ink: #1f1e1c; --ink-soft: #5a5751;
+    --ink-faint: #8a857c; --rule: #e6e2d4; --rule-soft: #efece1; --code-bg: #f3f0e6;
+    --accent: #d97757; --accent-soft: #f4e2d6; --good: #4f8a5c; --warn: #b6711c; --bad: #b14338;
+    --serif: "Tiempos", "Source Serif Pro", "Iowan Old Style", Georgia, serif;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --mono: "JetBrains Mono", "SF Mono", Menlo, Monaco, "Cascadia Code", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px;
+    line-height: 1.65; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  .container { max-width: 880px; margin: 0 auto; padding: 80px 40px 120px; }
+  header.hero { margin-bottom: 56px; }
+  .eyebrow { font-family: var(--mono); font-size: 12px; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--accent); margin-bottom: 18px; }
+  h1 { font-family: var(--serif); font-weight: 500; font-size: 48px; line-height: 1.1;
+    margin: 0 0 20px; letter-spacing: -0.015em; color: var(--ink); }
+  .lede { font-family: var(--serif); font-size: 22px; line-height: 1.45; color: var(--ink-soft);
+    margin: 0; max-width: 680px; }
+  h2 { font-family: var(--serif); font-weight: 500; font-size: 30px; line-height: 1.2;
+    margin: 64px 0 16px; letter-spacing: -0.01em; }
+  h3 { font-family: var(--sans); font-weight: 600; font-size: 17px; margin: 36px 0 10px;
+    letter-spacing: -0.005em; }
+  p { margin: 0 0 16px; }
+  p, li { color: var(--ink); }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent-soft); }
+  a:hover { border-bottom-color: var(--accent); }
+  ul, ol { padding-left: 24px; margin: 0 0 16px; }
+  li { margin-bottom: 8px; }
+  li code { font-size: 0.92em; }
+  code { font-family: var(--mono); background: var(--code-bg); padding: 1px 6px; border-radius: 4px; font-size: 0.9em; }
+  pre { background: #1f1e1c; color: #f6f3eb; padding: 20px 24px; border-radius: 8px; overflow-x: auto;
+    line-height: 1.55; font-size: 13.5px; margin: 20px 0 28px; }
+  pre code { background: transparent; padding: 0; color: inherit; font-size: inherit; }
+  .tok-comment { color: #9b9081; font-style: italic; }
+  .tok-keyword { color: #e89b6f; }
+  .tok-fn { color: #f0d68a; }
+  .tok-string { color: #b8d49d; }
+  .tok-num { color: #d8b9e3; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 18px 32px; margin: 32px 0 48px; padding: 18px 0;
+    border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); font-family: var(--mono);
+    font-size: 12.5px; color: var(--ink-soft); }
+  .meta-row b { color: var(--ink); font-weight: 500; margin-right: 8px; }
+  .callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 18px 22px;
+    margin: 28px 0; border-radius: 0 6px 6px 0; color: var(--ink); }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout .label { font-family: var(--mono); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--accent); font-weight: 600; margin-bottom: 6px; display: block; }
+  .figure { margin: 36px 0; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px;
+    padding: 28px 24px 18px; }
+  .figure svg { display: block; width: 100%; height: auto; }
+  .figure .caption { font-family: var(--mono); font-size: 12px; color: var(--ink-faint); margin-top: 14px;
+    padding-top: 14px; border-top: 1px dashed var(--rule); }
+  .figure .caption b { color: var(--ink-soft); font-weight: 600; }
+  table { border-collapse: collapse; width: 100%; margin: 24px 0 32px; font-size: 14.5px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { font-weight: 600; color: var(--ink-soft); background: var(--rule-soft); font-size: 13px; letter-spacing: 0.01em; }
+  td code { font-size: 0.88em; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-family: var(--mono);
+    font-size: 11px; font-weight: 600; letter-spacing: 0.04em; }
+  .pill.good { background: #e3f0e2; color: var(--good); }
+  .pill.warn { background: #f5e7d0; color: var(--warn); }
+  .pill.bad { background: #f5dad6; color: var(--bad); }
+  .pill.neutral { background: var(--rule-soft); color: var(--ink-soft); }
+  .footer { margin-top: 96px; padding-top: 24px; border-top: 1px solid var(--rule); font-family: var(--mono);
+    font-size: 12px; color: var(--ink-faint); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  svg text { font-family: var(--sans); font-size: 12.5px; fill: var(--ink); }
+  svg .label-mono { font-family: var(--mono); font-size: 11.5px; fill: var(--ink-soft); }
+  svg .label-soft { fill: var(--ink-soft); }
+  svg .label-faint { fill: var(--ink-faint); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="hero">
+  <div class="eyebrow">Engineering note · XTools / PopBar · 2026-06-26</div>
+  <h1>PopBar — 划词胶囊工具条</h1>
+  <p class="lede">选中文本即弹出一条可定制的 AI 动作胶囊。本文剖析 Easydict / Xpop / SelectedTextKit 三个参考实现的取词内核,并据此给出 XTools 的四层、可插拔架构 —— 取词层被抽象成一个有序回退的策略接口,今天只装一种,明天能塞五种。</p>
+</header>
+
+<div class="meta-row">
+  <span><b>Tool</b><code>Sources/Tools/PopBar/</code></span>
+  <span><b>Scope</b>v1 = user-level · 用户态</span>
+  <span><b>Perms</b><span class="pill warn">Accessibility</span></span>
+  <span><b>Entitlements</b><span class="pill good">无新增</span></span>
+</div>
+
+<h2>1 · 三个参考实现教会我们的事</h2>
+
+<p>这套功能的难点不在 UI,而在“可靠地拿到选中文本”。三个开源项目把这条路趟出了血:它们的回退链高度一致 —— <b>Accessibility 优先 → WebKit 走 TextMarker → 兜底模拟复制读剪贴板</b> —— 差异只在“谁来编排回退”和“代码成熟度”。</p>
+
+<table>
+  <thead>
+    <tr><th>项目</th><th>取词机制</th><th>触发</th><th>定位</th><th>成熟度 / 取舍</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>Easydict</b><br><span class="pill good">production</span></td>
+      <td>AX → AppleScript(浏览器)→ 模拟 Cmd+C / 菜单 Copy。<b>按 App + AXError 的强制复制白名单</b>(Word/VSCode/Firefox/ChatGPT…)</td>
+      <td>NSEvent 全局监听 + 手势推断;CGEventTap 仅在胶囊可见时捕获按键以消解</td>
+      <td>鼠标点(<code>kAXBoundsForRange</code> 实现了但注释掉)</td>
+      <td>久经沙场。值得抄:回退编排、按 App 容错表、菜单项多语言匹配、changeCount 轮询、消除提示音。坑:回退策略散落在库与 App 两侧</td>
+    </tr>
+    <tr>
+      <td><b>SelectedTextKit</b><br><span class="pill neutral">SPM 库</span></td>
+      <td>同上五策略,封装成 <code>TextStrategy</code> 枚举 + 大 <code>switch</code></td>
+      <td>—(只管取词)</td>
+      <td><code>getSelectedTextFrame()</code> 暴露选区矩形</td>
+      <td>取词内核可直接 SPM 引入。但抽象是“枚举 + switch”而非协议,<code>.auto</code> 与有序数组两套回退重复 —— 是我们要避免的反面教材</td>
+    </tr>
+    <tr>
+      <td><b>Xpop</b><br><span class="pill warn">low-star</span></td>
+      <td>AX <code>kAXSelectedText</code> → <code>AXStringForTextMarkerRange</code> → 菜单 Copy(opt-in)</td>
+      <td><code>InputEventCombination</code> 手势协议(双击 / 拖拽),干净</td>
+      <td>鼠标抬起点,胶囊居中其上方 10pt</td>
+      <td>作者“第一个 Swift 项目”。可抄:手势协议、NSPanel 配方、PopClip 兼容动作模型。避:God-object AppDelegate、满地魔法 sleep、强解包、并发无边界</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout">
+<span class="label">三者的共识</span>
+<p>取词永远是<b>有序回退</b>,不是单一方案;成功判据是“非空字符串”;唯一应中断整条链的错误是<b>辅助功能权限被拒</b>。我们把这条共识固化进一个 <code>SelectionResolver</code>,且<b>只此一处</b>编排回退 —— 这正是三个参考实现都没做好的地方。</p>
+</div>
+
+<h2>2 · 四层架构与数据流</h2>
+
+<p>整条管线拆成四个互不知道彼此内部的层,接缝处只传值类型(<code>SelectionResult</code> / <code>CGPoint</code> / 回调闭包)。触发层不认识窗口,取词层不认识按钮。</p>
+
+<div class="figure">
+<svg viewBox="0 0 820 300" xmlns="http://www.w3.org/2000/svg" aria-label="PopBar 四层数据流">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#d97757"/>
+    </marker>
+  </defs>
+  <!-- lane boxes -->
+  <rect x="10" y="50" width="185" height="92" rx="9" fill="#fff" stroke="#e6e2d4"/>
+  <rect x="215" y="50" width="200" height="92" rx="9" fill="#fff" stroke="#d97757" stroke-width="1.6"/>
+  <rect x="435" y="50" width="175" height="92" rx="9" fill="#fff" stroke="#e6e2d4"/>
+  <rect x="630" y="50" width="180" height="92" rx="9" fill="#fff" stroke="#e6e2d4"/>
+
+  <text x="102" y="40" text-anchor="middle" class="label-mono" fill="#8a857c">① 触发层</text>
+  <text x="315" y="40" text-anchor="middle" class="label-mono" fill="#d97757">② 取词层</text>
+  <text x="522" y="40" text-anchor="middle" class="label-mono" fill="#8a857c">③ 窗口层</text>
+  <text x="720" y="40" text-anchor="middle" class="label-mono" fill="#8a857c">④ 动作层</text>
+
+  <text x="102" y="82" text-anchor="middle" font-weight="600">GlobalInputMonitor</text>
+  <text x="102" y="104" text-anchor="middle" class="label-soft" font-size="11.5">NSEvent 全局监听</text>
+  <text x="102" y="123" text-anchor="middle" class="label-soft" font-size="11.5">拖拽 / 双击手势</text>
+
+  <text x="315" y="82" text-anchor="middle" font-weight="600">SelectionResolver</text>
+  <text x="315" y="104" text-anchor="middle" class="label-soft" font-size="11.5">有序 [SelectionStrategy]</text>
+  <text x="315" y="123" text-anchor="middle" class="label-soft" font-size="11.5">AX · ClipboardCopy · …</text>
+
+  <text x="522" y="82" text-anchor="middle" font-weight="600">PopBarPanel</text>
+  <text x="522" y="104" text-anchor="middle" class="label-soft" font-size="11.5">NSPanel 不抢焦点</text>
+  <text x="522" y="123" text-anchor="middle" class="label-soft" font-size="11.5">定位 + 贴边裁剪</text>
+
+  <text x="720" y="82" text-anchor="middle" font-weight="600">ActionRegistry</text>
+  <text x="720" y="104" text-anchor="middle" class="label-soft" font-size="11.5">复制(真) · 翻译(假)</text>
+  <text x="720" y="123" text-anchor="middle" class="label-soft" font-size="11.5">润色 / 解释(假)</text>
+
+  <line x1="195" y1="96" x2="213" y2="96" stroke="#d97757" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="415" y1="96" x2="433" y2="96" stroke="#d97757" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="610" y1="96" x2="628" y2="96" stroke="#d97757" stroke-width="1.5" marker-end="url(#arr)"/>
+
+  <!-- coordinator -->
+  <rect x="10" y="190" width="800" height="58" rx="9" fill="#f4e2d6" stroke="#d97757" stroke-dasharray="4 3"/>
+  <text x="410" y="214" text-anchor="middle" font-weight="600" fill="#1f1e1c">PopBarController · 协调器(app 生命周期,activate()/shutdown() 启停)</text>
+  <text x="410" y="234" text-anchor="middle" class="label-soft" font-size="11.5">手势回调 → 解析选区 → 定位并展示胶囊 → 派发动作。状态收敛在 @MainActor。</text>
+  <line x1="102" y1="190" x2="102" y2="144" stroke="#c9a78f" stroke-width="1.2" marker-end="url(#arr)"/>
+  <line x1="720" y1="190" x2="720" y2="144" stroke="#c9a78f" stroke-width="1.2" marker-end="url(#arr)"/>
+</svg>
+<div class="caption"><b>Figure 1.</b> 四层各自可替换:换触发手势不动取词,换取词策略不动窗口。协调器是唯一知道全流程的对象,且严格主线程。</div>
+</div>
+
+<h2>3 · 取词层:你要的那层抽象</h2>
+
+<p>这是本设计的核心诉求。我们不把取词写死成某一种方案,也不直接依赖 SelectedTextKit;而是定义一个<b>策略协议</b>,每种取词方式是一个独立实现,由 <code>SelectionResolver</code> 按顺序尝试、首个非空者胜出。新增一种兜底 = 新写一个 <code>SelectionStrategy</code> 并在 resolver 注册,管线其余部分一行不改。</p>
+
+<pre><code><span class="tok-comment">// 传入“在哪取、给谁取”,任何策略都不直接摸全局状态 —— 可测、可组合。</span>
+<span class="tok-keyword">struct</span> <span class="tok-fn">SelectionContext</span> { <span class="tok-keyword">let</span> frontmostApp: NSRunningApplication?; <span class="tok-keyword">let</span> mouseLocation: CGPoint }
+
+<span class="tok-comment">// 成功取到的结果。via 记录“是哪种策略赢的”(埋点 + 未来按来源做差异处理)。</span>
+<span class="tok-keyword">struct</span> <span class="tok-fn">SelectionResult</span> { <span class="tok-keyword">let</span> text: String; <span class="tok-keyword">let</span> via: SelectionStrategyID; <span class="tok-keyword">var</span> bounds: CGRect? }
+
+<span class="tok-comment">// 一种取词方式。加新策略只需实现它 —— 这就是可插拔、可融合的接缝。</span>
+<span class="tok-keyword">protocol</span> <span class="tok-fn">SelectionStrategy</span>: AnyObject {
+    <span class="tok-keyword">var</span> id: SelectionStrategyID { <span class="tok-keyword">get</span> }
+    <span class="tok-keyword">func</span> <span class="tok-fn">canHandle</span>(_ ctx: SelectionContext) -&gt; <span class="tok-keyword">Bool</span>          <span class="tok-comment">// 便宜的预筛(如 AppleScript 仅限受支持浏览器)</span>
+    <span class="tok-keyword">func</span> <span class="tok-fn">selectedText</span>(_ ctx: SelectionContext) <span class="tok-keyword">async throws</span> -&gt; SelectionResult?
+}</code></pre>
+
+<p>编排只此一处。空字符串视为失败、继续下一个;<code>.permissionDenied</code> 是唯一会立刻中断整链的致命错误 —— 这正是三个参考实现的共识,被我们收进一个对象:</p>
+
+<pre><code><span class="tok-keyword">func</span> <span class="tok-fn">resolve</span>(_ ctx: SelectionContext) <span class="tok-keyword">async</span> -&gt; SelectionResult? {
+    <span class="tok-keyword">for</span> s <span class="tok-keyword">in</span> strategies <span class="tok-keyword">where</span> s.canHandle(ctx) {
+        <span class="tok-keyword">do</span> { <span class="tok-keyword">if let</span> r = <span class="tok-keyword">try await</span> s.selectedText(ctx), !r.text.isEmpty { <span class="tok-keyword">return</span> r } }
+        <span class="tok-keyword">catch let</span> e <span class="tok-keyword">as</span> SelectionError <span class="tok-keyword">where</span> e.isFatal { <span class="tok-keyword">return</span> <span class="tok-num">nil</span> }  <span class="tok-comment">// 权限被拒,放弃</span>
+        <span class="tok-keyword">catch</span> { <span class="tok-keyword">continue</span> }                                          <span class="tok-comment">// 该策略失败,试下一个</span>
+    }
+    <span class="tok-keyword">return</span> <span class="tok-num">nil</span>
+}</code></pre>
+
+<div class="figure">
+<svg viewBox="0 0 820 250" xmlns="http://www.w3.org/2000/svg" aria-label="取词回退决策流">
+  <defs>
+    <marker id="arr2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5a5751"/>
+    </marker>
+  </defs>
+  <!-- AX -->
+  <rect x="20" y="95" width="150" height="60" rx="8" fill="#fff" stroke="#d97757" stroke-width="1.6"/>
+  <text x="95" y="120" text-anchor="middle" font-weight="600">① Accessibility</text>
+  <text x="95" y="139" text-anchor="middle" class="label-soft" font-size="11">kAXSelectedText</text>
+  <!-- decision -->
+  <path d="M255 125 L310 95 L365 125 L310 155 Z" fill="#f4e2d6" stroke="#d97757"/>
+  <text x="310" y="122" text-anchor="middle" font-size="11">非空?</text>
+  <text x="310" y="137" text-anchor="middle" class="label-faint" font-size="10">empty/throw</text>
+  <!-- clipboard -->
+  <rect x="445" y="95" width="170" height="60" rx="8" fill="#fff" stroke="#e6e2d4"/>
+  <text x="530" y="118" text-anchor="middle" font-weight="600">② ClipboardCopy</text>
+  <text x="530" y="136" text-anchor="middle" class="label-soft" font-size="10.5">备份→Cmd+C→轮询→还原</text>
+  <!-- future -->
+  <rect x="660" y="95" width="140" height="60" rx="8" fill="#faf9f5" stroke="#e6e2d4" stroke-dasharray="4 3"/>
+  <text x="730" y="118" text-anchor="middle" font-weight="600" fill="#8a857c">③ 未来…</text>
+  <text x="730" y="136" text-anchor="middle" class="label-faint" font-size="10.5">AppleScript / 菜单</text>
+
+  <line x1="170" y1="125" x2="253" y2="125" stroke="#5a5751" stroke-width="1.4" marker-end="url(#arr2)"/>
+  <line x1="365" y1="125" x2="443" y2="125" stroke="#5a5751" stroke-width="1.4" marker-end="url(#arr2)"/>
+  <line x1="615" y1="125" x2="658" y2="125" stroke="#5a5751" stroke-width="1.4" stroke-dasharray="4 3" marker-end="url(#arr2)"/>
+  <text x="404" y="116" text-anchor="middle" class="label-mono" fill="#b6711c">否</text>
+
+  <!-- success out -->
+  <text x="310" y="195" text-anchor="middle" class="label-mono" fill="#4f8a5c">是 → 返回 SelectionResult,链结束</text>
+  <line x1="310" y1="155" x2="310" y2="182" stroke="#4f8a5c" stroke-width="1.4" marker-end="url(#arr2)"/>
+</svg>
+<div class="caption"><b>Figure 2.</b> v1 装两节:AX 快路 + 剪贴板兜底。虚线节点是预留槽 —— 加策略不改这张图的形状,只往数组里追加。</div>
+</div>
+
+<h3>v1 的两种策略</h3>
+<ul>
+  <li><b>AccessibilityStrategy</b> — <code>systemWideElement</code> → 焦点元素 → <code>kAXSelectedTextAttribute</code>;失败再试 WebKit 的 <code>AXSelectedTextMarkerRange</code> + <code>AXStringForTextMarkerRange</code>。对 Electron/Chromium 取词为空时,一次性给目标 App 设 <code>AXManualAccessibility</code>/<code>AXEnhancedUserInterface</code> 打开其 AX 树。顺带用 <code>kAXBoundsForRange</code> 取选区矩形(拿得到就用,作为更精准定位)。</li>
+  <li><b>ClipboardCopyStrategy</b> — 备份整块剪贴板(所有 type)→ 用 CGEvent 合成 Cmd+C → 5ms 轮询 <code>changeCount</code>(上限 ~400ms)确认落地 → 读字符串 → 还原剪贴板。非破坏性,且不依赖任何额外权限/entitlement。</li>
+</ul>
+
+<h2>4 · 触发、窗口、动作层</h2>
+
+<h3>触发层 —— 为什么不用 CGEventTap</h3>
+<p>用 <code>NSEvent.addGlobalMonitorForEvents</code> 监听鼠标按下/拖拽/抬起 + 双击,广播给一组手势识别器(<code>DragSelectGesture</code>:down 与 up 之间拖拽事件数 ≥ 阈值;<code>DoubleClickGesture</code>:<code>clickCount ≥ 2</code>)。全局监听只观察、不吞事件 —— 正合我们意图。<b>刻意避开 CGEventTap</b>:它存在“代码签名 + 静默禁用竞态”,系统会悄悄关掉它,可靠性差。手势触发后取<b>鼠标抬起点</b>(全局监听里 <code>locationInWindow</code> 即屏幕坐标)。</p>
+
+<h3>窗口层 —— 不抢焦点的胶囊</h3>
+<p>三个项目的 NSPanel 配方一致,直接采用 —— 关键是 <code>.nonactivatingPanel</code>,胶囊弹出时不把焦点从源 App 抢走(否则源选区即丢):</p>
+<pre><code>window = NSPanel(contentRect: rect,
+                 styleMask: [.fullSizeContentView, .nonactivatingPanel],
+                 backing: .buffered, defer: <span class="tok-num">false</span>)
+window.level = .floating
+window.collectionBehavior = [.canJoinAllSpaces, .ignoresCycle]
+window.isOpaque = <span class="tok-num">false</span>; window.backgroundColor = .clear      <span class="tok-comment">// SwiftUI 圆角胶囊 + 毛玻璃</span>
+window.orderFront(<span class="tok-num">nil</span>)                                       <span class="tok-comment">// 永不 makeKey —— 保住源 App 焦点</span></code></pre>
+<p>内容是 <code>NSHostingView</code> 托管的 SwiftUI 胶囊。定位:居中于鼠标点上方,并按 <code>screen.visibleFrame</code> 贴边裁剪(补上 Xpop 缺失的越界保护)。胶囊外的任何点击/滚动/按键由一个临时全局监听消解。</p>
+
+<h3>动作层 —— v1 用假数据</h3>
+<p>动作是数据驱动的:<code>复制</code>(真实,写剪贴板)、<code>翻译</code>/<code>润色</code>/<code>解释</code>(<code>FakeAIService</code> 返回占位文本)。点 AI 动作后,胶囊原地切到结果视图展示假输出 + 一个“复制结果”按钮 —— 完整跑通“选词→动作→结果”闭环,接真模型时只换 <code>FakeAIService</code> 一处。按钮全区域可点(<code>.contentShape(Rectangle())</code>)。</p>
+
+<h2>5 · 权限、验证与边界</h2>
+<p>v1 只需<b>辅助功能(Accessibility)</b>权限(运行时 <code>AXIsProcessTrusted</code> 检测 + 引导授权),复用 XTools 既有的非沙盒形态,<b>不新增任何 entitlement 或 Info.plist 用途串</b>。功能 opt-in:授权并在设置页打开开关后才启动监听。设置页提供一个“预览胶囊”按钮(亦受 <code>XTOOLS_POPBAR_PREVIEW=1</code> 环境变量触发),让胶囊在固定位置以样例文本显示 —— 既是给用户的预览,也是我无需真机划词即可截图验证 UI 的路径。</p>
+
+<table>
+  <thead>
+    <tr><th>拿掉这块…</th><th>症状</th><th>严重度</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>SelectionResolver</code> 的回退</td><td>取词退化为单一方案,浏览器/Electron 大面积取不到词</td><td><span class="pill bad">HIGH</span></td></tr>
+    <tr><td><code>.nonactivatingPanel</code></td><td>胶囊弹出抢走焦点 → 源 App 选区丢失 → 动作拿到空文本</td><td><span class="pill bad">HIGH</span></td></tr>
+    <tr><td>剪贴板备份/还原</td><td>兜底复制污染用户剪贴板(把选中文本永久留在剪贴板里)</td><td><span class="pill warn">MEDIUM</span></td></tr>
+    <tr><td><code>changeCount</code> 轮询(改用固定 sleep)</td><td>慢 App 上复制未落地就去读 → 拿到旧内容或空</td><td><span class="pill warn">MEDIUM</span></td></tr>
+    <tr><td>贴边裁剪</td><td>靠近屏幕边缘选词时胶囊跑到屏幕外</td><td><span class="pill warn">MEDIUM</span></td></tr>
+    <tr><td>Electron AX 启用</td><td>VS Code / Slack / Discord 里 AX 取词恒为空(只能靠剪贴板兜底)</td><td><span class="pill neutral">LOW</span></td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+<span class="label">诚实边界</span>
+<p>我能亲自验证:编译通过、应用启动、PopBar 出现在侧栏、胶囊在预览路径下正确渲染、监听启动(看日志)。我<b>无法</b>在不手动授予辅助功能权限并真机划词的情况下,验证“任意 App 里全局取词”的端到端效果 —— 那一步标注为<b>未验证,待你授权后实测</b>。代码已按“一次复现即定位”的原则布满 <code>DBG</code> 日志。</p>
+</div>
+
+<div class="footer">
+  <span>XTools · PopBar 划词胶囊 · 2026-06-26</span>
+  <span><code>docs/popbar-design.html</code></span>
+</div>
+
+</div>
+</body>
+</html>

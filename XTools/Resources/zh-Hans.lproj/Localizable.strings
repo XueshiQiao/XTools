@@ -400,3 +400,41 @@
 "dashboard.card.swap" = "交换区";
 "dashboard.swap.sub" = "在磁盘 · 不算进内存";
 "dashboard.placeholder" = "Claude usage、CPU、网络…\n即将加入";
+
+/* ───────────── PopBar 划词胶囊 ───────────── */
+"tool.popbar.title" = "划词胶囊";
+
+"popbar.enable.title" = "划词工具条";
+"popbar.enable.subtitle" = "在任意 App 选中文本，即在光标处弹出一条快捷动作胶囊。";
+
+"popbar.status.title" = "状态";
+"popbar.status.on" = "已开启";
+"popbar.status.off" = "已关闭";
+"popbar.status.needsPermission" = "需要授权";
+
+"popbar.perm.header" = "权限";
+"popbar.perm.title" = "需要辅助功能权限";
+"popbar.perm.body" = "划词胶囊需要辅助功能（Accessibility）权限来检测选中并读取选中文本。所有数据都不会离开你的 Mac。";
+"popbar.perm.grant" = "授予权限…";
+"popbar.perm.open" = "打开设置";
+
+"popbar.actions.header" = "动作";
+"popbar.actions.footer" = "“复制”是真实功能；翻译、润色、解释目前返回占位文本——接入真实模型只需改一个文件。";
+"popbar.action.copy" = "复制";
+"popbar.action.translate" = "翻译";
+"popbar.action.polish" = "润色";
+"popbar.action.explain" = "解释";
+"popbar.tag.real" = "真实";
+"popbar.tag.fake" = "演示";
+
+"popbar.preview.button" = "预览胶囊";
+"popbar.preview.sample" = "敏捷的棕色狐狸跳过了那只懒狗。";
+
+"popbar.loading" = "处理中…";
+
+"popbar.about.body" = "工作原理：全局输入监听检测到拖拽或双击选中后，一条有序的策略链读取选中文本（优先 Accessibility，失败则用剪贴板复制兜底），再由一个不抢焦点的浮动面板展示动作——全程不夺走源 App 的焦点。";
+
+"popbar.fake.translate" = "翻译（演示）";
+"popbar.fake.polish" = "润色（演示）";
+"popbar.fake.explain" = "解释（演示）";
+"popbar.fake.note" = "这是占位输出。接入真实模型后会替换为实际结果。";
