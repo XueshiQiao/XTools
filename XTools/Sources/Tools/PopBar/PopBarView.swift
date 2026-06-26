@@ -101,15 +101,17 @@ struct PopBarView: View {
 
     private var actionsSection: some View {
         Section {
-            ForEach(actions.actions) { action in
-                Button { editingAction = action } label: { actionRow(action) }
-                    .buttonStyle(.plain)
-                    .contextMenu {
-                        Button(L("popbar.action.edit")) { editingAction = action }
-                        Button(L("popbar.action.delete"), role: .destructive) { actions.delete(id: action.id) }
-                    }
+            ForEach(Array(actions.actions.enumerated()), id: \.element.id) { index, action in
+                HStack(spacing: 8) {
+                    Button { editingAction = action } label: { actionRow(action) }
+                        .buttonStyle(.plain)
+                    reorderControls(index: index)
+                }
+                .contextMenu {
+                    Button(L("popbar.action.edit")) { editingAction = action }
+                    Button(L("popbar.action.delete"), role: .destructive) { actions.delete(id: action.id) }
+                }
             }
-            .onMove { actions.move(from: $0, to: $1) }
 
             HStack {
                 Button {
@@ -129,6 +131,40 @@ struct PopBarView: View {
         } footer: {
             Text(L("popbar.actions.footer2")).fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    /// Up/down chevrons to reorder a row, disabled at the list ends. Each button
+    /// hit-tests across its full padded bounds, not just the glyph.
+    @ViewBuilder
+    private func reorderControls(index: Int) -> some View {
+        let count = actions.actions.count
+        VStack(spacing: 0) {
+            reorderButton(symbol: "chevron.up", help: L("popbar.action.moveUp"),
+                          enabled: index > 0) {
+                // Move this row one slot earlier.
+                actions.move(from: IndexSet(integer: index), to: index - 1)
+            }
+            reorderButton(symbol: "chevron.down", help: L("popbar.action.moveDown"),
+                          enabled: index < count - 1) {
+                // toOffset is the index *before* the move, so to land after the
+                // next row we target index + 2.
+                actions.move(from: IndexSet(integer: index), to: index + 2)
+            }
+        }
+    }
+
+    private func reorderButton(symbol: String, help: String, enabled: Bool,
+                               _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(enabled ? Color.secondary : Color.secondary.opacity(0.3))
+                .frame(width: 24, height: 16)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .help(help)
     }
 
     private func actionRow(_ action: PopBarActionConfig) -> some View {

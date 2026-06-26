@@ -468,7 +468,9 @@
 "popbar.action.defaultModel" = "Default model";
 "popbar.actions.add" = "Add Action";
 "popbar.actions.reset" = "Reset to defaults";
-"popbar.actions.footer2" = "Drag to reorder · click to edit · right-click to delete. Each action can use the default model or its own.";
+"popbar.actions.footer2" = "Use the arrows to reorder · click to edit · right-click to delete. Each action can use the default model or its own.";
+"popbar.action.moveUp" = "Move up";
+"popbar.action.moveDown" = "Move down";
 "popbar.tag.needsKey" = "NEEDS KEY";
 "popbar.llm.keyFor" = "%@ API Key";
 

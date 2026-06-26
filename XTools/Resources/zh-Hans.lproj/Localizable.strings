@@ -468,7 +468,9 @@
 "popbar.action.defaultModel" = "默认模型";
 "popbar.actions.add" = "添加动作";
 "popbar.actions.reset" = "恢复默认";
-"popbar.actions.footer2" = "拖动排序 · 点击编辑 · 右键删除。每个动作可用默认模型，也可单独指定模型。";
+"popbar.actions.footer2" = "用箭头调整顺序 · 点击编辑 · 右键删除。每个动作可用默认模型，也可单独指定模型。";
+"popbar.action.moveUp" = "上移";
+"popbar.action.moveDown" = "下移";
 "popbar.tag.needsKey" = "需密钥";
 "popbar.llm.keyFor" = "%@ 密钥";
 
