@@ -54,6 +54,13 @@ final class PopBarPanel {
     /// Whether the capsule is pinned open (ignores auto-dismiss).
     var isPinned: Bool { model.isPinned }
 
+    /// Whether the capsule is currently showing its action buttons (not a loading
+    /// spinner or a result), i.e. safe to refresh the captured selection under it.
+    var isShowingActions: Bool {
+        if case .actions = model.phase { return true }
+        return false
+    }
+
     /// Pin / unpin: pinned capsules survive outside clicks and can be dragged.
     func setPinned(_ on: Bool) {
         model.isPinned = on

@@ -86,15 +86,7 @@ final class PopBarController {
     private func handleTrigger() {
         // A pinned capsule stays put — don't replace it on a new selection.
         if panel.isPinned { return }
-        // If a capsule is already showing for ~this spot, keep it exactly as is.
-        // A double-click then an accidental triple-click fire two triggers at the
-        // same point; without this they'd hide+re-resolve+reshow (flicker). Per
-        // the user, the existing result is fine — no need to re-read the range.
-        let loc = monitor.lastMouseUpLocation
-        if panel.isVisible,
-           hypot(loc.x - lastAnchor.x, loc.y - lastAnchor.y) < sameSelectionRadius {
-            return
-        }
+
         // `frontmostApplication` can momentarily return nil; fall back to the
         // menu-bar-owning app so the Electron AX-enable + self-skip still work.
         let front = NSWorkspace.shared.frontmostApplication
@@ -102,8 +94,17 @@ final class PopBarController {
         // Never read our own UI.
         if front?.bundleIdentifier == Bundle.main.bundleIdentifier { return }
 
-        let context = SelectionContext(frontmostApp: front, mouseLocation: monitor.lastMouseUpLocation)
-        Self.log.debug("trigger — front=\(front?.bundleIdentifier ?? front?.localizedName ?? "nil") at \(context.mouseLocation)")
+        let loc = monitor.lastMouseUpLocation
+        // Same spot + the capsule already showing its actions → this is a re-trigger
+        // for the SAME selection growing (e.g. double-click then triple-click). We
+        // re-read so the action uses the LATEST selection (the whole line), but we
+        // update the captured text *in place* — no hide/reposition — so the window
+        // stays put and doesn't flicker.
+        let inPlace = panel.isVisible && panel.isShowingActions
+            && hypot(loc.x - lastAnchor.x, loc.y - lastAnchor.y) < sameSelectionRadius
+
+        let context = SelectionContext(frontmostApp: front, mouseLocation: loc)
+        Self.log.debug("trigger — front=\(front?.bundleIdentifier ?? front?.localizedName ?? "nil") inPlace=\(inPlace)")
 
         resolveTask?.cancel()
         resolveGeneration &+= 1
@@ -113,14 +114,23 @@ final class PopBarController {
             let result = await self.resolver.resolve(context)
             if Task.isCancelled { return }
             await MainActor.run {
-                // A newer trigger superseded this one — let it own the panel.
-                guard generation == self.resolveGeneration else { return }
-                guard self.running, let result, !result.text.isEmpty else { self.hidePanel(); return }
-                self.currentText = result.text
-                self.lastAnchor = context.mouseLocation
-                self.panelGeneration &+= 1
-                self.panel.model.actions = self.actionStore.actions
-                self.panel.show(at: context.mouseLocation)
+                guard generation == self.resolveGeneration, self.running else { return }
+                guard let result, !result.text.isEmpty else {
+                    if !inPlace { self.hidePanel() }   // don't tear down on an in-place refresh miss
+                    return
+                }
+                if inPlace {
+                    // Only refresh if still showing actions at the same spot.
+                    guard self.panel.isShowingActions else { return }
+                    self.currentText = result.text
+                    self.lastAnchor = loc
+                } else {
+                    self.currentText = result.text
+                    self.lastAnchor = loc
+                    self.panelGeneration &+= 1
+                    self.panel.model.actions = self.actionStore.actions
+                    self.panel.show(at: loc)
+                }
             }
         }
     }
