@@ -32,11 +32,18 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     }
 
     func show() {
-        if !window.isVisible { window.center() }
-        NSApp.activate(ignoringOtherApps: true)
-        window.makeKeyAndOrderFront(nil)
-        let n = window.windowNumber
-        FileLog("MainWindow").debug("window shown — windowNumber=\(n)")
+        // Dispatch so an invoking status-bar menu finishes tracking first;
+        // activating mid-menu-tracking is what intermittently left the window
+        // behind other apps (e.g. Chrome). `orderFrontRegardless` then forces it
+        // above other apps' windows even if cooperative activation is denied.
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            if !self.window.isVisible { self.window.center() }
+            NSApp.activate(ignoringOtherApps: true)
+            self.window.makeKeyAndOrderFront(nil)
+            self.window.orderFrontRegardless()
+            FileLog("MainWindow").debug("window shown — windowNumber=\(self.window.windowNumber)")
+        }
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
