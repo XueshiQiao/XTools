@@ -459,3 +459,26 @@
 
 "popbar.error.prefix" = "Request failed";
 "popbar.error.empty" = "(empty response)";
+"popbar.error.nokey" = "No API key set for this action's provider. Add one in the AI Model section below.";
+"popbar.error.noprompt" = "This action has no prompt.";
+
+"popbar.action.edit" = "Edit";
+"popbar.action.delete" = "Delete";
+"popbar.action.untitled" = "Untitled";
+"popbar.action.defaultModel" = "Default model";
+"popbar.actions.add" = "Add Action";
+"popbar.actions.reset" = "Reset to defaults";
+"popbar.actions.footer2" = "Drag to reorder · click to edit · right-click to delete. Each action can use the default model or its own.";
+"popbar.tag.needsKey" = "NEEDS KEY";
+"popbar.llm.keyFor" = "%@ API Key";
+
+"popbar.editor.title" = "Title";
+"popbar.editor.kind" = "Type";
+"popbar.editor.kind.ai" = "AI prompt";
+"popbar.editor.kind.copy" = "Copy";
+"popbar.editor.icon" = "Icon";
+"popbar.editor.prompt" = "System prompt";
+"popbar.editor.customModel" = "Use a custom model for this action";
+"popbar.editor.save" = "Save";
+"popbar.editor.cancel" = "Cancel";
+"popbar.editor.nokeyWarn" = "No API key for %@ — set it in the AI Model section.";

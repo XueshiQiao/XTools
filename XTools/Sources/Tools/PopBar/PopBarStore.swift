@@ -17,9 +17,6 @@ final class PopBarStore: ObservableObject {
         self.isTrusted = AccessibilityAuthorizer.isTrusted
     }
 
-    /// All built-in actions, for the preview list.
-    var actions: [PopBarAction] { ActionRegistry.defaults }
-
     /// Turn the popup on/off. Turning on without permission persists the choice
     /// and prompts; monitoring then auto-starts once permission is granted (see
     /// `refreshTrust`).

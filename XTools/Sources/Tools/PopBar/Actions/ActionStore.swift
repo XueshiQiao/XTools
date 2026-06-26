@@ -1,0 +1,62 @@
+import Foundation
+import Combine
+
+/// Owns the user's configurable capsule actions, persisted as a JSON array under
+/// Application Support. Seeds the defaults on first run. Shared by the settings
+/// editor (CRUD) and the controller (reads the list when showing the capsule).
+final class ActionStore: ObservableObject {
+
+    private static let log = FileLog("PopBar.Actions")
+
+    @Published private(set) var actions: [PopBarActionConfig]
+
+    private let fileURL: URL = {
+        let base = (try? FileManager.default.url(
+            for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))
+            ?? URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("Library/Application Support")
+        let dir = base.appendingPathComponent("XTools", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir.appendingPathComponent("popbar-actions.json")
+    }()
+
+    init() {
+        if let data = try? Data(contentsOf: fileURL),
+           let decoded = try? JSONDecoder().decode([PopBarActionConfig].self, from: data),
+           !decoded.isEmpty {
+            actions = decoded
+        } else {
+            actions = DefaultActions.seed()
+            save()
+        }
+    }
+
+    // MARK: - CRUD
+
+    func add(_ action: PopBarActionConfig) { actions.append(action); save() }
+
+    func update(_ action: PopBarActionConfig) {
+        guard let idx = actions.firstIndex(where: { $0.id == action.id }) else { return }
+        actions[idx] = action
+        save()
+    }
+
+    func delete(id: String) { actions.removeAll { $0.id == id }; save() }
+
+    func move(from source: IndexSet, to destination: Int) {
+        actions.move(fromOffsets: source, toOffset: destination)
+        save()
+    }
+
+    func resetToDefaults() { actions = DefaultActions.seed(); save() }
+
+    // MARK: - Persistence (atomic)
+
+    private func save() {
+        do {
+            let data = try JSONEncoder().encode(actions)
+            try data.write(to: fileURL, options: .atomic)
+        } catch {
+            Self.log.error("save failed: \(error)")
+        }
+    }
+}

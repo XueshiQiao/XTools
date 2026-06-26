@@ -459,3 +459,26 @@
 
 "popbar.error.prefix" = "请求失败";
 "popbar.error.empty" = "（空响应）";
+"popbar.error.nokey" = "该动作所用服务商还没设置 API 密钥。请在下方「AI 模型」里添加。";
+"popbar.error.noprompt" = "该动作没有提示词。";
+
+"popbar.action.edit" = "编辑";
+"popbar.action.delete" = "删除";
+"popbar.action.untitled" = "未命名";
+"popbar.action.defaultModel" = "默认模型";
+"popbar.actions.add" = "添加动作";
+"popbar.actions.reset" = "恢复默认";
+"popbar.actions.footer2" = "拖动排序 · 点击编辑 · 右键删除。每个动作可用默认模型，也可单独指定模型。";
+"popbar.tag.needsKey" = "需密钥";
+"popbar.llm.keyFor" = "%@ 密钥";
+
+"popbar.editor.title" = "标题";
+"popbar.editor.kind" = "类型";
+"popbar.editor.kind.ai" = "AI 提示词";
+"popbar.editor.kind.copy" = "复制";
+"popbar.editor.icon" = "图标";
+"popbar.editor.prompt" = "系统提示词";
+"popbar.editor.customModel" = "为该动作单独指定模型";
+"popbar.editor.save" = "保存";
+"popbar.editor.cancel" = "取消";
+"popbar.editor.nokeyWarn" = "%@ 还没设置密钥 —— 请在「AI 模型」里添加。";

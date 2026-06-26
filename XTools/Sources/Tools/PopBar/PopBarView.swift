@@ -1,23 +1,24 @@
 import SwiftUI
 import AppKit
 
-/// The PopBar settings page: enable the popup, grant Accessibility, configure the
-/// AI model, preview the capsule, and see which actions it offers.
+/// The PopBar settings page: enable the popup, grant Accessibility, edit the
+/// configurable actions, configure models, and preview the capsule.
 struct PopBarView: View {
 
     @ObservedObject private var store: PopBarStore
     @ObservedObject private var llm: PopBarLLMStore
+    @ObservedObject private var actions: ActionStore
 
+    @State private var editingAction: PopBarActionConfig?
     @State private var keyDraft = ""
     @State private var keyError: String?
 
-    /// Poll the Accessibility grant so the UI reflects changes made in System
-    /// Settings without a relaunch.
     private let trustPoll = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
-    init(store: PopBarStore, llm: PopBarLLMStore) {
+    init(store: PopBarStore, llm: PopBarLLMStore, actions: ActionStore) {
         _store = ObservedObject(wrappedValue: store)
         _llm = ObservedObject(wrappedValue: llm)
+        _actions = ObservedObject(wrappedValue: actions)
     }
 
     var body: some View {
@@ -32,6 +33,18 @@ struct PopBarView: View {
         .navigationTitle(L("tool.popbar.title"))
         .onAppear { store.refreshTrust() }
         .onReceive(trustPoll) { _ in store.refreshTrust() }
+        .sheet(item: $editingAction) { action in
+            ActionEditorView(action: action, llm: llm) { saved in
+                if actions.actions.contains(where: { $0.id == saved.id }) {
+                    actions.update(saved)
+                } else {
+                    actions.add(saved)
+                }
+                editingAction = nil
+            } onCancel: {
+                editingAction = nil
+            }
+        }
     }
 
     // MARK: - Status
@@ -56,7 +69,6 @@ struct PopBarView: View {
     }
 
     private var running: Bool { store.isEnabled && store.isTrusted }
-
     private var statusText: String {
         if !store.isTrusted { return L("popbar.status.needsPermission") }
         return store.isEnabled ? L("popbar.status.on") : L("popbar.status.off")
@@ -85,17 +97,29 @@ struct PopBarView: View {
         }
     }
 
-    // MARK: - Actions preview
+    // MARK: - Actions (editable)
 
     private var actionsSection: some View {
         Section {
-            ForEach(store.actions) { action in
-                HStack(spacing: 10) {
-                    IconTile(symbol: action.symbol, color: .indigo)
-                    Text(action.title)
-                    Spacer()
-                    actionTag(action)
+            ForEach(actions.actions) { action in
+                Button { editingAction = action } label: { actionRow(action) }
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        Button(L("popbar.action.edit")) { editingAction = action }
+                        Button(L("popbar.action.delete"), role: .destructive) { actions.delete(id: action.id) }
+                    }
+            }
+            .onMove { actions.move(from: $0, to: $1) }
+
+            HStack {
+                Button {
+                    editingAction = PopBarActionConfig(title: "", iconSymbol: "sparkles", kind: .ai)
+                } label: {
+                    Label(L("popbar.actions.add"), systemImage: "plus")
                 }
+                Spacer()
+                Button(L("popbar.actions.reset")) { actions.resetToDefaults() }
+                    .foregroundStyle(.secondary)
             }
             Button { store.showPreview() } label: {
                 Label(L("popbar.preview.button"), systemImage: "eye")
@@ -103,18 +127,41 @@ struct PopBarView: View {
         } header: {
             Text(L("popbar.actions.header"))
         } footer: {
-            Text(L("popbar.actions.footer")).fixedSize(horizontal: false, vertical: true)
+            Text(L("popbar.actions.footer2")).fixedSize(horizontal: false, vertical: true)
         }
     }
 
+    private func actionRow(_ action: PopBarActionConfig) -> some View {
+        HStack(spacing: 10) {
+            IconTile(symbol: action.iconSymbol, color: .indigo)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(action.title.isEmpty ? L("popbar.action.untitled") : action.title)
+                if action.isAI {
+                    Text(modelLabel(action)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }
+            }
+            Spacer()
+            actionTag(action)
+            Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.tertiary)
+        }
+        .contentShape(Rectangle())
+    }
+
+    private func modelLabel(_ action: PopBarActionConfig) -> String {
+        if let o = action.modelOverride {
+            return "\(LLMConfig.displayName(o.provider)) · \(o.model)"
+        }
+        return L("popbar.action.defaultModel")
+    }
+
     @ViewBuilder
-    private func actionTag(_ action: PopBarAction) -> some View {
+    private func actionTag(_ action: PopBarActionConfig) -> some View {
         if action.isLocal {
             tag(L("popbar.tag.real"), .green)
-        } else if llm.isConfigured {
+        } else if llm.isConfigured(for: action.modelOverride) {
             tag(L("popbar.tag.ai"), .indigo)
         } else {
-            tag(L("popbar.tag.fake"), .orange)
+            tag(L("popbar.tag.needsKey"), .orange)
         }
     }
 
@@ -122,11 +169,11 @@ struct PopBarView: View {
         Text(text).font(.system(size: 10, weight: .semibold)).foregroundStyle(color)
     }
 
-    // MARK: - Model (LLM)
+    // MARK: - Default model + per-provider key
 
     private var modelSection: some View {
         Section {
-            Picker(selection: Binding(get: { llm.provider }, set: { llm.setProvider($0) })) {
+            Picker(selection: Binding(get: { llm.provider }, set: { llm.setProvider($0); keyDraft = "" })) {
                 ForEach(LLMConfig.providers, id: \.self) { p in
                     Text(LLMConfig.displayName(p)).tag(p)
                 }
@@ -135,34 +182,28 @@ struct PopBarView: View {
             LabeledContent {
                 TextField(L("popbar.llm.model"),
                           text: Binding(get: { llm.model }, set: { llm.setModel($0) }))
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: 220)
+                    .multilineTextAlignment(.trailing).frame(maxWidth: 220)
             } label: { iconLabel("shippingbox", .indigo, L("popbar.llm.model")) }
 
-            Picker(selection: Binding(get: { llm.reasoningEffort },
-                                      set: { llm.setReasoningEffort($0) })) {
-                ForEach(llm.thinkingOptions, id: \.tag) { opt in
-                    Text(opt.label).tag(opt.tag)
-                }
+            Picker(selection: Binding(get: { llm.reasoningEffort }, set: { llm.setReasoningEffort($0) })) {
+                ForEach(llm.thinkingOptions, id: \.tag) { opt in Text(opt.label).tag(opt.tag) }
             } label: { iconLabel("brain", .indigo, L("popbar.llm.thinking")) }
 
-            // API key
             LabeledContent {
-                if llm.hasKey {
+                if llm.hasKeyForCurrent {
                     HStack(spacing: 8) {
-                        Text(L("popbar.llm.key.saved"))
-                            .font(.system(size: 11, weight: .medium)).foregroundStyle(.green)
-                        Button(L("popbar.llm.key.clear")) { llm.clearKey() }.controlSize(.small)
+                        Text(L("popbar.llm.key.saved")).font(.system(size: 11, weight: .medium)).foregroundStyle(.green)
+                        Button(L("popbar.llm.key.clear")) { llm.clearKey(for: llm.provider) }.controlSize(.small)
                     }
                 } else {
                     Text(L("popbar.llm.key.missing")).font(.system(size: 11)).foregroundStyle(.orange)
                 }
-            } label: { iconLabel("key", .indigo, L("popbar.llm.key")) }
+            } label: { iconLabel("key", .indigo, String(format: L("popbar.llm.keyFor"), LLMConfig.displayName(llm.provider))) }
 
             HStack {
                 SecureField(L("popbar.llm.key.placeholder"), text: $keyDraft)
                 Button(L("popbar.llm.key.save")) {
-                    keyError = llm.saveKey(keyDraft)
+                    keyError = llm.saveKey(keyDraft, for: llm.provider)
                     if keyError == nil { keyDraft = "" }
                 }
                 .disabled(keyDraft.trimmingCharacters(in: .whitespaces).isEmpty)

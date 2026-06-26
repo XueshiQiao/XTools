@@ -14,11 +14,11 @@ final class PopBarPanelModel: ObservableObject {
     /// Whether the capsule is pinned open (ignores auto-dismiss).
     @Published var isPinned = false
 
-    /// Buttons to show (defaults to the built-in set).
-    var actions: [PopBarAction] = ActionRegistry.defaults
+    /// Buttons to show (set by the controller from the user's ActionStore).
+    var actions: [PopBarActionConfig] = []
 
     /// Wired by the controller.
-    var onAction: ((PopBarAction) -> Void)?
+    var onAction: ((PopBarActionConfig) -> Void)?
     var onCopyResult: ((String) -> Void)?
     var onClose: (() -> Void)?
     var onTogglePin: (() -> Void)?
@@ -116,14 +116,14 @@ struct PopBarContentView: View {
 /// A single capsule action button: icon over a tiny caption. The WHOLE tile
 /// hit-tests (`.contentShape(Rectangle())`), not just the glyph.
 private struct CapsuleActionButton: View {
-    let action: PopBarAction
+    let action: PopBarActionConfig
     let onTap: () -> Void
     @State private var hovering = false
 
     var body: some View {
         Button(action: onTap) {
             VStack(spacing: 2) {
-                Image(systemName: action.symbol)
+                Image(systemName: action.iconSymbol)
                     .font(.system(size: 15, weight: .medium))
                 Text(action.title)
                     .font(.system(size: 9, weight: .medium))

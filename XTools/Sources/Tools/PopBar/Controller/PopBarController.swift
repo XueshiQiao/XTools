@@ -16,6 +16,7 @@ final class PopBarController {
     private let monitor: GlobalInputMonitor
     private let panel = PopBarPanel()
     private let llmStore: PopBarLLMStore
+    private let actionStore: ActionStore
 
     /// The text the visible capsule is acting on.
     private var currentText = ""
@@ -34,8 +35,9 @@ final class PopBarController {
     /// onto a capsule that has since been replaced or dismissed.
     private var panelGeneration = 0
 
-    init(llmStore: PopBarLLMStore) {
+    init(llmStore: PopBarLLMStore, actionStore: ActionStore) {
         self.llmStore = llmStore
+        self.actionStore = actionStore
         resolver = SelectionResolver(strategies: [
             AccessibilityStrategy(),   // fast, side-effect-free; preferred
             ClipboardCopyStrategy(),   // fallback for browsers / Electron / custom views
@@ -117,6 +119,7 @@ final class PopBarController {
                 self.currentText = result.text
                 self.lastAnchor = context.mouseLocation
                 self.panelGeneration &+= 1
+                self.panel.model.actions = self.actionStore.actions
                 self.panel.show(at: context.mouseLocation)
             }
         }
@@ -149,13 +152,13 @@ final class PopBarController {
         }
     }
 
-    private func runAction(_ action: PopBarAction) {
+    private func runAction(_ action: PopBarActionConfig) {
         let text = currentText
         // AI actions need a model config + a loading state; local actions don't.
         let llm: LLMConfig?
-        if case .aiTransform = action.kind {
+        if action.isAI {
             panel.applyPhase(.loading)
-            llm = llmStore.currentConfig()
+            llm = llmStore.config(for: action.modelOverride)
         } else {
             llm = nil
         }
@@ -188,8 +191,12 @@ final class PopBarController {
     /// be seen without performing a real system-wide selection.
     func showPreview() {
         let frame = NSScreen.main?.frame ?? .zero
+        let center = CGPoint(x: frame.midX, y: frame.midY)
         currentText = L("popbar.preview.sample")
-        panel.show(at: CGPoint(x: frame.midX, y: frame.midY))
+        lastAnchor = center
+        panelGeneration &+= 1
+        panel.model.actions = actionStore.actions
+        panel.show(at: center)
         Self.log.info("showing preview capsule")
     }
 }

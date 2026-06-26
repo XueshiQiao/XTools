@@ -1,27 +1,15 @@
 import AppKit
 
-/// The set of capsule buttons and how each one runs. The default list is the
-/// single source of truth for "which buttons exist"; making them user-
-/// configurable later means persisting an ordered subset of these ids.
+/// Runs a configured action against the selected text. The controller resolves
+/// the model config (default or per-action override) and passes it in; a nil
+/// `llm` for an AI action means "no API key for that provider" → a clear,
+/// actionable message rather than a silent fallback (per the design review).
 enum ActionRegistry {
 
     private static let log = FileLog("PopBar.Action")
-    private static let fake = FakeAIService()
 
-    /// The built-in actions, in display order. The AI actions come first (real
-    /// once a model key is configured, else placeholder); Copy — real & local —
-    /// sits at the end.
-    static let defaults: [PopBarAction] = [
-        PopBarAction(id: "translate", titleKey: "popbar.action.translate", symbol: "character.bubble", kind: .aiTransform(.translate)),
-        PopBarAction(id: "polish",    titleKey: "popbar.action.polish",    symbol: "wand.and.stars",   kind: .aiTransform(.polish)),
-        PopBarAction(id: "explain",   titleKey: "popbar.action.explain",   symbol: "lightbulb",        kind: .aiTransform(.explain)),
-        PopBarAction(id: "copy",      titleKey: "popbar.action.copy",      symbol: "doc.on.doc",       kind: .copy),
-    ]
-
-    /// Run an action against the selected text. `llm` is the active model config
-    /// (nil when no key is set → AI actions use the placeholder service).
-    static func run(_ action: PopBarAction, on text: String, llm: LLMConfig?) async -> PopBarActionOutcome {
-        log.debug("run action \(action.id) on \(text.count) char(s)")
+    static func run(_ action: PopBarActionConfig, on text: String, llm: LLMConfig?) async -> PopBarActionOutcome {
+        log.debug("run action '\(action.title)' (\(action.kind.rawValue)) on \(text.count) char(s)")
         switch action.kind {
         case .copy:
             await MainActor.run {
@@ -30,16 +18,18 @@ enum ActionRegistry {
             }
             return .dismiss
 
-        case .aiTransform(let transform):
+        case .ai:
+            guard !action.prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return .showResult("⚠️ \(L("popbar.error.noprompt"))")
+            }
             guard let llm else {
-                return .showResult(await fake.transform(transform, text: text))
+                return .showResult("⚠️ \(L("popbar.error.nokey"))")
             }
             do {
-                let output = try await LLMClient(config: llm).complete(
-                    system: Prompts.system(for: transform), user: text)
+                let output = try await LLMClient(config: llm).complete(system: action.prompt, user: text)
                 return .showResult(output.isEmpty ? L("popbar.error.empty") : output)
             } catch {
-                log.error("LLM \(action.id) failed: \(error.localizedDescription)")
+                log.error("LLM '\(action.title)' failed: \(error.localizedDescription)")
                 return .showResult("⚠️ \(L("popbar.error.prefix"))\n\n\(error.localizedDescription)")
             }
         }

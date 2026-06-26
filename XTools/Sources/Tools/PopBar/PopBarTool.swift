@@ -19,7 +19,8 @@ final class PopBarTool: XToolModule {
     let color = Color.indigo
 
     private let llmStore = PopBarLLMStore()
-    private lazy var controller = PopBarController(llmStore: llmStore)
+    private let actionStore = ActionStore()
+    private lazy var controller = PopBarController(llmStore: llmStore, actionStore: actionStore)
     private lazy var store = PopBarStore(controller: controller)
 
     func activate() {
@@ -34,5 +35,5 @@ final class PopBarTool: XToolModule {
 
     func shutdown() { controller.stop() }
 
-    func makeRootView() -> AnyView { AnyView(PopBarView(store: store, llm: llmStore)) }
+    func makeRootView() -> AnyView { AnyView(PopBarView(store: store, llm: llmStore, actions: actionStore)) }
 }
