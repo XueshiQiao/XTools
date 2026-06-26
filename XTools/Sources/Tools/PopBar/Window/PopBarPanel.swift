@@ -115,6 +115,13 @@ final class PopBarPanel {
 
     var isVisible: Bool { panel.isVisible }
 
+    /// The window's current on-screen bottom-center. Reflects user drags (issue
+    /// #11). Used for stacking/overlap decisions because a fresh popup is placed
+    /// with its bottom-center just above the selection anchor (`clampedOrigin`), so
+    /// comparing bottom-centers compares the SAME geometric reference across
+    /// windows regardless of their differing heights.
+    var frameBottomCenter: CGPoint { CGPoint(x: panel.frame.midX, y: panel.frame.minY) }
+
     /// Whether the capsule is pinned open (ignores auto-dismiss).
     var isPinned: Bool { model.isPinned }
 
