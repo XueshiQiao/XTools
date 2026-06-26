@@ -15,6 +15,7 @@ final class PopBarController {
     private let resolver: SelectionResolver
     private let monitor: GlobalInputMonitor
     private let panel = PopBarPanel()
+    private let llmStore: PopBarLLMStore
 
     /// The text the visible capsule is acting on.
     private var currentText = ""
@@ -23,8 +24,12 @@ final class PopBarController {
     /// Bumped per trigger so a slow/canceled resolve can't act on the panel after
     /// a newer trigger has taken over.
     private var resolveGeneration = 0
+    /// Bumped on every panel show/hide so a slow AI action can't apply its result
+    /// onto a capsule that has since been replaced or dismissed.
+    private var panelGeneration = 0
 
-    init() {
+    init(llmStore: PopBarLLMStore) {
+        self.llmStore = llmStore
         resolver = SelectionResolver(strategies: [
             AccessibilityStrategy(),   // fast, side-effect-free; preferred
             ClipboardCopyStrategy(),   // fallback for browsers / Electron / custom views
@@ -64,13 +69,15 @@ final class PopBarController {
         running = false
         resolveTask?.cancel()
         monitor.stop()
-        panel.hide()
+        hidePanel()
         Self.log.info("stopped")
     }
 
     // MARK: - Trigger → resolve → show
 
     private func handleTrigger() {
+        // A pinned capsule stays put — don't replace it on a new selection.
+        if panel.isPinned { return }
         // `frontmostApplication` can momentarily return nil; fall back to the
         // menu-bar-owning app so the Electron AX-enable + self-skip still work.
         let front = NSWorkspace.shared.frontmostApplication
@@ -91,46 +98,61 @@ final class PopBarController {
             await MainActor.run {
                 // A newer trigger superseded this one — let it own the panel.
                 guard generation == self.resolveGeneration else { return }
-                guard self.running, let result, !result.text.isEmpty else { self.panel.hide(); return }
+                guard self.running, let result, !result.text.isEmpty else { self.hidePanel(); return }
                 self.currentText = result.text
+                self.panelGeneration &+= 1
                 self.panel.show(at: context.mouseLocation)
             }
         }
     }
 
     private func handleDismiss() {
-        if panel.isVisible { panel.hide() }
+        if panel.isVisible && !panel.isPinned { hidePanel() }
+    }
+
+    /// Hide the capsule and bump the panel generation so any in-flight action
+    /// result is discarded rather than re-showing a dismissed popup.
+    private func hidePanel() {
+        panelGeneration &+= 1
+        panel.hide()
     }
 
     // MARK: - Actions
 
     private func wirePanel() {
         panel.model.onAction = { [weak self] action in self?.runAction(action) }
-        panel.model.onCopyResult = { [weak self] text in self?.copyToPasteboard(text); self?.panel.hide() }
-        panel.model.onClose = { [weak self] in self?.panel.hide() }
+        panel.model.onCopyResult = { [weak self] text in self?.copyToPasteboard(text); self?.hidePanel() }
+        panel.model.onClose = { [weak self] in self?.hidePanel() }
+        panel.model.onTogglePin = { [weak self] in
+            guard let self else { return }
+            self.panel.setPinned(!self.panel.isPinned)
+        }
     }
 
     private func runAction(_ action: PopBarAction) {
         let text = currentText
-        switch action.kind {
-        case .copy:
-            Task { [weak self] in
-                _ = await ActionRegistry.run(action, on: text)
-                await MainActor.run { self?.panel.hide() }
-            }
-        case .aiTransform:
+        // AI actions need a model config + a loading state; local actions don't.
+        let llm: LLMConfig?
+        if case .aiTransform = action.kind {
             panel.applyPhase(.loading)
-            Task { [weak self] in
-                let outcome = await ActionRegistry.run(action, on: text)
-                await MainActor.run {
-                    guard let self else { return }
-                    if case .showResult(let output) = outcome {
-                        self.panel.applyPhase(.result(output))
-                    } else {
-                        self.panel.hide()
-                    }
-                }
+            llm = llmStore.currentConfig()
+        } else {
+            llm = nil
+        }
+        let generation = panelGeneration
+        Task { [weak self] in
+            let outcome = await ActionRegistry.run(action, on: text, llm: llm)
+            await MainActor.run {
+                guard let self, generation == self.panelGeneration else { return }
+                self.applyOutcome(outcome)
             }
+        }
+    }
+
+    private func applyOutcome(_ outcome: PopBarActionOutcome) {
+        switch outcome {
+        case .dismiss:                 hidePanel()
+        case .showResult(let output):  panel.applyPhase(.result(output))
         }
     }
 

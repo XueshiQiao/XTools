@@ -438,3 +438,24 @@
 "popbar.fake.polish" = "润色（演示）";
 "popbar.fake.explain" = "解释（演示）";
 "popbar.fake.note" = "这是占位输出。接入真实模型后会替换为实际结果。";
+
+"popbar.pin" = "固定";
+"popbar.unpin" = "取消固定";
+"popbar.close" = "关闭";
+"popbar.copy.result" = "复制结果";
+"popbar.tag.ai" = "AI";
+
+"popbar.llm.header" = "AI 模型";
+"popbar.llm.provider" = "服务商";
+"popbar.llm.model" = "模型";
+"popbar.llm.thinking" = "思考";
+"popbar.llm.key" = "API 密钥";
+"popbar.llm.key.placeholder" = "粘贴 API 密钥…";
+"popbar.llm.key.save" = "保存";
+"popbar.llm.key.saved" = "已保存";
+"popbar.llm.key.missing" = "未设置";
+"popbar.llm.key.clear" = "清除";
+"popbar.llm.footer" = "密钥保存在 macOS 钥匙串中。未设置密钥时 AI 动作返回占位文本。翻译等场景建议关闭思考以获得更快结果。";
+
+"popbar.error.prefix" = "请求失败";
+"popbar.error.empty" = "（空响应）";

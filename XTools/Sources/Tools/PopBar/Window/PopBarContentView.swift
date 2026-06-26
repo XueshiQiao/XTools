@@ -11,6 +11,8 @@ final class PopBarPanelModel: ObservableObject {
     }
 
     @Published var phase: Phase = .actions
+    /// Whether the capsule is pinned open (ignores auto-dismiss).
+    @Published var isPinned = false
 
     /// Buttons to show (defaults to the built-in set).
     var actions: [PopBarAction] = ActionRegistry.defaults
@@ -19,24 +21,26 @@ final class PopBarPanelModel: ObservableObject {
     var onAction: ((PopBarAction) -> Void)?
     var onCopyResult: ((String) -> Void)?
     var onClose: (() -> Void)?
+    var onTogglePin: (() -> Void)?
 }
 
 /// The capsule's content: a row of action buttons that transitions to a loading
 /// spinner and then a result panel for AI actions.
+///
+/// Visual crispness: the rounded corners + hairline border are masked at the
+/// layer level inside `VisualEffectBlur` and the drop shadow is the panel's
+/// native window shadow — not a SwiftUI `.shadow` over a transparent window,
+/// which is what produces fuzzy/feathered edges.
 struct PopBarContentView: View {
 
     @ObservedObject var model: PopBarPanelModel
 
+    private let cornerRadius: CGFloat = 11
+
     var body: some View {
         content
-            .background(VisualEffectBlur())
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .strokeBorder(.white.opacity(0.16))
-            )
-            .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
-            .padding(6) // room for the shadow inside the clear window
+            .background(VisualEffectBlur(cornerRadius: cornerRadius))
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .fixedSize()
     }
 
@@ -57,12 +61,16 @@ struct PopBarContentView: View {
     private var actionsBar: some View {
         HStack(spacing: 2) {
             ForEach(Array(model.actions.enumerated()), id: \.element.id) { index, action in
-                if index > 0 { Divider().frame(height: 26).opacity(0.4) }
+                if index > 0 { separator }
                 CapsuleActionButton(action: action) { model.onAction?(action) }
             }
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 5)
+    }
+
+    private var separator: some View {
+        Divider().frame(height: 26).opacity(0.4)
     }
 
     // MARK: - Loading
@@ -80,6 +88,19 @@ struct PopBarContentView: View {
 
     private func resultPanel(_ text: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
+            // Unified chrome toolbar: pin · copy · close all share one button style.
+            HStack(spacing: 4) {
+                ChromeButton(symbol: model.isPinned ? "pin.fill" : "pin",
+                             help: L(model.isPinned ? "popbar.unpin" : "popbar.pin"),
+                             active: model.isPinned) { model.onTogglePin?() }
+                Spacer()
+                ChromeButton(symbol: "doc.on.doc", help: L("popbar.copy.result")) {
+                    model.onCopyResult?(text)
+                }
+                ChromeButton(symbol: "xmark", help: L("popbar.close")) {
+                    model.onClose?()
+                }
+            }
             ScrollView {
                 Text(text)
                     .font(.system(size: 12))
@@ -87,27 +108,13 @@ struct PopBarContentView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .frame(width: 300, height: 130)
-
-            HStack(spacing: 8) {
-                Spacer()
-                Button { model.onCopyResult?(text) } label: {
-                    Label(L("popbar.action.copy"), systemImage: "doc.on.doc")
-                        .font(.system(size: 11))
-                }
-                .controlSize(.small)
-                Button { model.onClose?() } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 10, weight: .semibold))
-                }
-                .controlSize(.small)
-            }
         }
-        .padding(12)
+        .padding(10)
     }
 }
 
-/// A single capsule button: icon over a tiny caption. The WHOLE tile hit-tests
-/// (`.contentShape(Rectangle())`), not just the glyph.
+/// A single capsule action button: icon over a tiny caption. The WHOLE tile
+/// hit-tests (`.contentShape(Rectangle())`), not just the glyph.
 private struct CapsuleActionButton: View {
     let action: PopBarAction
     let onTap: () -> Void
@@ -136,14 +143,54 @@ private struct CapsuleActionButton: View {
     }
 }
 
-/// `NSVisualEffectView` blur behind the capsule.
+/// The one small icon button used for pin / copy / close, so they all read as a
+/// single family. Whole frame hit-tests; subtle hover + active states.
+private struct ChromeButton: View {
+    let symbol: String
+    let help: String
+    var active: Bool = false
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(active ? Color.accentColor : .secondary)
+                .frame(width: 24, height: 22)
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(active ? Color.accentColor.opacity(0.15)
+                                     : (hovering ? Color.primary.opacity(0.10) : Color.clear))
+                )
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help(help)
+    }
+}
+
+/// `NSVisualEffectView` blur, with rounded corners + a hairline border masked at
+/// the layer level so the edge is crisp (no SwiftUI-shadow feathering).
 private struct VisualEffectBlur: NSViewRepresentable {
+    var cornerRadius: CGFloat
+
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
         view.material = .menu
         view.blendingMode = .behindWindow
         view.state = .active
+        view.wantsLayer = true
+        view.layer?.cornerRadius = cornerRadius
+        view.layer?.cornerCurve = .continuous
+        view.layer?.masksToBounds = true
+        view.layer?.borderWidth = 0.5
+        view.layer?.borderColor = NSColor.separatorColor.cgColor
         return view
     }
-    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.layer?.borderColor = NSColor.separatorColor.cgColor
+    }
 }

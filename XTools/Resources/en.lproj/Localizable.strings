@@ -438,3 +438,24 @@
 "popbar.fake.polish" = "Polished (demo)";
 "popbar.fake.explain" = "Explanation (demo)";
 "popbar.fake.note" = "This is placeholder output. Connect a real model to replace it.";
+
+"popbar.pin" = "Pin";
+"popbar.unpin" = "Unpin";
+"popbar.close" = "Close";
+"popbar.copy.result" = "Copy result";
+"popbar.tag.ai" = "AI";
+
+"popbar.llm.header" = "AI Model";
+"popbar.llm.provider" = "Provider";
+"popbar.llm.model" = "Model";
+"popbar.llm.thinking" = "Thinking";
+"popbar.llm.key" = "API Key";
+"popbar.llm.key.placeholder" = "Paste API key…";
+"popbar.llm.key.save" = "Save";
+"popbar.llm.key.saved" = "Saved";
+"popbar.llm.key.missing" = "Not set";
+"popbar.llm.key.clear" = "Clear";
+"popbar.llm.footer" = "The key is stored in your macOS Keychain. With no key set, the AI actions return placeholder text. Turn Thinking off for fast results (e.g. translation).";
+
+"popbar.error.prefix" = "Request failed";
+"popbar.error.empty" = "(empty response)";

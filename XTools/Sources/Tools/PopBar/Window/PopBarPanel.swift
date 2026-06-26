@@ -37,7 +37,7 @@ final class PopBarPanel {
         panel.collectionBehavior = [.canJoinAllSpaces, .ignoresCycle]
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.hasShadow = false               // SwiftUI draws its own soft shadow
+        panel.hasShadow = true                // native window shadow — crisp, GPU-clipped
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
         panel.isMovableByWindowBackground = false
@@ -51,10 +51,20 @@ final class PopBarPanel {
 
     var isVisible: Bool { panel.isVisible }
 
+    /// Whether the capsule is pinned open (ignores auto-dismiss).
+    var isPinned: Bool { model.isPinned }
+
+    /// Pin / unpin: pinned capsules survive outside clicks and can be dragged.
+    func setPinned(_ on: Bool) {
+        model.isPinned = on
+        panel.isMovableByWindowBackground = on
+    }
+
     /// Show the capsule (in its `.actions` phase) anchored above `screenPoint`.
     func show(at screenPoint: CGPoint) {
         anchor = screenPoint
         model.phase = .actions
+        setPinned(false)   // a fresh popup always starts unpinned
         // Let SwiftUI lay out the actions row, then size + place the window.
         DispatchQueue.main.async { [weak self] in
             self?.fitAndPlace()
@@ -71,6 +81,7 @@ final class PopBarPanel {
     func hide() {
         panel.orderOut(nil)
         model.phase = .actions
+        setPinned(false)
     }
 
     // MARK: - Sizing / placement
@@ -81,6 +92,7 @@ final class PopBarPanel {
         let size = content.fittingSize
         panel.setContentSize(size)
         panel.setFrameOrigin(clampedOrigin(for: panel.frame.size))
+        panel.invalidateShadow()   // recompute the native shadow for the new rounded size
     }
 
     /// Center horizontally on the cursor, sit just above it, then clamp fully
