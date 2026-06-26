@@ -13,6 +13,9 @@ packages:
   Aptabase:
     url: https://github.com/aptabase/aptabase-swift
     from: "0.3.4"
+  MarkdownUI:
+    url: https://github.com/gonzalezreal/swift-markdown-ui
+    from: "2.4.0"
 
 schemes:
   XTools:
@@ -53,3 +56,5 @@ targets:
       - package: Sparkle
       - package: Aptabase
         product: Aptabase
+      - package: MarkdownUI
+        product: MarkdownUI

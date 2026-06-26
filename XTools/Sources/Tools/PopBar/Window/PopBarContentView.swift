@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import MarkdownUI
 
 /// Drives what the capsule shows. The panel/controller mutate `phase`; the view
 /// re-renders. Kept separate from the controller so the view is previewable.
@@ -122,8 +123,20 @@ struct PopBarContentView: View {
                                 Text(L("popbar.loading")).font(.system(size: 12)).foregroundStyle(.secondary)
                             }
                         } else {
-                            Text(text)
-                                .font(.system(size: 12))
+                            // Render the (possibly partial) streaming text as live
+                            // Markdown. MarkdownUI parses best-effort, so an unclosed
+                            // code fence or half-written list during streaming degrades
+                            // gracefully instead of crashing. The copy button still
+                            // copies the RAW `text`, not this rendered view.
+                            Markdown(text)
+                                .markdownTheme(.popBar)
+                                // The result is untrusted LLM output. MarkdownUI's
+                                // default provider would auto-fetch any `![](http…)`
+                                // image, so a prompt-injected response could make us
+                                // issue arbitrary network requests (tracking pixel /
+                                // SSRF) just by being displayed. Render nothing for
+                                // images instead.
+                                .markdownImageProvider(NoRemoteImageProvider())
                                 .textSelection(.enabled)
                         }
                     }
@@ -141,6 +154,101 @@ struct PopBarContentView: View {
     }
 
     private static let bottomAnchor = "popbar.result.bottom"
+}
+
+// MARK: - Markdown image provider
+
+/// Renders nothing for Markdown images. The PopBar result is untrusted LLM
+/// output, so we must NOT let MarkdownUI's default provider auto-fetch remote
+/// images (a prompt-injected `![](https://tracker/pixel)` would otherwise turn
+/// merely displaying the result into an arbitrary network request).
+private struct NoRemoteImageProvider: ImageProvider {
+    func makeImage(url: URL?) -> some View { EmptyView() }
+}
+
+// MARK: - Markdown theme
+
+private extension Theme {
+    /// A compact Markdown theme tuned for the 300pt-wide PopBar result panel:
+    /// ~12pt body, tight vertical margins, and modest heading sizes so the small
+    /// popup stays dense and readable in both light & dark. Colors use system
+    /// semantic styles so they adapt to appearance automatically.
+    static let popBar = Theme()
+        .text {
+            FontSize(12)
+        }
+        .code {
+            FontFamilyVariant(.monospaced)
+            FontSize(.em(0.88))
+            BackgroundColor(Color.primary.opacity(0.07))
+        }
+        .strong {
+            FontWeight(.semibold)
+        }
+        .emphasis {
+            FontStyle(.italic)
+        }
+        .link {
+            ForegroundColor(.accentColor)
+        }
+        .paragraph { configuration in
+            configuration.label
+                .relativeLineSpacing(.em(0.18))
+                .markdownMargin(top: 0, bottom: 6)
+        }
+        .heading1 { configuration in
+            configuration.label
+                .markdownMargin(top: 6, bottom: 4)
+                .markdownTextStyle {
+                    FontWeight(.bold)
+                    FontSize(.em(1.4))
+                }
+        }
+        .heading2 { configuration in
+            configuration.label
+                .markdownMargin(top: 6, bottom: 4)
+                .markdownTextStyle {
+                    FontWeight(.bold)
+                    FontSize(.em(1.25))
+                }
+        }
+        .heading3 { configuration in
+            configuration.label
+                .markdownMargin(top: 5, bottom: 3)
+                .markdownTextStyle {
+                    FontWeight(.semibold)
+                    FontSize(.em(1.1))
+                }
+        }
+        .listItem { configuration in
+            configuration.label
+                .markdownMargin(top: .em(0.12))
+        }
+        .blockquote { configuration in
+            HStack(spacing: 0) {
+                Rectangle()
+                    .fill(Color.secondary.opacity(0.4))
+                    .frame(width: 3)
+                configuration.label
+                    .padding(.leading, 8)
+                    .markdownTextStyle {
+                        ForegroundColor(.secondary)
+                    }
+            }
+        }
+        .codeBlock { configuration in
+            ScrollView(.horizontal, showsIndicators: false) {
+                configuration.label
+                    .markdownTextStyle {
+                        FontFamilyVariant(.monospaced)
+                        FontSize(.em(0.85))
+                    }
+                    .padding(8)
+            }
+            .background(Color.primary.opacity(0.06))
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .markdownMargin(top: 4, bottom: 6)
+        }
 }
 
 /// A single capsule action button: icon over a tiny caption. The WHOLE tile
