@@ -5,11 +5,25 @@
     <link>https://github.com/XueshiQiao/XTools</link>
     <language>en</language>
     <item>
-      <title>Version 26.06.4</title>
+      <title>Version 26.06.5</title>
       <description><![CDATA[<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
 <body>
+
+<h3>What's New in 26.06.5</h3>
+<ul>
+  <li><b>New tool — PopBar:</b> Select text in any app and a little capsule of actions pops up right at your cursor. Pick one and the AI answer streams in live, formatted as rich text (headings, lists, code).</li>
+  <li><b>Your own actions:</b> Add, edit, and reorder actions — each can use its own model. Bring your own provider key (DeepSeek, OpenAI, Doubao, Qwen, Ollama).</li>
+  <li><b>Comfortable windows:</b> Drag a result anywhere, let it grow to fit long answers, dial the text size to taste, and pin several results open side by side.</li>
+</ul>
+
+<h3>26.06.5 更新内容</h3>
+<ul>
+  <li><b>新增工具 · 划词胶囊 PopBar:</b>在任意 App 里选中文字,光标旁就会弹出一排操作胶囊。点一下,AI 回答就实时流式显示,并按富文本渲染(标题、列表、代码)。</li>
+  <li><b>动作随你定:</b>可添加、编辑、排序动作,每个动作可单独选模型;自带 provider 密钥(DeepSeek、OpenAI、豆包、通义千问、Ollama)。</li>
+  <li><b>窗口更顺手:</b>结果窗口可拖动、可随内容自动变高、可调字号,还能同时固定多个结果并排查看。</li>
+</ul>
 
 <h3>What's New in 26.06.4</h3>
 <ul>
@@ -25,11 +39,11 @@
 
 </body>
 </html>]]></description>
-      <pubDate>Wed, 24 Jun 2026 15:39:18 +0000</pubDate>
-      <sparkle:version>4</sparkle:version>
-      <sparkle:shortVersionString>26.06.4</sparkle:shortVersionString>
+      <pubDate>Sat, 27 Jun 2026 07:10:00 +0000</pubDate>
+      <sparkle:version>5</sparkle:version>
+      <sparkle:shortVersionString>26.06.5</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://github.com/XueshiQiao/XTools/releases/download/v26.06.4/XTools.dmg" length="6076368" type="application/octet-stream" sparkle:edSignature="Nof5xJ9vmSYzwExmb7ksHZpCLqb9mGjMX6KIBd/AMfhg91iQQTaE8rNqD4+qHkzHdDfyj9Oi/7UoQ6PuITZAAw==" />
+      <enclosure url="https://github.com/XueshiQiao/XTools/releases/download/v26.06.5/XTools.dmg" length="7719454" type="application/octet-stream" sparkle:edSignature="8drZE9R+5UQzXUHcznJW/vDp/K5knBKur5iWudt9u95KXwIQMJ6YkyM038WMYp/YGNsCG8qgrRjuMg2gUaSTAg==" />
     </item>
   </channel>
 </rss>
