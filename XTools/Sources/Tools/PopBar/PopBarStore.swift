@@ -8,6 +8,7 @@ final class PopBarStore: ObservableObject {
 
     @Published var isEnabled: Bool
     @Published var autoExpandHeight: Bool
+    @Published var resultFontSize: Double
     @Published private(set) var isTrusted: Bool
 
     private let controller: PopBarController
@@ -16,6 +17,7 @@ final class PopBarStore: ObservableObject {
         self.controller = controller
         self.isEnabled = PopBarPreferences.isEnabled
         self.autoExpandHeight = PopBarPreferences.autoExpandHeight
+        self.resultFontSize = PopBarPreferences.resultFontSize
         self.isTrusted = AccessibilityAuthorizer.isTrusted
     }
 
@@ -43,6 +45,15 @@ final class PopBarStore: ObservableObject {
         autoExpandHeight = on
         PopBarPreferences.autoExpandHeight = on
         controller.setAutoExpandHeight(on)
+    }
+
+    /// Set the result Markdown's base font size (issue #14). Persisted in PopBar's
+    /// own prefs; the controller pushes it to every live panel so an already-open
+    /// result re-renders at the new size immediately. Mirrors `setAutoExpandHeight`.
+    func setResultFontSize(_ size: Double) {
+        resultFontSize = size
+        PopBarPreferences.resultFontSize = size
+        controller.setResultFontSize(size)
     }
 
     /// Re-check the Accessibility grant (the user may toggle it in System

@@ -87,6 +87,11 @@ final class PopBarWindowManager {
         for session in pinned { session.setAutoExpandHeight(on) }
     }
 
+    func setResultFontSize(_ size: Double) {
+        transient.setResultFontSize(size)
+        for session in pinned { session.setResultFontSize(size) }
+    }
+
     // MARK: - Lifecycle
 
     /// Hide & release everything (controller stop / tool shutdown).

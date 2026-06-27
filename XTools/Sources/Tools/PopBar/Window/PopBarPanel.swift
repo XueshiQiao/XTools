@@ -47,6 +47,13 @@ final class PopBarPanel {
     /// content-height change only re-fits if the measured window size actually
     /// changed, so steady text costs nothing.
     private var lastFitHeight: CGFloat = 0
+    /// The locked TOP edge of the current result presentation (issue #12). While in
+    /// the `.result` phase (and the window hasn't been user-dragged), the window's
+    /// top stays put and it grows only DOWNWARD as content streams / auto-height
+    /// grows — no upward expansion / "up then down" jump. Captured on the FIRST
+    /// result fit from the capsule's current top, reused on every later re-fit, and
+    /// reset to `nil` whenever the popup re-shows or returns to `.actions`.
+    private var resultTopY: CGFloat?
 
     /// Auto-expand (issue #12) bounds for the result scroll area. The content
     /// grows within `[min, max]`; beyond `max` it scrolls. `max` is further capped
@@ -145,10 +152,13 @@ final class PopBarPanel {
         // Pick up the current auto-expand preference for this show (the user may
         // have toggled it in settings since the last popup).
         model.autoExpandHeight = PopBarPreferences.autoExpandHeight
+        // Same for the result font size (issue #14).
+        model.resultFontSize = PopBarPreferences.resultFontSize
         model.resultContentHeight = nil   // re-measure for this popup's content
         lastMeasuredContentHeight = 0     // drop the previous popup's measurement
         model.phase = .actions
         model.streamingText = ""
+        resultTopY = nil   // a fresh popup re-anchors; the result top re-locks on its first result fit
         setPinned(false)   // a fresh popup always starts unpinned
         // Let SwiftUI lay out the actions row, then size + place the window.
         DispatchQueue.main.async { [weak self] in
@@ -162,6 +172,9 @@ final class PopBarPanel {
     /// the result view (which reads `streamingText`) shows the initial value.
     func applyPhase(_ phase: PopBarPanelModel.Phase) {
         if case .result(let text) = phase { model.streamingText = text }
+        // Leaving the result phase releases the locked top so the next result
+        // (or the actions capsule) re-anchors fresh (issue #12).
+        if case .result = phase {} else { resultTopY = nil }
         model.phase = phase
         DispatchQueue.main.async { [weak self] in self?.fitAndPlace() }
     }
@@ -189,6 +202,14 @@ final class PopBarPanel {
         if on { model.resultContentHeight = clampedResultHeight(forContent: lastMeasuredContentHeight) }
         guard panel.isVisible else { return }
         DispatchQueue.main.async { [weak self] in self?.fitAndPlace() }
+    }
+
+    /// Apply a live result-font-size change (from settings) onto an already-open
+    /// panel (issue #14). Changing the size re-renders the Markdown; with auto-expand
+    /// ON the content-height measure callback fires and re-fits, so we don't re-fit
+    /// here. The result top stays locked (issue #12), so it grows/shrinks downward.
+    func setResultFontSize(_ size: Double) {
+        model.resultFontSize = size
     }
 
     /// SwiftUI measured the result content's natural height. Cache it (always),
@@ -224,6 +245,7 @@ final class PopBarPanel {
         panel.orderOut(nil)
         model.phase = .actions
         model.streamingText = ""
+        resultTopY = nil   // released so the next presentation re-anchors (issue #12)
         setPinned(false)
     }
 
@@ -242,15 +264,28 @@ final class PopBarPanel {
         if coalesce && abs(size.height - lastFitHeight) < 0.5 { return }
         lastFitHeight = size.height
 
-        // Where to keep the popup as it resizes: by default re-anchor to the cursor;
-        // once the user has dragged it, keep it pinned to where they put it (resize
-        // around the current top-center so it grows/shrinks in place).
+        // Where to keep the popup as it resizes (issue #12):
+        //  - dragged: keep it pinned where the user put it (hold the dragged top).
+        //  - `.actions` (not dragged): capsule above the cursor (unchanged).
+        //  - `.result` (not dragged): hold the TOP edge and grow only DOWNWARD —
+        //    lock the top on the first result fit (from the capsule's current top so
+        //    actions→result doesn't jump), then reuse it on every later re-fit.
         let oldFrame = panel.frame
+        // Capture the locked top BEFORE resizing, on the first result fit.
+        if !userMoved, case .result = model.phase, resultTopY == nil {
+            resultTopY = oldFrame.maxY
+        }
         repositioning = true
         panel.setContentSize(size)
-        let origin = userMoved
-            ? preservedOrigin(oldFrame: oldFrame, newSize: panel.frame.size)
-            : clampedOrigin(for: panel.frame.size)
+        let newSize = panel.frame.size
+        let origin: CGPoint
+        if userMoved {
+            origin = preservedOrigin(oldFrame: oldFrame, newSize: newSize)
+        } else if case .result = model.phase {
+            origin = resultOrigin(for: newSize)
+        } else {
+            origin = clampedOrigin(for: newSize)
+        }
         panel.setFrameOrigin(origin)
         repositioning = false
 
@@ -279,6 +314,25 @@ final class PopBarPanel {
     /// the edge near screen borders).
     private func clampedOrigin(for size: CGSize) -> CGPoint {
         var origin = CGPoint(x: anchor.x - size.width / 2, y: anchor.y + 12)
+
+        let screen = NSScreen.screens.first { $0.frame.contains(anchor) } ?? NSScreen.main
+        if let visible = screen?.visibleFrame {
+            let margin: CGFloat = 8
+            origin.x = min(max(origin.x, visible.minX + margin), visible.maxX - size.width - margin)
+            origin.y = min(max(origin.y, visible.minY + margin), visible.maxY - size.height - margin)
+        }
+        return origin
+    }
+
+    /// Place a result presentation with a FIXED top edge so it grows only DOWNWARD
+    /// (issue #12). The top (`resultTopY`, locked on the first result fit) stays put
+    /// while the height changes; only the bottom extends down. X stays centered on
+    /// the cursor (same as `clampedOrigin`). Clamped inside the visible frame so a
+    /// result that would grow past the bottom is held at the bottom (a safety clamp —
+    /// the auto-height cap already bounds growth).
+    private func resultOrigin(for size: CGSize) -> CGPoint {
+        let top = resultTopY ?? (anchor.y + 12)
+        var origin = CGPoint(x: anchor.x - size.width / 2, y: top - size.height)
 
         let screen = NSScreen.screens.first { $0.frame.contains(anchor) } ?? NSScreen.main
         if let visible = screen?.visibleFrame {

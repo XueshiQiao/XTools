@@ -127,6 +127,20 @@ struct PopBarView: View {
                                  set: { store.setAutoExpandHeight($0) })) {
                 iconLabel("arrow.up.and.down.text.horizontal", .indigo, L("popbar.autoheight.label"))
             }
+            LabeledContent {
+                HStack(spacing: 10) {
+                    Slider(value: Binding(get: { store.resultFontSize },
+                                          set: { store.setResultFontSize($0) }),
+                           in: PopBarPreferences.resultFontSizeRange, step: 1)
+                        .frame(maxWidth: 180)
+                    Text("\(Int(store.resultFontSize))")
+                        .font(.system(size: 11, weight: .medium).monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .frame(width: 22, alignment: .trailing)
+                }
+            } label: {
+                iconLabel("textformat.size", .indigo, L("popbar.fontsize.label"))
+            }
             Button { store.showPreview() } label: {
                 Label(L("popbar.preview.button"), systemImage: "eye")
             }
@@ -136,6 +150,7 @@ struct PopBarView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(L("popbar.actions.footer2"))
                 Text(L("popbar.autoheight.footer"))
+                Text(L("popbar.fontsize.footer"))
             }
             .fixedSize(horizontal: false, vertical: true)
         }

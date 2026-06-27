@@ -96,6 +96,10 @@ final class PopBarSession {
         panel.setAutoExpandHeight(on)
     }
 
+    func setResultFontSize(_ size: Double) {
+        panel.setResultFontSize(size)
+    }
+
     // MARK: - Actions (self-contained per window)
 
     /// Run a tapped action inside THIS window, streaming into THIS window's panel.

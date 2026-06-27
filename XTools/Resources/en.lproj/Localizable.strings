@@ -471,6 +471,8 @@
 "popbar.actions.footer2" = "Use the arrows to reorder · click to edit · right-click to delete. Each action can use the default model or its own.";
 "popbar.autoheight.label" = "Grow result height to fit";
 "popbar.autoheight.footer" = "When on, the result panel grows taller to fit its content (up to a limit, then scrolls). When off, it keeps a fixed compact size. Width is unchanged.";
+"popbar.fontsize.label" = "Result text size";
+"popbar.fontsize.footer" = "Sets the base font size of the result text. Applies live to any open result.";
 "popbar.action.moveUp" = "Move up";
 "popbar.action.moveDown" = "Move down";
 "popbar.tag.needsKey" = "NEEDS KEY";

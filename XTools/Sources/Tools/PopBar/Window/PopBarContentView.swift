@@ -19,6 +19,11 @@ final class PopBarPanelModel: ObservableObject {
     /// from `PopBarPreferences` and kept in sync so an already-open panel honors a
     /// toggle change. Width is always fixed regardless of this flag.
     @Published var autoExpandHeight = PopBarPreferences.autoExpandHeight
+    /// The base font size for the result Markdown (issue #14). Seeded from
+    /// `PopBarPreferences` and re-seeded on each show + on a live settings change so
+    /// an already-open result re-renders at the new size. Headings/code scale as
+    /// relative `.em(...)` multiples off this.
+    @Published var resultFontSize: Double = PopBarPreferences.resultFontSize
     /// The height the result scroll area should use when auto-expand is ON. The
     /// panel computes this (clamping the view's measured content height against the
     /// popup's own screen — issue #12) and pushes it here; the view applies it.
@@ -63,8 +68,8 @@ struct PopBarContentView: View {
     private let cornerRadius: CGFloat = 11
 
     /// The result content area's fixed width (always) and its fixed height when
-    /// auto-expand is OFF (today's behavior — issue #7).
-    private let resultWidth: CGFloat = 300
+    /// auto-expand is OFF (today's behavior — issue #7). Widened +50% in issue #14.
+    private let resultWidth: CGFloat = 450
     private let resultFixedHeight: CGFloat = 130
 
     var body: some View {
@@ -150,7 +155,7 @@ struct PopBarContentView: View {
                             // gracefully instead of crashing. The copy button still
                             // copies the RAW `text`, not this rendered view.
                             Markdown(text)
-                                .markdownTheme(.popBar)
+                                .markdownTheme(Theme.popBar(baseSize: model.resultFontSize))
                                 // The result is untrusted LLM output. MarkdownUI's
                                 // default provider would auto-fetch any `![](http…)`
                                 // image, so a prompt-injected response could make us
@@ -222,13 +227,16 @@ private struct NoRemoteImageProvider: ImageProvider {
 // MARK: - Markdown theme
 
 private extension Theme {
-    /// A compact Markdown theme tuned for the 300pt-wide PopBar result panel:
-    /// ~12pt body, tight vertical margins, and modest heading sizes so the small
-    /// popup stays dense and readable in both light & dark. Colors use system
-    /// semantic styles so they adapt to appearance automatically.
-    static let popBar = Theme()
+    /// A compact Markdown theme tuned for the PopBar result panel: tight vertical
+    /// margins and modest heading sizes so the popup stays dense and readable in
+    /// both light & dark. Colors use system semantic styles so they adapt to
+    /// appearance automatically. The body uses `baseSize` (a user setting — issue
+    /// #14) and headings/code scale off it as relative `.em(...)` multiples, so the
+    /// whole result scales together when the user changes the font size.
+    static func popBar(baseSize: CGFloat) -> Theme {
+        Theme()
         .text {
-            FontSize(12)
+            FontSize(baseSize)
         }
         .code {
             FontFamilyVariant(.monospaced)
@@ -302,6 +310,7 @@ private extension Theme {
             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             .markdownMargin(top: 4, bottom: 6)
         }
+    }
 }
 
 /// A single capsule action button: icon over a tiny caption. The WHOLE tile

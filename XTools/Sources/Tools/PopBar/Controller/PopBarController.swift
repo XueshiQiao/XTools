@@ -159,4 +159,10 @@ final class PopBarController {
     func setAutoExpandHeight(_ on: Bool) {
         windows.setAutoExpandHeight(on)
     }
+
+    /// Push a live result-font-size change (from settings) onto every open window so
+    /// an already-open result re-renders at the new size (issue #14).
+    func setResultFontSize(_ size: Double) {
+        windows.setResultFontSize(size)
+    }
 }
