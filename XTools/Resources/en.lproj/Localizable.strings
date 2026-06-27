@@ -6,6 +6,7 @@
 "Quit XTools" = "Quit XTools";
 
 /* Sidebar / chrome */
+"models.title" = "AI Models";
 "General" = "General";
 "About" = "About";
 "nav.toggleSidebar" = "Toggle Sidebar";
@@ -445,21 +446,31 @@
 "popbar.copy.result" = "Copy result";
 "popbar.tag.ai" = "AI";
 
-"popbar.llm.header" = "AI Model";
+/* Reused labels for PopBar's per-action model override picker */
 "popbar.llm.provider" = "Provider";
 "popbar.llm.model" = "Model";
 "popbar.llm.thinking" = "Thinking";
-"popbar.llm.key" = "API Key";
-"popbar.llm.key.placeholder" = "Paste API key…";
-"popbar.llm.key.save" = "Save";
-"popbar.llm.key.saved" = "Saved";
-"popbar.llm.key.missing" = "Not set";
-"popbar.llm.key.clear" = "Clear";
-"popbar.llm.footer" = "The key is stored in your macOS Keychain. With no key set, the AI actions return placeholder text. Turn Thinking off for fast results (e.g. translation).";
+
+/* AI Models page (app-level, shared by every tool) */
+"models.default.header" = "Default model";
+"models.provider" = "Provider";
+"models.model" = "Model";
+"models.baseURL" = "Base URL";
+"models.thinking" = "Thinking";
+"models.default.footer" = "The default model is used by any tool's AI action unless it specifies its own. Turn Thinking off for fast results (e.g. translation).";
+"models.key.header" = "API Key";
+"models.keyFor" = "%@ API Key";
+"models.key.placeholder" = "Paste API key…";
+"models.key.save" = "Save";
+"models.key.saved" = "Saved";
+"models.key.missing" = "Not set";
+"models.key.clear" = "Clear";
+"models.key.notNeeded" = "Not required";
+"models.key.footer" = "One key per provider, stored in your macOS Keychain. Any tool can use a provider once its key is set. Ollama needs no key.";
 
 "popbar.error.prefix" = "Request failed";
 "popbar.error.empty" = "(empty response)";
-"popbar.error.nokey" = "No API key set for this action's provider. Add one in the AI Model section below.";
+"popbar.error.nokey" = "No API key set for this action's provider. Add one on the AI Models page.";
 "popbar.error.noprompt" = "This action has no prompt.";
 
 "popbar.action.edit" = "Edit";
@@ -476,7 +487,6 @@
 "popbar.action.moveUp" = "Move up";
 "popbar.action.moveDown" = "Move down";
 "popbar.tag.needsKey" = "NEEDS KEY";
-"popbar.llm.keyFor" = "%@ API Key";
 
 "popbar.editor.title" = "Title";
 "popbar.editor.kind" = "Type";
@@ -487,4 +497,4 @@
 "popbar.editor.customModel" = "Use a custom model for this action";
 "popbar.editor.save" = "Save";
 "popbar.editor.cancel" = "Cancel";
-"popbar.editor.nokeyWarn" = "No API key for %@ — set it in the AI Model section.";
+"popbar.editor.nokeyWarn" = "No API key for %@ — set it on the AI Models page.";

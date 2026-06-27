@@ -5,9 +5,12 @@ import Foundation
 ///
 /// Order here = order in the sidebar (above the built-in General / About rows).
 enum ToolRegistry {
-    static func makeAllTools() -> [any XToolModule] {
+    /// Builds every tool, injecting app-level shared services (e.g. `LLMService`)
+    /// into the tools that consume them — preferred over a global singleton so
+    /// AppState stays the single owner of both the tools and the services.
+    static func makeAllTools(llm: LLMService) -> [any XToolModule] {
         [
-            PopBarTool(),
+            PopBarTool(llm: llm),
             LaunchManagerTool(),
             WakeLocksTool(),
             PowerInsightsTool(),

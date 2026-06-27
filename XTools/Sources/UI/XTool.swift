@@ -47,6 +47,7 @@ extension XToolModule {
 enum SidebarItem: Hashable {
     case dashboard
     case tool(String)
+    case models
     case general
     case about
 
@@ -55,6 +56,7 @@ enum SidebarItem: Hashable {
         switch self {
         case .dashboard:    return "dashboard"
         case .tool(let id): return "tool_\(id)"
+        case .models:       return "models"
         case .general:      return "general"
         case .about:        return "about"
         }

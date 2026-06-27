@@ -11,6 +11,11 @@ final class AppState: ObservableObject {
 
     let updateController: UpdateController
 
+    /// The app-level shared LLM service. Created once at launch and injected into
+    /// any tool that needs a model (e.g. PopBar). One Source of Truth for LLM
+    /// config; also backs the AI Models settings page.
+    let llm: LLMService
+
     /// All tools, in sidebar order. Each is long-lived (owns its store/services).
     let tools: [any XToolModule]
 
@@ -29,7 +34,9 @@ final class AppState: ObservableObject {
 
     init(updateController: UpdateController) {
         self.updateController = updateController
-        let tools = ToolRegistry.makeAllTools()
+        let llm = LLMService()
+        self.llm = llm
+        let tools = ToolRegistry.makeAllTools(llm: llm)
         self.tools = tools
         // Default to the Dashboard overview; `XTOOLS_TAB=<tool id>` overrides
         // (dev/screenshot affordance, inert in normal use), and `XTOOLS_TAB=dashboard`

@@ -2,20 +2,20 @@ import SwiftUI
 import AppKit
 
 /// The PopBar settings page: enable the popup, grant Accessibility, edit the
-/// configurable actions, configure models, and preview the capsule.
+/// configurable actions, and preview the capsule. The model/provider/key config
+/// now lives on the shared **AI Models** page (`ModelsPage`); this page only reads
+/// the shared `LLMService` to show whether an action's provider is configured.
 struct PopBarView: View {
 
     @ObservedObject private var store: PopBarStore
-    @ObservedObject private var llm: PopBarLLMStore
+    @ObservedObject private var llm: LLMService
     @ObservedObject private var actions: ActionStore
 
     @State private var editingAction: PopBarActionConfig?
-    @State private var keyDraft = ""
-    @State private var keyError: String?
 
     private let trustPoll = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
-    init(store: PopBarStore, llm: PopBarLLMStore, actions: ActionStore) {
+    init(store: PopBarStore, llm: LLMService, actions: ActionStore) {
         _store = ObservedObject(wrappedValue: store)
         _llm = ObservedObject(wrappedValue: llm)
         _actions = ObservedObject(wrappedValue: actions)
@@ -26,7 +26,6 @@ struct PopBarView: View {
             statusSection
             if !store.isTrusted { permissionSection }
             actionsSection
-            modelSection
             aboutSection
         }
         .formStyle(.grouped)
@@ -217,7 +216,7 @@ struct PopBarView: View {
     private func actionTag(_ action: PopBarActionConfig) -> some View {
         if action.isLocal {
             tag(L("popbar.tag.real"), .green)
-        } else if llm.isConfigured(for: action.modelOverride) {
+        } else if llm.isConfigured(forProvider: action.modelOverride?.provider ?? llm.settings.provider) {
             tag(L("popbar.tag.ai"), .indigo)
         } else {
             tag(L("popbar.tag.needsKey"), .orange)
@@ -226,55 +225,6 @@ struct PopBarView: View {
 
     private func tag(_ text: String, _ color: Color) -> some View {
         Text(text).font(.system(size: 10, weight: .semibold)).foregroundStyle(color)
-    }
-
-    // MARK: - Default model + per-provider key
-
-    private var modelSection: some View {
-        Section {
-            Picker(selection: Binding(get: { llm.provider }, set: { llm.setProvider($0); keyDraft = "" })) {
-                ForEach(LLMConfig.providers, id: \.self) { p in
-                    Text(LLMConfig.displayName(p)).tag(p)
-                }
-            } label: { iconLabel("cpu", .indigo, L("popbar.llm.provider")) }
-
-            LabeledContent {
-                TextField(L("popbar.llm.model"),
-                          text: Binding(get: { llm.model }, set: { llm.setModel($0) }))
-                    .multilineTextAlignment(.trailing).frame(maxWidth: 220)
-            } label: { iconLabel("shippingbox", .indigo, L("popbar.llm.model")) }
-
-            Picker(selection: Binding(get: { llm.reasoningEffort }, set: { llm.setReasoningEffort($0) })) {
-                ForEach(llm.thinkingOptions, id: \.tag) { opt in Text(opt.label).tag(opt.tag) }
-            } label: { iconLabel("brain", .indigo, L("popbar.llm.thinking")) }
-
-            LabeledContent {
-                if llm.hasKeyForCurrent {
-                    HStack(spacing: 8) {
-                        Text(L("popbar.llm.key.saved")).font(.system(size: 11, weight: .medium)).foregroundStyle(.green)
-                        Button(L("popbar.llm.key.clear")) { llm.clearKey(for: llm.provider) }.controlSize(.small)
-                    }
-                } else {
-                    Text(L("popbar.llm.key.missing")).font(.system(size: 11)).foregroundStyle(.orange)
-                }
-            } label: { iconLabel("key", .indigo, String(format: L("popbar.llm.keyFor"), LLMConfig.displayName(llm.provider))) }
-
-            HStack {
-                SecureField(L("popbar.llm.key.placeholder"), text: $keyDraft)
-                Button(L("popbar.llm.key.save")) {
-                    keyError = llm.saveKey(keyDraft, for: llm.provider)
-                    if keyError == nil { keyDraft = "" }
-                }
-                .disabled(keyDraft.trimmingCharacters(in: .whitespaces).isEmpty)
-            }
-            if let keyError {
-                Text(keyError).font(.caption).foregroundStyle(.red)
-            }
-        } header: {
-            Text(L("popbar.llm.header"))
-        } footer: {
-            Text(L("popbar.llm.footer")).fixedSize(horizontal: false, vertical: true)
-        }
     }
 
     // MARK: - About

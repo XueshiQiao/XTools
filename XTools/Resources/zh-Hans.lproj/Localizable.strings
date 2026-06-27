@@ -6,6 +6,7 @@
 "Quit XTools" = "退出 XTools";
 
 /* Sidebar / chrome */
+"models.title" = "AI 模型";
 "General" = "通用";
 "About" = "关于";
 "nav.toggleSidebar" = "切换侧栏";
@@ -445,21 +446,31 @@
 "popbar.copy.result" = "复制结果";
 "popbar.tag.ai" = "AI";
 
-"popbar.llm.header" = "AI 模型";
+/* PopBar 单动作模型覆盖选择器复用的标签 */
 "popbar.llm.provider" = "服务商";
 "popbar.llm.model" = "模型";
 "popbar.llm.thinking" = "思考";
-"popbar.llm.key" = "API 密钥";
-"popbar.llm.key.placeholder" = "粘贴 API 密钥…";
-"popbar.llm.key.save" = "保存";
-"popbar.llm.key.saved" = "已保存";
-"popbar.llm.key.missing" = "未设置";
-"popbar.llm.key.clear" = "清除";
-"popbar.llm.footer" = "密钥保存在 macOS 钥匙串中。未设置密钥时 AI 动作返回占位文本。翻译等场景建议关闭思考以获得更快结果。";
+
+/* AI 模型页面（应用级，所有工具共享） */
+"models.default.header" = "默认模型";
+"models.provider" = "服务商";
+"models.model" = "模型";
+"models.baseURL" = "Base URL";
+"models.thinking" = "思考";
+"models.default.footer" = "任何工具的 AI 动作若未单独指定模型，都会使用这个默认模型。翻译等场景建议关闭思考以获得更快结果。";
+"models.key.header" = "API 密钥";
+"models.keyFor" = "%@ 密钥";
+"models.key.placeholder" = "粘贴 API 密钥…";
+"models.key.save" = "保存";
+"models.key.saved" = "已保存";
+"models.key.missing" = "未设置";
+"models.key.clear" = "清除";
+"models.key.notNeeded" = "无需密钥";
+"models.key.footer" = "每个服务商一个密钥，保存在 macOS 钥匙串中。密钥设置后，任何工具都能使用该服务商。Ollama 无需密钥。";
 
 "popbar.error.prefix" = "请求失败";
 "popbar.error.empty" = "（空响应）";
-"popbar.error.nokey" = "该动作所用服务商还没设置 API 密钥。请在下方「AI 模型」里添加。";
+"popbar.error.nokey" = "该动作所用服务商还没设置 API 密钥。请在「AI 模型」页面添加。";
 "popbar.error.noprompt" = "该动作没有提示词。";
 
 "popbar.action.edit" = "编辑";
@@ -476,7 +487,6 @@
 "popbar.action.moveUp" = "上移";
 "popbar.action.moveDown" = "下移";
 "popbar.tag.needsKey" = "需密钥";
-"popbar.llm.keyFor" = "%@ 密钥";
 
 "popbar.editor.title" = "标题";
 "popbar.editor.kind" = "类型";
@@ -487,4 +497,4 @@
 "popbar.editor.customModel" = "为该动作单独指定模型";
 "popbar.editor.save" = "保存";
 "popbar.editor.cancel" = "取消";
-"popbar.editor.nokeyWarn" = "%@ 还没设置密钥 —— 请在「AI 模型」里添加。";
+"popbar.editor.nokeyWarn" = "%@ 还没设置密钥 —— 请在「AI 模型」页面添加。";

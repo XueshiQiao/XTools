@@ -1,14 +1,17 @@
 import AppKit
 
-/// Runs a configured action against the selected text. The controller resolves
-/// the model config (default or per-action override) and passes it in; a nil
-/// `llm` for an AI action means "no API key for that provider" → a clear,
-/// actionable message rather than a silent fallback (per the design review).
+/// Runs a configured action against the selected text. The session resolves the
+/// model config (default or per-action override) via the shared `LLMService` and
+/// passes both in; a nil `config` for an AI action means "no API key for that
+/// provider" → a clear, actionable message rather than a silent fallback (per the
+/// design review). The actual inference goes through `LLMService`, the app-level
+/// facade, so PopBar no longer talks to `LLMClient` directly.
 enum ActionRegistry {
 
     private static let log = FileLog("PopBar.Action")
 
-    static func run(_ action: PopBarActionConfig, on text: String, llm: LLMConfig?) async -> PopBarActionOutcome {
+    static func run(_ action: PopBarActionConfig, on text: String,
+                    service: LLMService?, config: LLMConfig?) async -> PopBarActionOutcome {
         log.debug("run action '\(action.title)' (\(action.kind.rawValue)) on \(text.count) char(s)")
         switch action.kind {
         case .copy:
@@ -22,11 +25,11 @@ enum ActionRegistry {
             guard !action.prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 return .showResult("⚠️ \(L("popbar.error.noprompt"))")
             }
-            guard let llm else {
+            guard let service, let config else {
                 return .showResult("⚠️ \(L("popbar.error.nokey"))")
             }
             do {
-                let output = try await LLMClient(config: llm).complete(system: action.prompt, user: text)
+                let output = try await service.complete(config, system: action.prompt, user: text)
                 return .showResult(output.isEmpty ? L("popbar.error.empty") : output)
             } catch {
                 log.error("LLM '\(action.title)' failed: \(error.localizedDescription)")
@@ -44,25 +47,25 @@ enum ActionRegistry {
     static func runStreaming(
         _ action: PopBarActionConfig,
         on text: String,
-        llm: LLMConfig?,
+        service: LLMService?,
+        config: LLMConfig?,
         onDelta: @escaping (String) -> Void
     ) async -> PopBarActionOutcome {
-        guard action.kind == .ai else { return await run(action, on: text, llm: llm) }
+        guard action.kind == .ai else { return await run(action, on: text, service: service, config: config) }
 
         log.debug("stream action '\(action.title)' on \(text.count) char(s)")
         guard !action.prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return .showResult("⚠️ \(L("popbar.error.noprompt"))")
         }
-        guard let llm else {
+        guard let service, let config else {
             return .showResult("⚠️ \(L("popbar.error.nokey"))")
         }
 
-        let client = LLMClient(config: llm)
         // Track whether any token reached the UI: a failure AFTER content is shown
         // must NOT silently re-run the one-shot path (double charge + lost partial).
         let emitted = StreamProgress()
         do {
-            let output = try await client.stream(system: action.prompt, user: text) { displayed in
+            let output = try await service.stream(config, system: action.prompt, user: text) { displayed in
                 if !displayed.isEmpty { emitted.didEmit = true }
                 onDelta(displayed)
             }
@@ -83,7 +86,7 @@ enum ActionRegistry {
             }
             log.error("LLM stream '\(action.title)' failed to start: \(error.localizedDescription) — falling back to one-shot")
             do {
-                let output = try await client.complete(system: action.prompt, user: text)
+                let output = try await service.complete(config, system: action.prompt, user: text)
                 return .showResult(output.isEmpty ? L("popbar.error.empty") : output)
             } catch is CancellationError {
                 return .dismiss

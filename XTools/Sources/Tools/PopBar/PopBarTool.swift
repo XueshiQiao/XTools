@@ -18,10 +18,16 @@ final class PopBarTool: XToolModule {
     let symbol = "text.bubble.fill"
     let color = Color.indigo
 
-    private let llmStore = PopBarLLMStore()
+    /// The app-level shared LLM service, injected by `ToolRegistry`. PopBar no
+    /// longer owns the model config — it lives on the AI Models page.
+    private let llm: LLMService
     private let actionStore = ActionStore()
-    private lazy var controller = PopBarController(llmStore: llmStore, actionStore: actionStore)
+    private lazy var controller = PopBarController(llm: llm, actionStore: actionStore)
     private lazy var store = PopBarStore(controller: controller)
+
+    init(llm: LLMService) {
+        self.llm = llm
+    }
 
     func activate() {
         controller.startIfEnabled()
@@ -35,5 +41,5 @@ final class PopBarTool: XToolModule {
 
     func shutdown() { controller.stop() }
 
-    func makeRootView() -> AnyView { AnyView(PopBarView(store: store, llm: llmStore, actions: actionStore)) }
+    func makeRootView() -> AnyView { AnyView(PopBarView(store: store, llm: llm, actions: actionStore)) }
 }

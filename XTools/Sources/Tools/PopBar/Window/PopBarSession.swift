@@ -22,7 +22,7 @@ final class PopBarSession {
 
     let panel = PopBarPanel()
 
-    private let llmStore: PopBarLLMStore
+    private let llm: LLMService
 
     /// The text the visible capsule is acting on (this window's selection).
     private(set) var text = ""
@@ -40,8 +40,8 @@ final class PopBarSession {
     /// selection elsewhere, so a pinned window keeps streaming undisturbed.
     private var actionTask: Task<Void, Never>?
 
-    init(llmStore: PopBarLLMStore) {
-        self.llmStore = llmStore
+    init(llm: LLMService) {
+        self.llm = llm
     }
 
     var isVisible: Bool { panel.isVisible }
@@ -120,7 +120,7 @@ final class PopBarSession {
         guard action.isAI else {
             // Local actions (copy) have no loading/result UI — run and apply.
             actionTask = Task { [weak self] in
-                let outcome = await ActionRegistry.run(action, on: text, llm: nil)
+                let outcome = await ActionRegistry.run(action, on: text, service: nil, config: nil)
                 await MainActor.run {
                     guard let self, isCurrent(self) else { return }
                     self.applyOutcome(outcome)
@@ -131,10 +131,12 @@ final class PopBarSession {
 
         // AI: show the result chrome IMMEDIATELY (empty → placeholder), then stream
         // tokens into it. No `.loading` blocking state; the window is up at once.
-        let llm = llmStore.config(for: action.modelOverride)
+        // Resolve the config (default or per-action override) from the shared service.
+        let config = resolveConfig(for: action.modelOverride)
+        let service = self.llm
         panel.applyPhase(.result(""))
         actionTask = Task { [weak self] in
-            let outcome = await ActionRegistry.runStreaming(action, on: text, llm: llm) { displayed in
+            let outcome = await ActionRegistry.runStreaming(action, on: text, service: service, config: config) { displayed in
                 // Every delta hops to main and bails if a newer popup OR a newer
                 // action on this same capsule took over, so stale tokens never leak.
                 Task { @MainActor [weak self] in
@@ -153,6 +155,17 @@ final class PopBarSession {
                 self.applyOutcome(outcome)
             }
         }
+    }
+
+    /// Resolve the LLM config for an action's optional override via the shared
+    /// service: an override names provider/model/effort (key resolved per-provider);
+    /// no override → the app-wide default. nil when the resolved provider has no key
+    /// (and isn't Ollama), so the action shows a "set a key" message.
+    private func resolveConfig(for override: ModelOverride?) -> LLMConfig? {
+        if let o = override {
+            return llm.config(forProvider: o.provider, model: o.model, effort: o.reasoningEffort)
+        }
+        return llm.defaultConfig()
     }
 
     /// What the session does when an action finishes. `.dismiss` is reported to the

@@ -22,7 +22,7 @@ final class PopBarWindowManager {
 
     private static let log = FileLog("PopBar.Windows")
 
-    private let llmStore: PopBarLLMStore
+    private let llm: LLMService
 
     /// The active, unpinned popup. Always present; recreated after a pin graduates
     /// the previous one.
@@ -37,9 +37,9 @@ final class PopBarWindowManager {
     private let stackOffset: CGFloat = 26
     private let overlapRadius: CGFloat = 24
 
-    init(llmStore: PopBarLLMStore) {
-        self.llmStore = llmStore
-        transient = PopBarSession(llmStore: llmStore)
+    init(llm: LLMService) {
+        self.llm = llm
+        transient = PopBarSession(llm: llm)
         wireTransient()
     }
 
@@ -133,7 +133,7 @@ final class PopBarWindowManager {
         Self.log.info("pinned a window — now \(count) pinned")
 
         // Fresh transient for the next selection.
-        transient = PopBarSession(llmStore: llmStore)
+        transient = PopBarSession(llm: llm)
         wireTransient()
     }
 

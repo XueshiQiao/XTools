@@ -18,7 +18,7 @@ final class PopBarController {
     private let resolver: SelectionResolver
     private let monitor: GlobalInputMonitor
     private let windows: PopBarWindowManager
-    private let llmStore: PopBarLLMStore
+    private let llm: LLMService
     private let actionStore: ActionStore
 
     /// Screen point the transient capsule's CURRENT selection is anchored to (the
@@ -35,10 +35,10 @@ final class PopBarController {
     /// a newer trigger has taken over.
     private var resolveGeneration = 0
 
-    init(llmStore: PopBarLLMStore, actionStore: ActionStore) {
-        self.llmStore = llmStore
+    init(llm: LLMService, actionStore: ActionStore) {
+        self.llm = llm
         self.actionStore = actionStore
-        self.windows = PopBarWindowManager(llmStore: llmStore)
+        self.windows = PopBarWindowManager(llm: llm)
         resolver = SelectionResolver(strategies: [
             AccessibilityStrategy(),   // fast, side-effect-free; preferred
             ClipboardCopyStrategy(),   // fallback for browsers / Electron / custom views

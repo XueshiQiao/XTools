@@ -67,6 +67,7 @@ struct MainView: View {
                     }
                 }
                 Section {
+                    builtinRow(.models, symbol: "brain.head.profile", color: .indigo, title: L("models.title"))
                     builtinRow(.general, symbol: "gearshape.fill", color: Color(nsColor: .systemGray), title: L("General"))
                     builtinRow(.about, symbol: "info.circle.fill", color: .pink, title: L("About"))
                 }
@@ -106,6 +107,8 @@ struct MainView: View {
             } else {
                 Text(verbatim: "Unknown tool: \(id)")
             }
+        case .models:
+            ModelsPage(settings: appState.llm.settings)
         case .general:
             GeneralPage()
         case .about:

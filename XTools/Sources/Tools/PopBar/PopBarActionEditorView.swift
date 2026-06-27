@@ -5,11 +5,11 @@ import SwiftUI
 struct ActionEditorView: View {
 
     @State private var draft: PopBarActionConfig
-    @ObservedObject private var llm: PopBarLLMStore
+    @ObservedObject private var llm: LLMService
     let onSave: (PopBarActionConfig) -> Void
     let onCancel: () -> Void
 
-    init(action: PopBarActionConfig, llm: PopBarLLMStore,
+    init(action: PopBarActionConfig, llm: LLMService,
          onSave: @escaping (PopBarActionConfig) -> Void, onCancel: @escaping () -> Void) {
         _draft = State(initialValue: action)
         _llm = ObservedObject(wrappedValue: llm)
@@ -97,7 +97,7 @@ struct ActionEditorView: View {
             get: { draft.modelOverride != nil },
             set: { on in
                 if on {
-                    let p = llm.provider
+                    let p = llm.settings.provider
                     let d = LLMConfig.providerDefaults(p)
                     draft.modelOverride = ModelOverride(provider: p, model: d.model,
                                                         reasoningEffort: LLMConfig.clampThinking("none", for: p))
@@ -129,7 +129,7 @@ struct ActionEditorView: View {
                 }
             }
 
-            if override.provider != "ollama" && !llm.hasKey(for: override.provider) {
+            if !llm.isConfigured(forProvider: override.provider) {
                 Label(String(format: L("popbar.editor.nokeyWarn"), LLMConfig.displayName(override.provider)),
                       systemImage: "exclamationmark.triangle.fill")
                     .font(.caption).foregroundStyle(.orange)
