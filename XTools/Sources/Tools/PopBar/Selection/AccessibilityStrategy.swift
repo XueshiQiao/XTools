@@ -26,8 +26,7 @@ final class AccessibilityStrategy: SelectionStrategy {
     func selectedText(_ context: SelectionContext) async throws -> SelectionResult? {
         guard AXIsProcessTrusted() else { throw SelectionError.permissionDenied }
 
-        let systemWide = AXUIElementCreateSystemWide()
-        guard let focused = copyElement(systemWide, kAXFocusedUIElementAttribute) else {
+        guard let focused = AXSelectionProbe.focusedElement() else {
             enableEnhancedAXIfNeeded(context)
             throw SelectionError.noFocusedElement
         }
@@ -49,14 +48,6 @@ final class AccessibilityStrategy: SelectionStrategy {
     }
 
     // MARK: - AX helpers
-
-    /// Copy an attribute that is itself an AXUIElement (e.g. the focused element).
-    private func copyElement(_ element: AXUIElement, _ attribute: String) -> AXUIElement? {
-        var value: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, attribute as CFString, &value) == .success,
-              let value, CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
-        return (value as! AXUIElement)
-    }
 
     /// Copy a string-valued attribute.
     private func copyString(_ element: AXUIElement, _ attribute: String) -> String? {

@@ -24,6 +24,19 @@ final class ClipboardCopyStrategy: SelectionStrategy {
     func selectedText(_ context: SelectionContext) async throws -> SelectionResult? {
         guard AXIsProcessTrusted() else { throw SelectionError.permissionDenied }
 
+        // issue #15 — gate the synthetic ⌘C on a plausible TEXT selection. The
+        // drag gesture fires on ANY drag (a Finder icon, a list row, a window),
+        // and posting ⌘C with nothing copyable makes the frontmost app play the
+        // system "funk" beep. Ask AX first; if there's clearly no text selection,
+        // skip the copy silently (no beep). See AXSelectionProbe for the policy
+        // and the AX-opaque (Electron) tradeoff.
+        let decision = await MainActor.run { AXSelectionProbe.shouldAttemptCopy() }
+        guard decision.shouldCopy else {
+            Self.log.debug("skip ⌘C — no text selection (role=\(decision.role) selRangeLen=\(decision.rangeLength))")
+            return nil
+        }
+        Self.log.debug("send ⌘C — role=\(decision.role) selRangeLen=\(decision.rangeLength)")
+
         let backup = await MainActor.run { Pasteboard.backup() }
         let initialChangeCount = await MainActor.run { NSPasteboard.general.changeCount }
 
