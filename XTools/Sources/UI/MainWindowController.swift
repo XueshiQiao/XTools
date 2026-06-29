@@ -32,16 +32,22 @@ final class MainWindowController: NSObject, NSWindowDelegate {
     }
 
     func show() {
-        // NOTE: keep this simple — activate the app, then makeKeyAndOrderFront so
-        // the window becomes KEY and its text fields can receive input. An earlier
-        // attempt to also force front via `orderFrontRegardless` showed the window
-        // without keying it, which broke text-field focus app-wide (keystrokes
-        // leaked to the previously-active app). Don't reintroduce that.
+        // Bring the settings window to the front from the menu bar. ORDER MATTERS on
+        // macOS 14+ (cooperative activation): order the window front FIRST, THEN
+        // activate the app. Doing it the other way round (activate → makeKeyAndOrderFront)
+        // routinely left the window BEHIND the previously-frontmost app (e.g. Chrome),
+        // because the system defers the activation while the order-front already ran.
+        // This is the proven approach from the sibling regular (Dock) app HyperCapslock;
+        // no reactivation retry loop is needed.
+        //
+        // We deliberately do NOT use `orderFrontRegardless`: it fronts the window
+        // WITHOUT keying it (only the ACTIVE app can own a key window), which broke
+        // text-field focus app-wide before — keystrokes leaked to the previously-active
+        // app.
         if !window.isVisible { window.center() }
-        NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
-        let n = window.windowNumber
-        FileLog("MainWindow").debug("window shown — windowNumber=\(n)")
+        NSApp.activate(ignoringOtherApps: true)
+        FileLog("MainWindow").debug("window shown — windowNumber=\(self.window.windowNumber)")
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
