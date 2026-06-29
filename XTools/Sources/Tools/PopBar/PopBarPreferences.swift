@@ -6,6 +6,11 @@ import Foundation
 enum PopBarStyle: String, CaseIterable, Hashable {
     case capsule
     case wheel
+    case liquidGlass
+    /// Ring-based styles (wheel + liquid glass): centered on the cursor, only the
+    /// ring hit-tests. The shell treats them the same for placement / hit-testing;
+    /// they differ only in their SwiftUI skin.
+    var isWheel: Bool { self == .wheel || self == .liquidGlass }
 }
 
 /// PopBar's own persistence (kept inside the tool's folder, per the XTools

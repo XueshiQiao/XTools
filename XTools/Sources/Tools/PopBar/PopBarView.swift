@@ -144,10 +144,11 @@ struct PopBarView: View {
                 Picker("", selection: Binding(get: { store.style }, set: { store.setStyle($0) })) {
                     Text(L("popbar.style.capsule")).tag(PopBarStyle.capsule)
                     Text(L("popbar.style.wheel")).tag(PopBarStyle.wheel)
+                    Text(L("popbar.style.liquid")).tag(PopBarStyle.liquidGlass)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
-                .frame(maxWidth: 180)
+                .frame(maxWidth: 220)
             } label: {
                 iconLabel("circle.hexagongrid", .indigo, L("popbar.style.label"))
             }

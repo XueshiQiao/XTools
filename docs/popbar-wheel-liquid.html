@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PopBar · Liquid Glass 轮盘（明亮·无边）</title>
+<style>
+  :root{
+    --sf:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang SC",ui-sans-serif,system-ui,sans-serif;
+    --accent:#2f8fff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:var(--sf);overflow:hidden;user-select:none;-webkit-font-smoothing:antialiased;
+    color:var(--ink); transition:background .3s}
+
+  /* ---- LIGHT (default): bright, airy ---- */
+  body.light{ --ink:#232a36; --ink-dim:rgba(40,48,62,.6);
+    --glyph:#2a3340; --glyphHot:#0e1726; --hub:#1b2330;
+    --panel:rgba(255,255,255,.6); --panelInk:#222a36;
+    background:linear-gradient(155deg,#eaf2ff 0%,#f1ecff 38%,#ffe9f3 68%,#fff4e7 100%);}
+  body.light .b1{background:#7db4ff;opacity:.55} body.light .b2{background:#c9a3ff;opacity:.5}
+  body.light .b3{background:#7ef0d8;opacity:.5}  body.light .b4{background:#ffaccf;opacity:.55}
+
+  /* ---- DARK ---- */
+  body.dark{ --ink:rgba(255,255,255,.96); --ink-dim:rgba(255,255,255,.55);
+    --glyph:rgba(255,255,255,.92); --glyphHot:#fff; --hub:#fff;
+    --panel:rgba(40,42,50,.7); --panelInk:rgba(255,255,255,.95);
+    background:#0c0f15;}
+  body.dark .b1{background:#1d6cff;opacity:.5} body.dark .b2{background:#7a3cff;opacity:.5}
+  body.dark .b3{background:#12c2c2;opacity:.5}  body.dark .b4{background:#ff5db1;opacity:.5}
+
+  .bg{position:fixed;inset:0;overflow:hidden}
+  .bg i{position:absolute;border-radius:50%;filter:blur(64px)}
+  .b1{width:520px;height:520px;left:28%;top:14%}
+  .b2{width:460px;height:460px;left:54%;top:44%}
+  .b3{width:420px;height:420px;left:36%;top:62%}
+  .b4{width:380px;height:380px;left:62%;top:22%}
+
+  .stage{position:fixed;inset:0;cursor:crosshair;z-index:1}
+  .ring{position:absolute;left:0;top:0;width:0;height:0;will-change:transform}
+  .layer{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;pointer-events:none}
+  .hotspot{position:absolute;left:50%;top:50%;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none;
+    background:radial-gradient(closest-side,rgba(255,255,255,.95),rgba(255,255,255,0) 70%);filter:blur(3px);opacity:.8}
+  .shadow{position:absolute;left:50%;top:55%;border-radius:50%;transform:translate(-50%,-50%);filter:blur(28px);pointer-events:none}
+  .lit{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);overflow:visible;pointer-events:none}
+
+  .glyphs{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none}
+  .glyph{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:3px;
+    color:var(--glyph);transition:color .18s,transform .2s cubic-bezier(.2,.9,.25,1)}
+  .glyph svg{width:22px;height:22px;display:block}
+  .glyph .cap{font-size:10px;font-weight:600;letter-spacing:.2px;line-height:1;white-space:nowrap}
+  .glyph.hot{color:var(--glyphHot);transform:translate(-50%,-50%) scale(1.08)}
+  body.light .glyph{text-shadow:0 1px 6px rgba(255,255,255,.7)}
+  body.light .glyph svg{filter:drop-shadow(0 1px 3px rgba(255,255,255,.6))}
+  body.dark .glyph{text-shadow:0 1px 3px rgba(0,0,0,.55)}
+  body.dark .glyph svg{filter:drop-shadow(0 1px 2px rgba(0,0,0,.5))}
+
+  .hub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:12.5px;font-weight:700;
+    color:var(--hub);opacity:0;transition:opacity .14s;pointer-events:none}
+  body.light .hub{text-shadow:0 1px 6px rgba(255,255,255,.8)} body.dark .hub{text-shadow:0 1px 4px rgba(0,0,0,.6)}
+  .hub.show{opacity:1}
+
+  .panel{position:fixed;left:18px;top:18px;width:236px;z-index:20;background:var(--panel);color:var(--panelInk);
+    border-radius:14px;backdrop-filter:blur(26px) saturate(1.7);-webkit-backdrop-filter:blur(26px) saturate(1.7);
+    box-shadow:0 18px 50px rgba(0,0,0,.25);padding:14px;cursor:default}
+  .panel h1{font-size:13px;font-weight:700;margin-bottom:2px}
+  .panel .sub{font-size:11px;color:var(--ink-dim);margin-bottom:12px;line-height:1.45}
+  .row{margin-bottom:11px}
+  .row>label{display:block;font-size:11px;color:var(--ink-dim);margin-bottom:6px;text-transform:uppercase;letter-spacing:.6px;font-weight:600}
+  .seg{display:flex;background:rgba(127,127,127,.14);border-radius:9px;padding:2px;gap:2px}
+  .seg button{flex:1;font-family:var(--sf);font-size:11px;font-weight:600;color:var(--ink-dim);background:transparent;border:0;border-radius:7px;padding:6px 3px;cursor:pointer;transition:.12s}
+  .seg button[aria-pressed="true"]{background:rgba(255,255,255,.9);color:#1a2230;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+  body.dark .seg button[aria-pressed="true"]{background:rgba(255,255,255,.18);color:#fff}
+  input[type=range]{width:100%;accent-color:var(--accent);cursor:pointer}
+  .val{float:right;font-variant-numeric:tabular-nums;font-weight:600}
+  .chk{display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer}
+  .chk input{accent-color:var(--accent);width:15px;height:15px}
+  .swatch{display:flex;gap:6px}
+  .swatch button{width:26px;height:22px;border-radius:6px;border:0;cursor:pointer;outline:2px solid transparent;outline-offset:1px}
+  .swatch button[aria-pressed="true"]{outline-color:var(--accent)}
+  .hint{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:20;font-size:12px;color:var(--ink-dim);
+    background:var(--panel);padding:7px 14px;border-radius:20px;backdrop-filter:blur(18px);text-align:center;pointer-events:none}
+  .hint b{color:var(--ink)}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body class="light">
+  <div class="bg"><i class="b1"></i><i class="b2"></i><i class="b3"></i><i class="b4"></i></div>
+  <div class="stage" id="stage">
+    <div class="ring" id="ring">
+      <div class="shadow layer" id="shadow"></div>
+      <div class="glass layer" id="glass"></div>
+      <div class="depth layer" id="depth"></div>
+      <div class="sheen layer" id="sheen"></div>
+      <div class="hotspot" id="hotspot"></div>
+      <svg class="lit" id="lit" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="glyphs" id="glyphs"></div>
+      <div class="hub" id="hub"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel">
+    <h1>PopBar · Liquid Glass 轮盘</h1>
+    <div class="sub">明亮通透的无边磨砂玻璃环。移动鼠标 → 那一格亮起一汪柔和液光。</div>
+    <div class="row"><label>外观</label>
+      <div class="seg" id="theme"><button data-v="light" aria-pressed="true">明亮</button><button data-v="dark">暗黑</button></div>
+    </div>
+    <div class="row"><label>选中态</label>
+      <div class="seg" id="litstyle"><button data-v="glow" aria-pressed="true">液光晕</button><button data-v="clear">清透提亮</button><button data-v="halo">霓光描边</button></div>
+    </div>
+    <div class="row"><label>液光颜色</label>
+      <div class="swatch" id="accent">
+        <button data-c="#2f8fff" aria-pressed="true" style="background:#2f8fff"></button>
+        <button data-c="#7b6bff" style="background:#7b6bff"></button>
+        <button data-c="#13c2b0" style="background:#13c2b0"></button>
+        <button data-c="#ff5fa2" style="background:#ff5fa2"></button>
+        <button data-c="#ff9f43" style="background:#ff9f43"></button>
+      </div>
+    </div>
+    <div class="row"><label>外半径 <span class="val" id="oVal">120</span></label><input type="range" id="outer" min="96" max="160" value="120"></div>
+    <div class="row"><label>环厚（内径） <span class="val" id="iVal">62</span></label><input type="range" id="inner" min="34" max="96" value="62"></div>
+    <div class="row"><label>磨砂强度 <span class="val" id="bVal">16</span></label><input type="range" id="blur" min="2" max="28" value="16"></div>
+    <div class="row" style="margin-bottom:0"><label class="chk"><input type="checkbox" id="follow"> 跟随光标</label></div>
+  </div>
+  <div class="hint">朝一格<b>推出去</b>看液光亮起 · 左侧切 明亮/暗黑 · 选中态 · 颜色</div>
+
+<script>
+(() => {
+  const A={box:'<rect x="4" y="5" width="16" height="14" rx="3.4" fill="none" stroke="currentColor" stroke-width="1.6"/><text x="12" y="15.4" text-anchor="middle" font-family="-apple-system" font-size="9.5" font-weight="700" fill="currentColor">译</text>',
+    spark:'<path d="M12 3.4l1.55 4.05L17.6 9l-4.05 1.55L12 14.6l-1.55-4.05L6.4 9l4.05-1.55z" fill="currentColor"/><path d="M18 13.6l.66 1.74L20.4 16l-1.74.66L18 18.4l-.66-1.74L15.6 16l1.74-.66z" fill="currentColor"/>',
+    glass:'<circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M15.6 15.6L20 20" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
+    bulb:'<path d="M8.7 15.8a5 5 0 1 1 6.6 0c-.7.6-1.1 1.2-1.1 2.1h-4.4c0-.9-.4-1.5-1.1-2.1z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9.9 20.2h4.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+    aa:'<text x="12" y="15.8" text-anchor="middle" font-family="-apple-system,ui-serif" font-size="12.5" font-weight="600" fill="currentColor">Aa</text>',
+    bubble:'<path d="M5 6.6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v5.4a2 2 0 0 1-2 2h-6.2L7 17.4v-3.4H7a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 7.4v3.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="12.3" r=".75" fill="currentColor"/>',
+    copy:'<rect x="8.3" y="8.3" width="11" height="12" rx="2.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M5.6 15.4V6.2a2 2 0 0 1 2-2h7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>'};
+  const ACTIONS=[{k:'翻译',i:A.box},{k:'润色',i:A.spark},{k:'解释单词',i:A.glass},{k:'解释',i:A.bulb},{k:'英',i:A.aa},{k:'日',i:A.bubble},{k:'复制',i:A.copy}];
+  const NS='http://www.w3.org/2000/svg',N=ACTIONS.length,$=id=>document.getElementById(id);
+  const ring=$('ring'),lit=$('lit'),glyphs=$('glyphs'),hub=$('hub');
+  let outerR=120,innerR=62,blurPx=16,litStyle='glow',accent='#2f8fff',theme='light',follow=false,PAD=34;
+  let center={x:innerWidth/2,y:innerHeight*0.56},mouse={...center},hot=-1;
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),polar=(C,r,a)=>[C+r*Math.cos(a),C+r*Math.sin(a)];
+  const hexA=(h,a)=>{const n=parseInt(h.slice(1),16);return`rgba(${n>>16&255},${n>>8&255},${n&255},${a})`};
+
+  function sliceAng(i){const step=2*Math.PI/N,base=-Math.PI/2+i*step;return{a0:base,a1:base+step,mid:base+step/2,step}}
+  function sector(C,a0,a1,ri,ro){const[xo0,yo0]=polar(C,ro,a0),[xo1,yo1]=polar(C,ro,a1),[xi1,yi1]=polar(C,ri,a1),[xi0,yi0]=polar(C,ri,a0),L=(a1-a0)>Math.PI?1:0;return`M ${xo0} ${yo0} A ${ro} ${ro} 0 ${L} 1 ${xo1} ${yo1} L ${xi1} ${yi1} A ${ri} ${ri} 0 ${L} 0 ${xi0} ${yi0} Z`}
+  const annMask=()=>`radial-gradient(circle at center, transparent ${innerR-0.5}px, #000 ${innerR}px, #000 ${outerR}px, transparent ${outerR+0.5}px)`;
+
+  function build(){
+    const D=outerR*2,midR=(innerR+outerR)/2,tube=outerR-innerR,light=theme==='light';
+    ['glass','depth','sheen'].forEach(id=>{const e=$(id);e.style.width=e.style.height=D+'px';e.style.webkitMaskImage=e.style.maskImage=annMask();});
+    $('glass').style.background=light?'rgba(255,255,255,.3)':'rgba(255,255,255,.08)';
+    $('glass').style.backdropFilter=$('glass').style.webkitBackdropFilter=`blur(${blurPx}px) saturate(${light?2.0:1.7}) brightness(${light?1.12:1.06})`;
+    // soft cross-section depth (no stroke)
+    const edge=light?'rgba(90,115,160,.30)':'rgba(8,12,22,.66)', edge2=light?'rgba(80,100,150,.34)':'rgba(6,10,18,.7)', midGlow=light?'rgba(255,255,255,.34)':'rgba(255,255,255,.14)';
+    $('depth').style.background=`radial-gradient(circle at center,
+      transparent ${innerR-1}px, ${edge} ${innerR+1.5}px,
+      rgba(255,255,255,0) ${innerR+tube*0.34}px, ${midGlow} ${midR}px, rgba(255,255,255,0) ${outerR-tube*0.32}px,
+      ${edge2} ${outerR-1}px, transparent ${outerR}px)`;
+    $('sheen').style.background=`radial-gradient(120% 120% at 50% 8%, rgba(255,255,255,${light?0.75:0.5}) 0%, rgba(255,255,255,.1) 26%, rgba(255,255,255,0) 46%, rgba(0,0,0,${light?0.06:0.22}) 100%)`;
+    $('sheen').style.mixBlendMode=light?'overlay':'soft-light';
+    const hs=$('hotspot');hs.style.width=hs.style.height=(tube*1.7)+'px';const[hx,hy]=polar(0,midR,-Math.PI*0.62);hs.style.marginLeft=hx+'px';hs.style.marginTop=hy+'px';hs.style.opacity=light?.9:.7;
+    const sh=$('shadow');sh.style.width=(D*0.96)+'px';sh.style.height=(D*0.72)+'px';sh.style.background=light?'rgba(70,90,140,.3)':'rgba(0,0,0,.5)';sh.style.opacity=light?.5:.6;
+
+    glyphs.style.width=glyphs.style.height=D+'px';glyphs.innerHTML='';
+    ACTIONS.forEach((act,i)=>{const{mid}=sliceAng(i);const[gx,gy]=polar(outerR,midR,mid);
+      const el=document.createElement('div');el.className='glyph';el.dataset.i=i;el.style.left=gx+'px';el.style.top=gy+'px';
+      el.innerHTML=`<svg viewBox="0 0 24 24">${act.i}</svg><span class="cap">${act.k}</span>`;glyphs.appendChild(el);});
+
+    const S=2*(outerR+PAD);lit.setAttribute('viewBox',`0 0 ${S} ${S}`);lit.setAttribute('width',S);lit.setAttribute('height',S);
+    placeRing();applyHot();
+  }
+
+  function applyHot(){
+    const S=2*(outerR+PAD),C=S/2,midR=(innerR+outerR)/2,tube=outerR-innerR;
+    glyphs.querySelectorAll('.glyph').forEach(g=>g.classList.toggle('hot',+g.dataset.i===hot));
+    if(hot<0){lit.innerHTML='';hub.classList.remove('show');return;}
+    const{a0,a1,mid}=sliceAng(hot);const[cx,cy]=polar(C,midR,mid);const acc=accent;
+    let inner='';
+    if(litStyle==='glow'){
+      // 清透提亮 glow: mostly bright/clear white light with only a whisper of colour, translucent
+      inner=`<defs><clipPath id="ann"><path d="${sector(C,0,2*Math.PI-0.001,innerR,outerR)}"/></clipPath>
+        <radialGradient id="g" cx="${cx}" cy="${cy}" r="${tube*1.2}" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#ffffff"/><stop offset="38%" stop-color="rgba(255,255,255,.82)"/><stop offset="66%" stop-color="${hexA(acc,.46)}"/><stop offset="100%" stop-color="${hexA(acc,0)}"/>
+        </radialGradient></defs>
+        <g clip-path="url(#ann)">
+          <path d="${sector(C,a0,a1,innerR,outerR)}" fill="${acc}" opacity=".24" style="filter:blur(10px)"/>
+          <circle cx="${cx}" cy="${cy}" r="${tube*1.15}" fill="url(#g)" style="filter:blur(3px)"/>
+          <path d="${sector(C,a0+0.03,a1-0.03,midR,outerR-2)}" fill="rgba(255,255,255,.62)" style="filter:blur(4px)" opacity=".78"/>
+        </g>`;
+    } else if(litStyle==='clear'){
+      inner=`<defs><clipPath id="ann"><path d="${sector(C,0,2*Math.PI-0.001,innerR,outerR)}"/></clipPath></defs>
+        <g clip-path="url(#ann)">
+          <path d="${sector(C,a0,a1,innerR,outerR)}" fill="rgba(255,255,255,.4)" style="filter:blur(7px)"/>
+          <path d="${sector(C,a0,a1,innerR,outerR)}" fill="${hexA(acc,.42)}" style="filter:blur(7px)"/>
+          <path d="${sector(C,a0+0.02,a1-0.02,midR-2,outerR-3)}" fill="rgba(255,255,255,.7)" style="filter:blur(5px)" opacity=".85"/>
+        </g>`;
+    } else {
+      inner=`<defs><radialGradient id="g" cx="${cx}" cy="${cy}" r="${tube*1.3}" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="${acc}"/><stop offset="100%" stop-color="${hexA(acc,0)}"/></radialGradient>
+        <clipPath id="ann"><path d="${sector(C,0,2*Math.PI-0.001,innerR,outerR)}"/></clipPath></defs>
+        <circle cx="${cx}" cy="${cy}" r="${tube*1.3}" fill="url(#g)" style="filter:blur(6px)" opacity=".9"/>
+        <g clip-path="url(#ann)"><path d="${sector(C,a0,a1,innerR,outerR)}" fill="${hexA(acc,.5)}" style="filter:blur(3px)"/><circle cx="${cx}" cy="${cy}" r="${tube*0.5}" fill="#fff" style="filter:blur(3px)" opacity=".95"/></g>`;
+    }
+    lit.innerHTML=inner;hub.textContent=ACTIONS[hot].k;hub.classList.add('show');
+  }
+
+  function placeRing(){ring.style.transform=`translate(${center.x}px,${center.y}px)`}
+  function pick(){const dx=mouse.x-center.x,dy=mouse.y-center.y,d=Math.hypot(dx,dy);let p=-1;
+    if(d>=innerR-2&&d<=outerR+10){let rel=Math.atan2(dy,dx)+Math.PI/2;rel=((rel%(2*Math.PI))+2*Math.PI)%(2*Math.PI);p=Math.min(Math.floor(rel/(2*Math.PI/N)),N-1);}
+    if(p!==hot){hot=p;applyHot();}}
+  function onMove(e){mouse={x:e.clientX,y:e.clientY};const d=Math.hypot(mouse.x-center.x,mouse.y-center.y);
+    if(follow&&d<innerR){center={x:clamp(mouse.x,outerR+30,innerWidth-outerR-30),y:clamp(mouse.y,outerR+30,innerHeight-outerR-50)};placeRing();}pick();}
+
+  function seg(id,fn){document.querySelectorAll('#'+id+' button').forEach(b=>{b.onclick=()=>{document.querySelectorAll('#'+id+' button').forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');fn(b);};});}
+  seg('theme',b=>{theme=b.dataset.v;document.body.className=theme;build();});
+  seg('litstyle',b=>{litStyle=b.dataset.v;applyHot();});
+  seg('accent',b=>{accent=b.dataset.c;applyHot();});
+  $('outer').oninput=e=>{outerR=+e.target.value;oVal.textContent=outerR;if(innerR>outerR-26){innerR=outerR-26;$('inner').value=innerR;iVal.textContent=innerR;}build();};
+  $('inner').oninput=e=>{innerR=Math.min(+e.target.value,outerR-26);iVal.textContent=innerR;build();};
+  $('blur').oninput=e=>{blurPx=+e.target.value;bVal.textContent=blurPx;build();};
+  $('follow').onchange=e=>follow=e.target.checked;
+
+  const st=$('stage');
+  st.addEventListener('mousemove',onMove);
+  st.addEventListener('click',()=>{if(hot>=0){const g=glyphs.querySelector(`.glyph[data-i="${hot}"]`);if(g)g.animate([{transform:'translate(-50%,-50%) scale(1.08)'},{transform:'translate(-50%,-50%) scale(.92)'},{transform:'translate(-50%,-50%) scale(1.08)'}],{duration:200});}});
+  addEventListener('resize',()=>{center={x:clamp(center.x,outerR+30,innerWidth-outerR-30),y:clamp(center.y,outerR+30,innerHeight-outerR-50)};placeRing();});
+
+  build();
+})();
+</script>
+</body>
+</html>

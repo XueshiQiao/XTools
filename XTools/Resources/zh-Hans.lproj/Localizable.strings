@@ -434,7 +434,8 @@
 "popbar.style.label" = "显示样式";
 "popbar.style.capsule" = "胶囊";
 "popbar.style.wheel" = "轮盘";
-"popbar.style.footer" = "胶囊在选区上方横向展开；轮盘以光标为圆心成环。";
+"popbar.style.liquid" = "水玻璃";
+"popbar.style.footer" = "胶囊在选区上方横向展开；轮盘 / 水玻璃以光标为圆心成环（水玻璃是明亮磨砂玻璃皮肤）。";
 
 "popbar.loading" = "处理中…";
 

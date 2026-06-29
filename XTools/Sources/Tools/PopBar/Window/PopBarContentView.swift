@@ -81,10 +81,12 @@ struct PopBarContentView: View {
 
     var body: some View {
         Group {
-            if case .actions = model.phase, model.style == .wheel {
-                // Wheel brings its own circular frosted backdrop, so it skips the
-                // rounded-rect glass the capsule/loading/result share.
-                WheelActionsView(actions: model.actions, layout: model.wheelLayout) { action in
+            if case .actions = model.phase, model.style.isWheel {
+                // Both wheel styles bring their own circular backdrop, so they skip the
+                // rounded-rect glass the capsule/loading/result share. `.liquidGlass`
+                // is the same wheel with the bright Liquid Glass skin.
+                WheelActionsView(actions: model.actions, layout: model.wheelLayout,
+                                 skin: model.style == .liquidGlass ? .liquid : .classic) { action in
                     model.onAction?(action)
                 }
             } else {

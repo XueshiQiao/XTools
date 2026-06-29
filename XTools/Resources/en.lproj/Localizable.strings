@@ -434,7 +434,8 @@
 "popbar.style.label" = "Display style";
 "popbar.style.capsule" = "Capsule";
 "popbar.style.wheel" = "Wheel";
-"popbar.style.footer" = "Capsule shows a horizontal bar above the selection; Wheel shows a ring centered on the cursor.";
+"popbar.style.liquid" = "Liquid";
+"popbar.style.footer" = "Capsule shows a horizontal bar above the selection; Wheel and Liquid show a ring centered on the cursor (Liquid is a bright frosted-glass skin).";
 
 "popbar.loading" = "Working…";
 

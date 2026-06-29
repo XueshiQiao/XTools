@@ -212,7 +212,7 @@ final class PopBarPanel {
     /// only. Any other phase (or the capsule style) hit-tests the whole rectangular
     /// view, so the result/loading chrome stays fully clickable.
     private func updateWheelHitTest() {
-        hosting.ringHitTest = (model.style == .wheel && isShowingActions)
+        hosting.ringHitTest = (model.style.isWheel && isShowingActions)
             ? (inner: model.wheelLayout.innerRadius, outer: model.wheelLayout.outerRadius)
             : nil
     }
@@ -321,9 +321,9 @@ final class PopBarPanel {
             origin = preservedOrigin(oldFrame: oldFrame, newSize: newSize)
         } else if case .result = model.phase {
             origin = resultOrigin(for: newSize)
-        } else if case .actions = model.phase, model.style == .wheel {
-            // The wheel is centered ON the cursor (the hollow center reveals the
-            // selection through it), unlike the capsule which sits above it.
+        } else if case .actions = model.phase, model.style.isWheel {
+            // Both wheel styles are centered ON the cursor (the hollow center reveals
+            // the selection through it), unlike the capsule which sits above it.
             origin = wheelOrigin(for: newSize)
         } else {
             origin = clampedOrigin(for: newSize)
