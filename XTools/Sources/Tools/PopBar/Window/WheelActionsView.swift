@@ -23,6 +23,10 @@ struct WheelLayout: Equatable {
     /// adjacent slices / outside the ring (`lineLimit(1)` alone doesn't truncate
     /// without a width). Mirrors the capsule's fixed-tile caption width.
     var labelWidth: CGFloat = 64
+    /// Whether each slice shows its SF Symbol icon (user setting).
+    var showIcons: Bool = true
+    /// Whether each slice shows its text label (user setting).
+    var showLabels: Bool = true
 
     /// The square content side the wheel needs.
     var diameter: CGFloat { (outerRadius + pad) * 2 }
@@ -186,14 +190,18 @@ struct WheelActionsView: View {
                 let mid = a.mid.radians
                 let hot = hovered == action.id
                 VStack(spacing: 2) {
-                    Image(systemName: action.iconSymbol)
-                        .font(.system(size: 15, weight: .medium))
-                        .frame(height: 18)   // fixed slot — same baseline fix as the capsule
-                    Text(action.title)
-                        .font(.system(size: 9, weight: .medium))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .frame(maxWidth: layout.labelWidth)
+                    if layout.showIcons {
+                        Image(systemName: action.iconSymbol)
+                            .font(.system(size: 15, weight: .medium))
+                            .frame(height: 18)   // fixed slot — same baseline fix as the capsule
+                    }
+                    if layout.showLabels {
+                        Text(action.title)
+                            .font(.system(size: 9, weight: .medium))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .frame(maxWidth: layout.labelWidth)
+                    }
                 }
                 .foregroundStyle(hot ? Color.white : Color.primary)
                 .position(x: d / 2 + cos(mid) * layout.midRadius,
@@ -278,15 +286,19 @@ struct WheelActionsView: View {
             let m = a.mid.radians
             let hot = hovered == action.id
             VStack(spacing: 2) {
-                Image(systemName: action.iconSymbol)
-                    .font(.system(size: 15, weight: .medium))
-                    .frame(height: 18)
-                Text(action.title)
-                    // selected = BOLD label (the only text change; non-selected stays medium)
-                    .font(.system(size: 9, weight: hot ? .bold : .medium))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: layout.labelWidth)
+                if layout.showIcons {
+                    Image(systemName: action.iconSymbol)
+                        .font(.system(size: 15, weight: .medium))
+                        .frame(height: 18)
+                }
+                if layout.showLabels {
+                    Text(action.title)
+                        // selected = BOLD label (the only text change; non-selected stays medium)
+                        .font(.system(size: 9, weight: hot ? .bold : .medium))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: layout.labelWidth)
+                }
             }
             .foregroundStyle(hot ? Color(red: 0.05, green: 0.09, blue: 0.16)
                                  : Color(red: 0.17, green: 0.21, blue: 0.27))

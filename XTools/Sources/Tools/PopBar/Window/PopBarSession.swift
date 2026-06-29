@@ -100,6 +100,10 @@ final class PopBarSession {
         panel.setResultFontSize(size)
     }
 
+    func setWheelLayout(_ layout: WheelLayout) {
+        panel.setWheelLayout(layout)
+    }
+
     // MARK: - Actions (self-contained per window)
 
     /// Run a tapped action inside THIS window, streaming into THIS window's panel.

@@ -48,8 +48,9 @@ final class PopBarPanelModel: ObservableObject {
     /// from `PopBarPreferences` on each show; only the `.actions` phase differs —
     /// loading/result chrome is shared. `@Published` so flipping it re-renders.
     @Published var style: PopBarStyle = .capsule
-    /// Geometry for the wheel presentation (ignored by the capsule).
-    var wheelLayout = WheelLayout()
+    /// Geometry for the wheel presentation (ignored by the capsule). `@Published` so a
+    /// live settings change (dragging the radius sliders) re-renders the showing wheel.
+    @Published var wheelLayout = WheelLayout()
 
     /// Wired by the controller.
     var onAction: ((PopBarActionConfig) -> Void)?

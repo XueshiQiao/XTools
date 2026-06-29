@@ -151,11 +151,31 @@ final class PopBarController {
     /// "Preview" button and by `XTOOLS_POPBAR_PREVIEW=1` at launch. Lets the UI
     /// be seen without performing a real system-wide selection.
     func showPreview() {
-        let frame = NSScreen.main?.frame ?? .zero
-        let center = CGPoint(x: frame.midX, y: frame.midY)
-        lastAnchor = center
-        windows.showTransient(text: L("popbar.preview.sample"), anchor: center, actions: actionStore.actions)
+        let anchor = previewAnchor()
+        lastAnchor = anchor
+        windows.showTransient(text: L("popbar.preview.sample"), anchor: anchor, actions: actionStore.actions)
         Self.log.info("showing preview capsule")
+    }
+
+    /// Anchor the preview popup BESIDE the settings window so it never covers the
+    /// controls the user is dragging — to the window's right if there's room, else its
+    /// left, vertically centered on it. Falls back to the main screen's center when
+    /// there's no settings window (e.g. preview fired with the window closed).
+    private func previewAnchor() -> CGPoint {
+        // Half-extent to reserve on each side: ~ the largest wheel radius + a margin,
+        // so even the biggest ring clears the window edge.
+        let reserve: CGFloat = 190
+        guard let w = NSApp.mainWindow ?? NSApp.keyWindow else {
+            let f = NSScreen.main?.frame ?? .zero
+            return CGPoint(x: f.midX, y: f.midY)
+        }
+        let f = w.frame
+        let visible = (NSScreen.screens.first { $0.frame.intersects(f) } ?? NSScreen.main)?.visibleFrame ?? f
+        let rightX = f.maxX + reserve
+        if rightX + reserve <= visible.maxX { return CGPoint(x: rightX, y: f.midY) }
+        let leftX = f.minX - reserve
+        if leftX - reserve >= visible.minX { return CGPoint(x: leftX, y: f.midY) }
+        return CGPoint(x: visible.midX, y: visible.midY)
     }
 
     /// Push a live auto-expand preference change (from settings) onto every open
@@ -168,5 +188,31 @@ final class PopBarController {
     /// an already-open result re-renders at the new size (issue #14).
     func setResultFontSize(_ size: Double) {
         windows.setResultFontSize(size)
+    }
+
+    /// Show (or live-update) the centered preview wheel as the user drags the wheel
+    /// geometry sliders / toggles in settings, so the change is visible in real time.
+    /// If the preview is already up, push the new geometry in place (smooth); otherwise
+    /// bring the centered preview up (which reads the current geometry at show time).
+    func previewWheelLive() {
+        if windows.transientIsVisibleUnpinned && windows.transientIsShowingActions {
+            windows.setWheelLayout(PopBarPreferences.wheelLayout)
+        } else {
+            showPreview()
+        }
+    }
+
+    /// Reflect a live STYLE switch (capsule ↔ wheel ↔ liquid) in the preview. Unlike a
+    /// radius/icon/label tweak, a style change alters the popup's structure, placement
+    /// and hit-testing, so re-show the preview fresh (it reads the new style at show
+    /// time) rather than patching the showing one in place.
+    func previewStyleLive() {
+        showPreview()
+    }
+
+    /// Dismiss the live preview wheel — used when the user leaves the PopBar settings
+    /// page (so a centered preview isn't left orphaned over the rest of the app).
+    func dismissPreview() {
+        windows.dismissTransient()
     }
 }

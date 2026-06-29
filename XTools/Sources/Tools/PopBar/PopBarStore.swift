@@ -10,6 +10,10 @@ final class PopBarStore: ObservableObject {
     @Published var autoExpandHeight: Bool
     @Published var resultFontSize: Double
     @Published var style: PopBarStyle
+    @Published var wheelOuterRadius: Double
+    @Published var wheelInnerRadius: Double
+    @Published var wheelShowIcons: Bool
+    @Published var wheelShowLabels: Bool
     @Published private(set) var isTrusted: Bool
 
     private let controller: PopBarController
@@ -20,6 +24,10 @@ final class PopBarStore: ObservableObject {
         self.autoExpandHeight = PopBarPreferences.autoExpandHeight
         self.resultFontSize = PopBarPreferences.resultFontSize
         self.style = PopBarPreferences.style
+        self.wheelOuterRadius = PopBarPreferences.wheelOuterRadius
+        self.wheelInnerRadius = PopBarPreferences.wheelInnerRadius
+        self.wheelShowIcons = PopBarPreferences.wheelShowIcons
+        self.wheelShowLabels = PopBarPreferences.wheelShowLabels
         self.isTrusted = AccessibilityAuthorizer.isTrusted
     }
 
@@ -68,15 +76,49 @@ final class PopBarStore: ObservableObject {
         }
     }
 
-    /// Switch the popup's presentation style. Persisted in PopBar's own prefs; the
-    /// next popup (or the Preview button) reads it at show time, so there's nothing
-    /// to push onto a live panel.
+    /// Switch the popup's presentation style. Persisted in PopBar's own prefs and
+    /// reflected live in the centered preview (so flipping capsule ↔ wheel ↔ liquid in
+    /// settings shows the new style immediately).
     func setStyle(_ s: PopBarStyle) {
         style = s
         PopBarPreferences.style = s
+        controller.previewStyleLive()   // show/refresh the preview so the new style is visible live
+    }
+
+    /// Wheel geometry / content settings (wheel + liquid-glass styles). Persisted;
+    /// the next popup / Preview reads them at show time. Inner is kept at least
+    /// `wheelMinThickness` below outer so the ring stays valid.
+    func setWheelOuterRadius(_ r: Double) {
+        wheelOuterRadius = r
+        PopBarPreferences.wheelOuterRadius = r
+        if wheelInnerRadius > r - PopBarPreferences.wheelMinThickness {
+            setWheelInnerRadius(r - PopBarPreferences.wheelMinThickness)
+        }
+        controller.previewWheelLive()
+    }
+    func setWheelInnerRadius(_ r: Double) {
+        let capped = min(r, wheelOuterRadius - PopBarPreferences.wheelMinThickness)
+        wheelInnerRadius = capped
+        PopBarPreferences.wheelInnerRadius = capped
+        controller.previewWheelLive()
+    }
+    func setWheelShowIcons(_ on: Bool) {
+        // Don't let the user hide BOTH icon and label (a slice would be blank).
+        if !on && !wheelShowLabels { setWheelShowLabels(true) }
+        wheelShowIcons = on
+        PopBarPreferences.wheelShowIcons = on
+        controller.previewWheelLive()
+    }
+    func setWheelShowLabels(_ on: Bool) {
+        if !on && !wheelShowIcons { setWheelShowIcons(true) }
+        wheelShowLabels = on
+        PopBarPreferences.wheelShowLabels = on
+        controller.previewWheelLive()
     }
 
     func requestPermission() { AccessibilityAuthorizer.prompt() }
     func openAccessibilitySettings() { AccessibilityAuthorizer.openSettings() }
     func showPreview() { controller.showPreview() }
+    /// Hide the live tuning preview when the user leaves the PopBar settings page.
+    func dismissPreview() { controller.dismissPreview() }
 }

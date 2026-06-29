@@ -92,6 +92,11 @@ final class PopBarWindowManager {
         for session in pinned { session.setResultFontSize(size) }
     }
 
+    func setWheelLayout(_ layout: WheelLayout) {
+        transient.setWheelLayout(layout)
+        for session in pinned { session.setWheelLayout(layout) }
+    }
+
     // MARK: - Lifecycle
 
     /// Hide & release everything (controller stop / tool shutdown).

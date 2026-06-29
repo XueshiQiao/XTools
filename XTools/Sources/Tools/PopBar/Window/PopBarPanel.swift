@@ -172,7 +172,7 @@ final class PopBarPanel {
         // Pick up the current presentation style for this show (capsule vs wheel).
         // Read here so toggling it in settings affects the next popup/preview.
         model.style = PopBarPreferences.style
-        model.wheelLayout = WheelLayout()   // v1 fixed geometry; future: size to action count
+        model.wheelLayout = PopBarPreferences.wheelLayout   // user-adjustable radii + icon/label toggles
         // Pick up the current auto-expand preference for this show (the user may
         // have toggled it in settings since the last popup).
         model.autoExpandHeight = PopBarPreferences.autoExpandHeight
@@ -248,6 +248,18 @@ final class PopBarPanel {
     /// here. The result top stays locked (issue #12), so it grows/shrinks downward.
     func setResultFontSize(_ size: Double) {
         model.resultFontSize = size
+    }
+
+    /// Apply a live wheel-geometry change (from the settings sliders) onto the showing
+    /// wheel preview so dragging the inner/outer radius — or toggling icons/labels —
+    /// updates it in place. Mirrors `setAutoExpandHeight`/`setResultFontSize`. Re-scopes
+    /// the ring hit-test to the new radii and re-fits the window, but only while the
+    /// wheel is actually showing its ring (no effect on a result/capsule/hidden panel).
+    func setWheelLayout(_ layout: WheelLayout) {
+        model.wheelLayout = layout
+        guard panel.isVisible, model.style.isWheel, isShowingActions else { return }
+        updateWheelHitTest()
+        DispatchQueue.main.async { [weak self] in self?.fitAndPlace() }
     }
 
     /// SwiftUI measured the result content's natural height. Cache it (always),

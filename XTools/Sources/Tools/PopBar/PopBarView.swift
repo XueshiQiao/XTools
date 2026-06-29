@@ -26,11 +26,14 @@ struct PopBarView: View {
             statusSection
             if !store.isTrusted { permissionSection }
             actionsSection
+            resultSection
+            displaySection
             aboutSection
         }
         .formStyle(.grouped)
         .navigationTitle(L("tool.popbar.title"))
         .onAppear { store.refreshTrust() }
+        .onDisappear { store.dismissPreview() }   // don't leave the live tuning preview orphaned
         .onReceive(trustPoll) { _ in store.refreshTrust() }
         .sheet(item: $editingAction) { action in
             ActionEditorView(action: action, llm: llm) { saved in
@@ -98,6 +101,8 @@ struct PopBarView: View {
 
     // MARK: - Actions (editable)
 
+    // MARK: - Actions
+
     private var actionsSection: some View {
         Section {
             ForEach(Array(actions.actions.enumerated()), id: \.element.id) { index, action in
@@ -122,6 +127,18 @@ struct PopBarView: View {
                 Button(L("popbar.actions.reset")) { actions.resetToDefaults() }
                     .foregroundStyle(.secondary)
             }
+        } header: {
+            Text(L("popbar.actions.header"))
+        } footer: {
+            Text(L("popbar.actions.footer2"))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    // MARK: - Result
+
+    private var resultSection: some View {
+        Section {
             Toggle(isOn: Binding(get: { store.autoExpandHeight },
                                  set: { store.setAutoExpandHeight($0) })) {
                 iconLabel("arrow.up.and.down.text.horizontal", .indigo, L("popbar.autoheight.label"))
@@ -140,6 +157,21 @@ struct PopBarView: View {
             } label: {
                 iconLabel("textformat.size", .indigo, L("popbar.fontsize.label"))
             }
+        } header: {
+            Text(L("popbar.result.header"))
+        } footer: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(L("popbar.autoheight.footer"))
+                Text(L("popbar.fontsize.footer"))
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    // MARK: - Display style (capsule / wheel / liquid)
+
+    private var displaySection: some View {
+        Section {
             LabeledContent {
                 Picker("", selection: Binding(get: { store.style }, set: { store.setStyle($0) })) {
                     Text(L("popbar.style.capsule")).tag(PopBarStyle.capsule)
@@ -152,19 +184,32 @@ struct PopBarView: View {
             } label: {
                 iconLabel("circle.hexagongrid", .indigo, L("popbar.style.label"))
             }
+            // The wheel + liquid-glass styles share these geometry/content knobs; the
+            // capsule has none. Changing any of them updates the live preview in place.
+            if store.style.isWheel {
+                wheelRadiusRow(label: L("popbar.wheel.outer"), symbol: "circle.circle",
+                               value: store.wheelOuterRadius, range: PopBarPreferences.wheelOuterRadiusRange) {
+                    store.setWheelOuterRadius($0)
+                }
+                wheelRadiusRow(label: L("popbar.wheel.inner"), symbol: "smallcircle.circle",
+                               value: store.wheelInnerRadius, range: PopBarPreferences.wheelInnerRadiusRange) {
+                    store.setWheelInnerRadius($0)
+                }
+                Toggle(isOn: Binding(get: { store.wheelShowIcons }, set: { store.setWheelShowIcons($0) })) {
+                    iconLabel("square.grid.2x2", .indigo, L("popbar.wheel.showIcons"))
+                }
+                Toggle(isOn: Binding(get: { store.wheelShowLabels }, set: { store.setWheelShowLabels($0) })) {
+                    iconLabel("textformat", .indigo, L("popbar.wheel.showLabels"))
+                }
+            }
             Button { store.showPreview() } label: {
                 Label(L("popbar.preview.button"), systemImage: "eye")
             }
         } header: {
-            Text(L("popbar.actions.header"))
+            Text(L("popbar.display.header"))
         } footer: {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(L("popbar.actions.footer2"))
-                Text(L("popbar.style.footer"))
-                Text(L("popbar.autoheight.footer"))
-                Text(L("popbar.fontsize.footer"))
-            }
-            .fixedSize(horizontal: false, vertical: true)
+            Text(L("popbar.style.footer"))
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -200,6 +245,24 @@ struct PopBarView: View {
         .buttonStyle(.plain)
         .disabled(!enabled)
         .help(help)
+    }
+
+    /// A labeled radius slider for the wheel geometry settings (px value shown).
+    private func wheelRadiusRow(label: String, symbol: String, value: Double,
+                                range: ClosedRange<Double>,
+                                onChange: @escaping (Double) -> Void) -> some View {
+        LabeledContent {
+            HStack(spacing: 10) {
+                Slider(value: Binding(get: { value }, set: { onChange($0) }), in: range, step: 1)
+                    .frame(maxWidth: 180)
+                Text("\(Int(value))")
+                    .font(.system(size: 11, weight: .medium).monospacedDigit())
+                    .foregroundStyle(.secondary)
+                    .frame(width: 28, alignment: .trailing)
+            }
+        } label: {
+            iconLabel(symbol, .indigo, label)
+        }
     }
 
     private func actionRow(_ action: PopBarActionConfig) -> some View {

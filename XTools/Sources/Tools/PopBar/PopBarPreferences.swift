@@ -1,4 +1,5 @@
 import Foundation
+import CoreGraphics
 
 /// How the popup presents its action row. The trigger/LLM core is identical for
 /// both — only the UI and window placement differ (capsule = horizontal bar above
@@ -21,11 +22,23 @@ enum PopBarPreferences {
     private static let autoExpandHeightKey = "popbar.autoExpandHeight"
     private static let resultFontSizeKey = "popbar.resultFontSize"
     private static let styleKey = "popbar.style"
+    private static let wheelOuterRadiusKey = "popbar.wheel.outerRadius"
+    private static let wheelInnerRadiusKey = "popbar.wheel.innerRadius"
+    private static let wheelShowIconsKey = "popbar.wheel.showIcons"
+    private static let wheelShowLabelsKey = "popbar.wheel.showLabels"
 
     /// Allowed range + default for the result Markdown's base font size (issue #14).
     /// The user found the old ~12pt body too small, so the default is a touch larger.
     static let resultFontSizeRange: ClosedRange<Double> = 11...20
     static let resultFontSizeDefault: Double = 13
+
+    /// Wheel geometry knobs (apply to both the wheel + liquid-glass styles). Defaults
+    /// match the locked design; inner is kept at least `wheelMinThickness` below outer.
+    static let wheelOuterRadiusRange: ClosedRange<Double> = 90...170
+    static let wheelInnerRadiusRange: ClosedRange<Double> = 28...140
+    static let wheelMinThickness: Double = 26
+    static let wheelOuterRadiusDefault: Double = 114
+    static let wheelInnerRadiusDefault: Double = 54
 
     /// Whether the popup is active. Opt-in: defaults to off (absent key → false),
     /// so the tool never starts monitoring global input until the user turns it on.
@@ -65,5 +78,42 @@ enum PopBarPreferences {
             let clamped = min(max(newValue, resultFontSizeRange.lowerBound), resultFontSizeRange.upperBound)
             UserDefaults.standard.set(clamped, forKey: resultFontSizeKey)
         }
+    }
+
+    // MARK: - Wheel geometry / content (wheel + liquid-glass styles)
+
+    private static func double(_ key: String, default def: Double, in range: ClosedRange<Double>) -> Double {
+        guard UserDefaults.standard.object(forKey: key) != nil else { return def }
+        return min(max(UserDefaults.standard.double(forKey: key), range.lowerBound), range.upperBound)
+    }
+    private static func bool(_ key: String, default def: Bool) -> Bool {
+        UserDefaults.standard.object(forKey: key) == nil ? def : UserDefaults.standard.bool(forKey: key)
+    }
+
+    static var wheelOuterRadius: Double {
+        get { double(wheelOuterRadiusKey, default: wheelOuterRadiusDefault, in: wheelOuterRadiusRange) }
+        set { UserDefaults.standard.set(min(max(newValue, wheelOuterRadiusRange.lowerBound), wheelOuterRadiusRange.upperBound), forKey: wheelOuterRadiusKey) }
+    }
+    static var wheelInnerRadius: Double {
+        get { double(wheelInnerRadiusKey, default: wheelInnerRadiusDefault, in: wheelInnerRadiusRange) }
+        set { UserDefaults.standard.set(min(max(newValue, wheelInnerRadiusRange.lowerBound), wheelInnerRadiusRange.upperBound), forKey: wheelInnerRadiusKey) }
+    }
+    static var wheelShowIcons: Bool {
+        get { bool(wheelShowIconsKey, default: true) }
+        set { UserDefaults.standard.set(newValue, forKey: wheelShowIconsKey) }
+    }
+    static var wheelShowLabels: Bool {
+        get { bool(wheelShowLabelsKey, default: true) }
+        set { UserDefaults.standard.set(newValue, forKey: wheelShowLabelsKey) }
+    }
+
+    /// A `WheelLayout` built from the current prefs. Inner is clamped to stay at least
+    /// `wheelMinThickness` below outer so the ring is always valid regardless of the
+    /// stored values (e.g. if the user shrinks outer below a large inner).
+    static var wheelLayout: WheelLayout {
+        let outer = wheelOuterRadius
+        let inner = min(wheelInnerRadius, outer - wheelMinThickness)
+        return WheelLayout(outerRadius: CGFloat(outer), innerRadius: CGFloat(inner),
+                           showIcons: wheelShowIcons, showLabels: wheelShowLabels)
     }
 }

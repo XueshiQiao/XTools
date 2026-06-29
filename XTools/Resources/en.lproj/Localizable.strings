@@ -420,6 +420,8 @@
 "popbar.perm.open" = "Open Settings";
 
 "popbar.actions.header" = "Actions";
+"popbar.result.header" = "Result";
+"popbar.display.header" = "Display style";
 "popbar.actions.footer" = "Copy is real. Translate, Polish and Explain return placeholder text for now — wiring a real model in is a one-file change.";
 "popbar.action.copy" = "Copy";
 "popbar.action.translate" = "Translate";
@@ -436,6 +438,10 @@
 "popbar.style.wheel" = "Wheel";
 "popbar.style.liquid" = "Liquid";
 "popbar.style.footer" = "Capsule shows a horizontal bar above the selection; Wheel and Liquid show a ring centered on the cursor (Liquid is a bright frosted-glass skin).";
+"popbar.wheel.outer" = "Outer radius";
+"popbar.wheel.inner" = "Inner radius";
+"popbar.wheel.showIcons" = "Show icons";
+"popbar.wheel.showLabels" = "Show labels";
 
 "popbar.loading" = "Working…";
 
