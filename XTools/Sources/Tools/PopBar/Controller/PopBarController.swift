@@ -41,6 +41,7 @@ final class PopBarController {
         self.windows = PopBarWindowManager(llm: llm)
         resolver = SelectionResolver(strategies: [
             AccessibilityStrategy(),   // fast, side-effect-free; preferred
+            CopyOnSelectStrategy(),    // terminals (OTTY) that copy-on-select; reads the clipboard directly
             ClipboardCopyStrategy(),   // fallback for browsers / Electron / custom views
         ])
         monitor = GlobalInputMonitor(gestures: [
@@ -101,7 +102,10 @@ final class PopBarController {
         let inPlace = windows.transientIsShowingActions
             && hypot(loc.x - lastAnchor.x, loc.y - lastAnchor.y) < sameSelectionRadius
 
-        let context = SelectionContext(frontmostApp: front, mouseLocation: loc)
+        let context = SelectionContext(
+            frontmostApp: front,
+            mouseLocation: loc,
+            clipboardChangeCountAtGestureStart: monitor.gestureStartClipboardChangeCount)
         Self.log.debug("trigger — front=\(front?.bundleIdentifier ?? front?.localizedName ?? "nil") inPlace=\(inPlace)")
 
         resolveTask?.cancel()

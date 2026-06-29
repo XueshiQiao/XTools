@@ -17,6 +17,7 @@ import AppKit
 /// can later adapt behavior to *how* the text was obtained.
 enum SelectionStrategyID: String {
     case accessibility
+    case copyOnSelect  // app's own "copy on select" already put it on the clipboard
     case clipboardCopy
     case appleScript   // reserved for a future browser strategy
     case menuAction    // reserved for a future "press Edit > Copy" strategy
@@ -30,6 +31,12 @@ struct SelectionContext {
     /// Cursor location in screen coordinates (Cocoa, bottom-left origin) — where
     /// the gesture finished. Used to anchor the popup.
     let mouseLocation: CGPoint
+    /// `NSPasteboard.general.changeCount` sampled at the gesture's mouse-DOWN.
+    /// Lets a strategy detect a clipboard write that happened *during* this one
+    /// selection gesture — i.e. an app's "copy on select" (OTTY, and any terminal
+    /// with that option) — and read it directly. Scoping the comparison to this
+    /// single gesture is what keeps it from ever picking up stale clipboard text.
+    let clipboardChangeCountAtGestureStart: Int
 
     var bundleID: String? { frontmostApp?.bundleIdentifier }
     var pid: pid_t? { frontmostApp?.processIdentifier }

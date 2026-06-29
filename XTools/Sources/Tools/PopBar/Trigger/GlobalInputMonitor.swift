@@ -29,6 +29,13 @@ final class GlobalInputMonitor {
     /// Screen-coordinate location of the last mouse-up — where the gesture ended.
     private(set) var lastMouseUpLocation: CGPoint = .zero
 
+    /// `NSPasteboard.general.changeCount` sampled at the most recent mouse-DOWN,
+    /// i.e. the baseline at each gesture's start. The controller reads this when
+    /// building the `SelectionContext` so a strategy can tell whether the clipboard
+    /// changed *during* the gesture (an app's "copy on select"). Sampled on main
+    /// (NSEvent monitors fire on main), so the read is cheap and thread-safe.
+    private(set) var gestureStartClipboardChangeCount: Int = NSPasteboard.general.changeCount
+
     init(gestures: [SelectionGesture], debounce: TimeInterval = 0.1) {
         self.gestures = gestures
         self.debounce = debounce
@@ -60,7 +67,11 @@ final class GlobalInputMonitor {
     private func handle(_ event: NSEvent) {
         let input: InputEvent
         switch event.type {
-        case .leftMouseDown:    input = .mouseDown(event)
+        case .leftMouseDown:
+            input = .mouseDown(event)
+            // Snapshot the clipboard at gesture start so a later strategy can
+            // detect a "copy on select" write that lands before we read.
+            gestureStartClipboardChangeCount = NSPasteboard.general.changeCount
         case .leftMouseDragged: input = .mouseDragged(event)
         case .leftMouseUp:      input = .mouseUp(event); lastMouseUpLocation = screenLocation(event)
         case .scrollWheel:      input = .scroll(event)
