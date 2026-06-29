@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PopBar · 环形轮盘（等分扇形）调研稿</title>
+<style>
+  :root{
+    --glass: rgba(38,40,46,.5);
+    --glass-strong: rgba(48,50,57,.82);
+    --hair: rgba(255,255,255,.14);
+    --hair-soft: rgba(255,255,255,.08);
+    --ink: rgba(255,255,255,.92);
+    --ink-dim: rgba(255,255,255,.55);
+    --accent: #0A84FF;
+    --sf: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", "Helvetica Neue",
+          "PingFang SC", ui-sans-serif, system-ui, sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%}
+  body{
+    font-family:var(--sf); color:var(--ink); overflow:hidden;
+    background:radial-gradient(120% 90% at 28% 18%, #3a4253 0%, #2a2f3b 42%, #1c2029 78%, #15181f 100%);
+    user-select:none; -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:""; position:fixed; inset:0; pointer-events:none; opacity:.05; mix-blend-mode:overlay;
+    background-image:radial-gradient(rgba(255,255,255,.7) .5px, transparent .5px); background-size:3px 3px;
+  }
+
+  .doc{
+    position:absolute; left:50%; top:11%; transform:translateX(-50%);
+    width:min(620px,84vw); line-height:1.85; font-size:15px;
+    color:rgba(255,255,255,.40); letter-spacing:.2px; pointer-events:none;
+  }
+  .doc .sel{
+    color:rgba(255,255,255,.86); background:rgba(10,132,255,.32);
+    box-shadow:0 0 0 2px rgba(10,132,255,.32); border-radius:3px; padding:1px 2px;
+  }
+
+  .stage{position:fixed; inset:0; cursor:crosshair}
+
+  .ring{position:absolute; left:0; top:0; width:0; height:0; will-change:transform}
+
+  /* frosted disc behind the wheel, masked to the annulus so the centre stays clear */
+  .glassdisc{
+    position:absolute; left:50%; top:50%; border-radius:50%;
+    transform:translate(-50%,-50%);
+    background:rgba(36,38,44,.34);
+    backdrop-filter:blur(22px) saturate(1.5); -webkit-backdrop-filter:blur(22px) saturate(1.5);
+    pointer-events:none;
+  }
+  .donut-svg{
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) scale(1);
+    transform-origin:center; transition:transform .3s cubic-bezier(.2,.9,.25,1), opacity .26s ease;
+    overflow:visible;
+  }
+  .donut-svg.popping{transform:translate(-50%,-50%) scale(.62); opacity:0}
+
+  /* each equal slice of the ring */
+  .seg .wj{
+    fill:rgba(255,255,255,.05);
+    stroke:var(--hair); stroke-width:.75;
+    transition:fill .14s ease;
+  }
+  .seg .ico{color:var(--ink)}
+  .seg .lab{fill:var(--ink); font-family:var(--sf); font-size:9.5px; font-weight:600; letter-spacing:.2px}
+  .ring[data-labels="icon"] .seg .lab{display:none}
+
+  .seg.hot .wj{ fill:var(--accent); filter:drop-shadow(0 0 10px rgba(10,132,255,.55)); }
+  .seg.hot .ico{color:#fff}
+  .seg.hot .lab{fill:#fff}
+
+  .caret{
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    width:2px; height:20px; border-radius:2px;
+    background:linear-gradient(var(--accent),rgba(10,132,255,.2));
+    box-shadow:0 0 10px 1px rgba(10,132,255,.6); pointer-events:none;
+  }
+  .hub{
+    position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+    font-size:12.5px; font-weight:600; letter-spacing:.3px; color:var(--ink);
+    opacity:0; transition:opacity .14s ease; pointer-events:none; white-space:nowrap;
+  }
+  .hub.show{opacity:1}
+
+  /* inspector */
+  .panel{
+    position:fixed; left:18px; top:18px; width:250px; z-index:20;
+    background:var(--glass-strong); border:.5px solid var(--hair); border-radius:14px;
+    backdrop-filter:blur(26px) saturate(1.7); -webkit-backdrop-filter:blur(26px) saturate(1.7);
+    box-shadow:0 18px 50px rgba(0,0,0,.5); padding:14px 14px 12px; cursor:default;
+  }
+  .panel h1{font-size:13px; font-weight:700; letter-spacing:.2px; margin-bottom:2px}
+  .panel .sub{font-size:11px; color:var(--ink-dim); margin-bottom:12px; line-height:1.45}
+  .row{margin-bottom:11px}
+  .row > label{display:block; font-size:11px; color:var(--ink-dim); margin-bottom:6px;
+    text-transform:uppercase; letter-spacing:.6px; font-weight:600}
+  .seg2{display:flex; background:rgba(255,255,255,.06); border:.5px solid var(--hair-soft);
+    border-radius:9px; padding:2px; gap:2px}
+  .seg2 button{flex:1; font-family:var(--sf); font-size:11.5px; font-weight:600; color:var(--ink-dim);
+    background:transparent; border:0; border-radius:7px; padding:6px 4px; cursor:pointer; transition:.12s}
+  .seg2 button[aria-pressed="true"]{background:rgba(255,255,255,.14); color:var(--ink);
+    box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  input[type=range]{width:100%; accent-color:var(--accent); cursor:pointer}
+  .val{float:right; font-variant-numeric:tabular-nums; color:var(--ink); font-weight:600}
+  .chk{display:flex; align-items:center; gap:8px; font-size:12px; color:var(--ink); cursor:pointer}
+  .chk input{accent-color:var(--accent); width:15px; height:15px; cursor:pointer}
+  .hint{
+    position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:20;
+    font-size:12px; color:var(--ink-dim); background:var(--glass-strong); border:.5px solid var(--hair-soft);
+    padding:7px 14px; border-radius:20px; backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    text-align:center; pointer-events:none;
+  }
+  .hint b{color:var(--ink); font-weight:600}
+  .row.arc-only{display:none}
+  .panel[data-layout="arc"] .row.arc-only{display:block}
+  @media (prefers-reduced-motion:reduce){ *{animation:none !important; transition:none !important} }
+</style>
+</head>
+<body>
+
+  <div class="doc">
+    在任意 App 里选中一段文字，PopBar 不再弹横向胶囊，而是<span class="sel">以光标为圆心撑开一个圆环，圆环被切成若干等份</span>——
+    每一份扇形就是一个功能。手不用横向找按钮，朝那一瓣的方向轻轻一推就高亮、点一下即触发。
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="ring" id="ring" data-labels="both">
+      <div class="glassdisc" id="glassdisc"></div>
+      <svg class="donut-svg" id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div class="caret"></div>
+      <div class="hub" id="hub"></div>
+    </div>
+  </div>
+
+  <div class="panel" id="panel" data-layout="ring">
+    <h1>PopBar · 环形轮盘</h1>
+    <div class="sub">圆环本身被等分成扇形瓣，每瓣 = 一个功能。把鼠标朝某一瓣方向推出中心空当，整瓣就高亮。</div>
+
+    <div class="row">
+      <label>形状</label>
+      <div class="seg2" id="layout">
+        <button data-v="ring" aria-pressed="true">整圈</button>
+        <button data-v="arc">顶部半环</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <label>等分数（功能数） <span class="val" id="nVal">7</span></label>
+      <input type="range" id="n" min="4" max="9" value="7">
+    </div>
+
+    <div class="row">
+      <label>瓣内显示</label>
+      <div class="seg2" id="labels">
+        <button data-v="both" aria-pressed="true">图标+文字</button>
+        <button data-v="icon">仅图标</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <label>外半径 <span class="val" id="oVal">114</span></label>
+      <input type="range" id="outer" min="96" max="170" value="114">
+    </div>
+    <div class="row">
+      <label>中心空当（内半径） <span class="val" id="iVal">54</span></label>
+      <input type="range" id="inner" min="34" max="92" value="54">
+    </div>
+    <div class="row">
+      <label>瓣间缝隙 <span class="val" id="gVal">0.0°</span></label>
+      <input type="range" id="gap" min="0" max="6" step="0.2" value="0">
+    </div>
+
+    <div class="row" style="margin-bottom:0">
+      <label class="chk"><input type="checkbox" id="follow"> 圆环跟随光标</label>
+    </div>
+  </div>
+
+  <div class="hint">移动鼠标感受「以光标为圆心」&nbsp;·&nbsp; 朝一瓣<b>推出去</b>即高亮整瓣 &nbsp;·&nbsp; 上方可调等分数 / 形状 / 半径</div>
+
+<script>
+(() => {
+  // 7 real PopBar actions; inner SVG markup (no wrapper), drawn with currentColor.
+  const A = {
+    box:  '<rect x="4" y="5" width="16" height="14" rx="3.4" fill="none" stroke="currentColor" stroke-width="1.5"/><text x="12" y="15.4" text-anchor="middle" font-family="-apple-system,ui-sans-serif" font-size="9.5" font-weight="700" fill="currentColor">译</text>',
+    spark:'<path d="M12 3.4l1.55 4.05L17.6 9l-4.05 1.55L12 14.6l-1.55-4.05L6.4 9l4.05-1.55z" fill="currentColor"/><path d="M18 13.6l.66 1.74L20.4 16l-1.74.66L18 18.4l-.66-1.74L15.6 16l1.74-.66z" fill="currentColor"/>',
+    glass:'<circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M15.6 15.6L20 20" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/>',
+    bulb: '<path d="M8.7 15.8a5 5 0 1 1 6.6 0c-.7.6-1.1 1.2-1.1 2.1h-4.4c0-.9-.4-1.5-1.1-2.1z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M9.9 20.2h4.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
+    aa:   '<text x="12" y="15.8" text-anchor="middle" font-family="-apple-system,ui-serif,ui-sans-serif" font-size="12.5" font-weight="600" fill="currentColor">Aa</text>',
+    bubble:'<path d="M5 6.6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v5.4a2 2 0 0 1-2 2h-6.2L7 17.4v-3.4H7a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M12 7.4v3.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="12.3" r=".75" fill="currentColor"/>',
+    copy: '<rect x="8.3" y="8.3" width="11" height="12" rx="2.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M5.6 15.4V6.2a2 2 0 0 1 2-2h7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>',
+  };
+  const ACTIONS = [
+    {k:'翻译', i:A.box}, {k:'润色', i:A.spark}, {k:'解释单词', i:A.glass},
+    {k:'解释', i:A.bulb}, {k:'英', i:A.aa}, {k:'日', i:A.bubble}, {k:'复制', i:A.copy},
+  ];
+
+  const SVGNS='http://www.w3.org/2000/svg';
+  const ring=document.getElementById('ring');
+  const svg=document.getElementById('svg');
+  const disc=document.getElementById('glassdisc');
+  const hub=document.getElementById('hub');
+  const panel=document.getElementById('panel');
+  const stage=document.getElementById('stage');
+
+  let layout='ring', N=7, outerR=114, innerR=54, follow=false, PAD=18, gapDeg=0;
+  let center={x:innerWidth/2, y:innerHeight*0.58};
+  let mouse={...center};
+  let hot=-1, segs=[];
+
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const polar=(C,r,a)=>[C+r*Math.cos(a), C+r*Math.sin(a)];
+
+  // angular span the wheel occupies, and where it starts (screen coords, y-down)
+  function geom(){
+    if(layout==='arc') return {span:Math.PI, start:-Math.PI};   // top half: angles -PI..0
+    return {span:2*Math.PI, start:-Math.PI/2};                   // full ring, first slice centred up
+  }
+  function sliceAngles(i){
+    const g=geom(), step=g.span/N, gap=Math.min(gapDeg*Math.PI/180, step*0.42);
+    return {a0:g.start+i*step+gap, a1:g.start+(i+1)*step-gap, mid:g.start+(i+0.5)*step};
+  }
+  function sectorPath(C,a0,a1){
+    const [xo0,yo0]=polar(C,outerR,a0), [xo1,yo1]=polar(C,outerR,a1);
+    const [xi1,yi1]=polar(C,innerR,a1), [xi0,yi0]=polar(C,innerR,a0);
+    const large=(a1-a0)>Math.PI?1:0;
+    return `M ${xo0} ${yo0} A ${outerR} ${outerR} 0 ${large} 1 ${xo1} ${yo1} `
+         + `L ${xi1} ${yi1} A ${innerR} ${innerR} 0 ${large} 0 ${xi0} ${yi0} Z`;
+  }
+
+  function build(){
+    const S=2*(outerR+PAD), C=S/2;
+    svg.setAttribute('viewBox',`0 0 ${S} ${S}`);
+    svg.setAttribute('width',S); svg.setAttribute('height',S);
+    svg.innerHTML='';
+    disc.style.width=disc.style.height=(2*outerR)+'px';
+    disc.style.webkitMaskImage=disc.style.maskImage=
+      `radial-gradient(circle at center, transparent ${innerR-0.5}px, #000 ${innerR}px, #000 ${outerR}px, transparent ${outerR+0.5}px)`;
+
+    segs=[];
+    for(let i=0;i<N;i++){
+      const act=ACTIONS[i % ACTIONS.length];
+      const {a0,a1,mid}=sliceAngles(i);
+      const g=document.createElementNS(SVGNS,'g'); g.setAttribute('class','seg'); g.dataset.i=i;
+      const p=document.createElementNS(SVGNS,'path');
+      p.setAttribute('class','wj'); p.setAttribute('d',sectorPath(C,a0,a1));
+      g.appendChild(p);
+
+      // icon + label stacked upright at the slice centroid
+      const rMid=(innerR+outerR)/2;
+      const [mx,my]=polar(C,rMid,mid);
+      const showLab = (ring.dataset.labels==='both');
+      const iconDy = showLab ? -7 : 0;
+      const ig=document.createElementNS(SVGNS,'g');
+      ig.setAttribute('class','ico');
+      ig.setAttribute('transform',`translate(${mx} ${my+iconDy})`);
+      const inner=document.createElementNS(SVGNS,'g');
+      inner.setAttribute('transform','translate(-12 -12)');
+      inner.innerHTML=act.i;
+      ig.appendChild(inner); g.appendChild(ig);
+
+      if(showLab){
+        const t=document.createElementNS(SVGNS,'text');
+        t.setAttribute('class','lab'); t.setAttribute('x',mx); t.setAttribute('y',my+15);
+        t.setAttribute('text-anchor','middle'); t.textContent=act.k;
+        g.appendChild(t);
+      }
+      svg.appendChild(g); segs.push(g);
+    }
+    hot=-1; hub.classList.remove('show');
+  }
+
+  function placeRing(){ ring.style.transform=`translate(${center.x}px, ${center.y}px)`; }
+
+  function selectByPointer(){
+    const dx=mouse.x-center.x, dy=mouse.y-center.y, dist=Math.hypot(dx,dy);
+    let pick=-1;
+    if(dist>=innerR){
+      const a=Math.atan2(dy,dx);
+      if(!(layout==='arc' && Math.sin(a)>0.04)){       // arc: ignore the bottom half
+        let best=1e9;
+        for(let i=0;i<N;i++){ const m=sliceAngles(i).mid;
+          const d=Math.abs(Math.atan2(Math.sin(a-m),Math.cos(a-m)));
+          if(d<best){best=d; pick=i;} }
+      }
+    }
+    if(pick!==hot){
+      if(hot>=0&&segs[hot]) segs[hot].classList.remove('hot');
+      hot=pick;
+      if(hot>=0){ segs[hot].classList.add('hot');
+        hub.textContent=ACTIONS[hot%ACTIONS.length].k; hub.classList.add('show'); }
+      else hub.classList.remove('show');
+    }
+  }
+
+  function onMove(e){
+    mouse={x:e.clientX,y:e.clientY};
+    const dist=Math.hypot(mouse.x-center.x, mouse.y-center.y);
+    if(follow && dist<innerR){
+      center={x:clamp(mouse.x, outerR+30, innerWidth-outerR-30),
+              y:clamp(mouse.y, outerR+30, innerHeight-outerR-50)};
+      placeRing();
+    }
+    selectByPointer();
+  }
+
+  function popIn(){
+    svg.classList.add('popping'); disc.style.opacity='0';
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      svg.classList.remove('popping'); disc.style.opacity='1';
+    }));
+  }
+
+  function rebuild(animate){ build(); placeRing(); selectByPointer(); if(animate) popIn(); }
+
+  // controls
+  function seg(id,fn){
+    document.querySelectorAll('#'+id+' button').forEach(b=>{ b.onclick=()=>{
+      document.querySelectorAll('#'+id+' button').forEach(x=>x.setAttribute('aria-pressed','false'));
+      b.setAttribute('aria-pressed','true'); fn(b.dataset.v); }; });
+  }
+  seg('layout', v=>{ layout=v; panel.dataset.layout=v; rebuild(true); });
+  seg('labels', v=>{ ring.dataset.labels=v; rebuild(false); });
+  document.getElementById('n').oninput=e=>{ N=+e.target.value; nVal.textContent=N; rebuild(false); };
+  document.getElementById('outer').oninput=e=>{ outerR=+e.target.value; oVal.textContent=outerR;
+    if(innerR>outerR-26){ innerR=outerR-26; document.getElementById('inner').value=innerR; iVal.textContent=innerR; } rebuild(false); };
+  document.getElementById('inner').oninput=e=>{ innerR=Math.min(+e.target.value, outerR-26); iVal.textContent=innerR; rebuild(false); };
+  document.getElementById('gap').oninput=e=>{ gapDeg=+e.target.value; gVal.textContent=(+e.target.value).toFixed(1)+'°'; rebuild(false); };
+  document.getElementById('follow').onchange=e=>follow=e.target.checked;
+
+  stage.addEventListener('mousemove', onMove);
+  stage.addEventListener('click', ()=>{ if(hot>=0&&segs[hot]){
+    segs[hot].animate([{opacity:1},{opacity:.45},{opacity:1}],{duration:170}); } });
+  addEventListener('resize', ()=>{ center={x:clamp(center.x,outerR+30,innerWidth-outerR-30),
+    y:clamp(center.y,outerR+30,innerHeight-outerR-50)}; placeRing(); });
+
+  rebuild(true);
+})();
+</script>
+</body>
+</html>

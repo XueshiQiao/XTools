@@ -13,8 +13,25 @@ import SwiftUI
 /// click lands on background — and SwiftUI's own controls (buttons) intercept the
 /// click first, so they keep working. (Verified by dragging the live capsule.)
 private final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
+    /// Wheel mode only: restrict AppKit hit-testing to the visible ring `[inner,
+    /// outer]` from the view's center. SwiftUI's `.contentShape` governs only its own
+    /// gesture resolution; the panel is still a square window, so without this a click
+    /// in the hollow centre or a transparent corner is eaten by XTools instead of
+    /// passing THROUGH to the app behind (and reaching the global dismiss monitor).
+    /// nil = capsule mode → the whole opaque view hit-tests as before.
+    var ringHitTest: (inner: CGFloat, outer: CGFloat)?
+
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     override var mouseDownCanMoveWindow: Bool { true }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        if let ring = ringHitTest {
+            let p = convert(point, from: superview)   // → this view's coordinate space
+            let dist = hypot(p.x - bounds.midX, p.y - bounds.midY)
+            if dist < ring.inner || dist > ring.outer { return nil }   // transparent → click-through
+        }
+        return super.hitTest(point)
+    }
 }
 
 /// The floating capsule window.
@@ -31,6 +48,9 @@ final class PopBarPanel {
     let model = PopBarPanelModel()
 
     private let panel: NSPanel
+    /// Kept so `show` can switch its AppKit hit-test region per style (wheel → ring
+    /// only; capsule → whole view).
+    private let hosting: FirstMouseHostingView<PopBarContentView>
     /// The cursor point the popup is anchored to, so re-fitting after a phase
     /// change keeps it in place.
     private var anchor: CGPoint = .zero
@@ -89,7 +109,7 @@ final class PopBarPanel {
         panel.hidesOnDeactivate = false
         panel.becomesKeyOnlyIfNeeded = true
 
-        let hosting = FirstMouseHostingView(rootView: PopBarContentView(model: model))
+        hosting = FirstMouseHostingView(rootView: PopBarContentView(model: model))
         hosting.autoresizingMask = [.width, .height]
         panel.contentView = hosting
 
@@ -149,6 +169,10 @@ final class PopBarPanel {
     func show(at screenPoint: CGPoint) {
         anchor = screenPoint
         userMoved = false   // a fresh popup re-anchors to the cursor
+        // Pick up the current presentation style for this show (capsule vs wheel).
+        // Read here so toggling it in settings affects the next popup/preview.
+        model.style = PopBarPreferences.style
+        model.wheelLayout = WheelLayout()   // v1 fixed geometry; future: size to action count
         // Pick up the current auto-expand preference for this show (the user may
         // have toggled it in settings since the last popup).
         model.autoExpandHeight = PopBarPreferences.autoExpandHeight
@@ -160,6 +184,7 @@ final class PopBarPanel {
         model.streamingText = ""
         resultTopY = nil   // a fresh popup re-anchors; the result top re-locks on its first result fit
         setPinned(false)   // a fresh popup always starts unpinned
+        updateWheelHitTest()   // wheel ring hit-test is scoped to the actions phase
         // Let SwiftUI lay out the actions row, then size + place the window.
         DispatchQueue.main.async { [weak self] in
             self?.fitAndPlace()
@@ -176,7 +201,20 @@ final class PopBarPanel {
         // (or the actions capsule) re-anchors fresh (issue #12).
         if case .result = phase {} else { resultTopY = nil }
         model.phase = phase
+        // The shared loading/result chrome is a normal rectangular panel (wider than
+        // the wheel). Clear the wheel's annular hit-test or its toolbar/text outside
+        // the old ring would be dead (it only applies to the wheel's actions phase).
+        updateWheelHitTest()
         DispatchQueue.main.async { [weak self] in self?.fitAndPlace() }
+    }
+
+    /// Scope the wheel's AppKit annular hit-test to the wheel's `.actions` phase
+    /// only. Any other phase (or the capsule style) hit-tests the whole rectangular
+    /// view, so the result/loading chrome stays fully clickable.
+    private func updateWheelHitTest() {
+        hosting.ringHitTest = (model.style == .wheel && isShowingActions)
+            ? (inner: model.wheelLayout.innerRadius, outer: model.wheelLayout.outerRadius)
+            : nil
     }
 
     /// Push a streaming delta into an already-showing result panel. Caller
@@ -283,6 +321,10 @@ final class PopBarPanel {
             origin = preservedOrigin(oldFrame: oldFrame, newSize: newSize)
         } else if case .result = model.phase {
             origin = resultOrigin(for: newSize)
+        } else if case .actions = model.phase, model.style == .wheel {
+            // The wheel is centered ON the cursor (the hollow center reveals the
+            // selection through it), unlike the capsule which sits above it.
+            origin = wheelOrigin(for: newSize)
         } else {
             origin = clampedOrigin(for: newSize)
         }
@@ -305,6 +347,19 @@ final class PopBarPanel {
             let margin: CGFloat = 8
             origin.x = min(max(origin.x, visible.minX + margin), visible.maxX - newSize.width - margin)
             origin.y = min(max(origin.y, visible.minY + margin), visible.maxY - newSize.height - margin)
+        }
+        return origin
+    }
+
+    /// Center the wheel ON the cursor (both axes), then clamp inside the visible
+    /// frame so it never runs off a screen edge.
+    private func wheelOrigin(for size: CGSize) -> CGPoint {
+        var origin = CGPoint(x: anchor.x - size.width / 2, y: anchor.y - size.height / 2)
+        let screen = NSScreen.screens.first { $0.frame.contains(anchor) } ?? NSScreen.main
+        if let visible = screen?.visibleFrame {
+            let margin: CGFloat = 8
+            origin.x = min(max(origin.x, visible.minX + margin), visible.maxX - size.width - margin)
+            origin.y = min(max(origin.y, visible.minY + margin), visible.maxY - size.height - margin)
         }
         return origin
     }

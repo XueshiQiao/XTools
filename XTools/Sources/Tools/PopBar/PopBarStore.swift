@@ -9,6 +9,7 @@ final class PopBarStore: ObservableObject {
     @Published var isEnabled: Bool
     @Published var autoExpandHeight: Bool
     @Published var resultFontSize: Double
+    @Published var style: PopBarStyle
     @Published private(set) var isTrusted: Bool
 
     private let controller: PopBarController
@@ -18,6 +19,7 @@ final class PopBarStore: ObservableObject {
         self.isEnabled = PopBarPreferences.isEnabled
         self.autoExpandHeight = PopBarPreferences.autoExpandHeight
         self.resultFontSize = PopBarPreferences.resultFontSize
+        self.style = PopBarPreferences.style
         self.isTrusted = AccessibilityAuthorizer.isTrusted
     }
 
@@ -64,6 +66,14 @@ final class PopBarStore: ObservableObject {
         if trusted && isEnabled && !controller.isRunning {
             controller.start()
         }
+    }
+
+    /// Switch the popup's presentation style. Persisted in PopBar's own prefs; the
+    /// next popup (or the Preview button) reads it at show time, so there's nothing
+    /// to push onto a live panel.
+    func setStyle(_ s: PopBarStyle) {
+        style = s
+        PopBarPreferences.style = s
     }
 
     func requestPermission() { AccessibilityAuthorizer.prompt() }

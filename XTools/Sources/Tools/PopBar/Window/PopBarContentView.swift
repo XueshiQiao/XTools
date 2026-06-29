@@ -44,6 +44,13 @@ final class PopBarPanelModel: ObservableObject {
     /// Buttons to show (set by the controller from the user's ActionStore).
     var actions: [PopBarActionConfig] = []
 
+    /// Which presentation the action row uses (capsule bar vs radial wheel). Seeded
+    /// from `PopBarPreferences` on each show; only the `.actions` phase differs —
+    /// loading/result chrome is shared. `@Published` so flipping it re-renders.
+    @Published var style: PopBarStyle = .capsule
+    /// Geometry for the wheel presentation (ignored by the capsule).
+    var wheelLayout = WheelLayout()
+
     /// Wired by the controller.
     var onAction: ((PopBarActionConfig) -> Void)?
     var onCopyResult: ((String) -> Void)?
@@ -73,10 +80,20 @@ struct PopBarContentView: View {
     private let resultFixedHeight: CGFloat = 130
 
     var body: some View {
-        content
-            .background(VisualEffectBlur(cornerRadius: cornerRadius))
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .fixedSize()
+        Group {
+            if case .actions = model.phase, model.style == .wheel {
+                // Wheel brings its own circular frosted backdrop, so it skips the
+                // rounded-rect glass the capsule/loading/result share.
+                WheelActionsView(actions: model.actions, layout: model.wheelLayout) { action in
+                    model.onAction?(action)
+                }
+            } else {
+                content
+                    .background(VisualEffectBlur(cornerRadius: cornerRadius))
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            }
+        }
+        .fixedSize()
     }
 
     @ViewBuilder
@@ -322,9 +339,16 @@ private struct CapsuleActionButton: View {
 
     var body: some View {
         Button(action: onTap) {
-            VStack(spacing: 2) {
+            VStack(spacing: 3) {
+                // Fixed-height icon slot. SF Symbols have different glyph bounding
+                // boxes (magnifyingglass vs lightbulb vs "Aa"/textformat), so a
+                // plain centered VStack let a taller icon push BOTH itself up and
+                // the caption down — the "高低不一" the bar showed. Pinning the
+                // icon's vertical band keeps every icon at the same position and
+                // every caption on the same baseline, independent of the glyph.
                 Image(systemName: action.iconSymbol)
                     .font(.system(size: 15, weight: .medium))
+                    .frame(height: 18)
                 Text(action.title)
                     .font(.system(size: 9, weight: .medium))
                     .lineLimit(1)
@@ -372,9 +396,13 @@ private struct ChromeButton: View {
 }
 
 /// `NSVisualEffectView` blur, with rounded corners + a hairline border masked at
-/// the layer level so the edge is crisp (no SwiftUI-shadow feathering).
-private struct VisualEffectBlur: NSViewRepresentable {
+/// the layer level so the edge is crisp (no SwiftUI-shadow feathering). Reused by
+/// the wheel presentation (`bordered: false`, then SwiftUI-masked to a ring).
+struct VisualEffectBlur: NSViewRepresentable {
     var cornerRadius: CGFloat
+    /// The wheel masks this to an annulus, so a rectangular border would just leave
+    /// stray clipped edges — it turns the border off.
+    var bordered: Bool = true
 
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()
@@ -385,12 +413,13 @@ private struct VisualEffectBlur: NSViewRepresentable {
         view.layer?.cornerRadius = cornerRadius
         view.layer?.cornerCurve = .continuous
         view.layer?.masksToBounds = true
-        view.layer?.borderWidth = 0.5
+        view.layer?.borderWidth = bordered ? 0.5 : 0
         view.layer?.borderColor = NSColor.separatorColor.cgColor
         return view
     }
 
     func updateNSView(_ nsView: NSVisualEffectView, context: Context) {
+        nsView.layer?.borderWidth = bordered ? 0.5 : 0
         nsView.layer?.borderColor = NSColor.separatorColor.cgColor
     }
 }

@@ -428,8 +428,13 @@
 "popbar.tag.real" = "REAL";
 "popbar.tag.fake" = "DEMO";
 
-"popbar.preview.button" = "Preview capsule";
+"popbar.preview.button" = "Preview popup";
 "popbar.preview.sample" = "The quick brown fox jumps over the lazy dog.";
+
+"popbar.style.label" = "Display style";
+"popbar.style.capsule" = "Capsule";
+"popbar.style.wheel" = "Wheel";
+"popbar.style.footer" = "Capsule shows a horizontal bar above the selection; Wheel shows a ring centered on the cursor.";
 
 "popbar.loading" = "Working…";
 

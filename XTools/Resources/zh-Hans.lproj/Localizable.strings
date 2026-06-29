@@ -428,8 +428,13 @@
 "popbar.tag.real" = "真实";
 "popbar.tag.fake" = "演示";
 
-"popbar.preview.button" = "预览胶囊";
+"popbar.preview.button" = "预览弹窗";
 "popbar.preview.sample" = "敏捷的棕色狐狸跳过了那只懒狗。";
+
+"popbar.style.label" = "显示样式";
+"popbar.style.capsule" = "胶囊";
+"popbar.style.wheel" = "轮盘";
+"popbar.style.footer" = "胶囊在选区上方横向展开；轮盘以光标为圆心成环。";
 
 "popbar.loading" = "处理中…";
 

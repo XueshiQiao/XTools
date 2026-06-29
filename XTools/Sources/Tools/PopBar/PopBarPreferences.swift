@@ -1,5 +1,13 @@
 import Foundation
 
+/// How the popup presents its action row. The trigger/LLM core is identical for
+/// both — only the UI and window placement differ (capsule = horizontal bar above
+/// the selection; wheel = a ring centered on the cursor).
+enum PopBarStyle: String, CaseIterable, Hashable {
+    case capsule
+    case wheel
+}
+
 /// PopBar's own persistence (kept inside the tool's folder, per the XTools
 /// convention that tools own their state). App-wide prefs live in `Preferences`.
 enum PopBarPreferences {
@@ -7,6 +15,7 @@ enum PopBarPreferences {
     private static let enabledKey = "popbar.enabled"
     private static let autoExpandHeightKey = "popbar.autoExpandHeight"
     private static let resultFontSizeKey = "popbar.resultFontSize"
+    private static let styleKey = "popbar.style"
 
     /// Allowed range + default for the result Markdown's base font size (issue #14).
     /// The user found the old ~12pt body too small, so the default is a touch larger.
@@ -27,6 +36,13 @@ enum PopBarPreferences {
     static var autoExpandHeight: Bool {
         get { UserDefaults.standard.bool(forKey: autoExpandHeightKey) }
         set { UserDefaults.standard.set(newValue, forKey: autoExpandHeightKey) }
+    }
+
+    /// Which presentation the popup uses. Absent/unknown key → `.capsule` (the
+    /// original, so existing users are unaffected). Stored as the enum's raw string.
+    static var style: PopBarStyle {
+        get { PopBarStyle(rawValue: UserDefaults.standard.string(forKey: styleKey) ?? "") ?? .capsule }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: styleKey) }
     }
 
     /// The base font size for the result Markdown (issue #14). Absent key → the

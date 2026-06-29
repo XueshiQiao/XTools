@@ -140,6 +140,17 @@ struct PopBarView: View {
             } label: {
                 iconLabel("textformat.size", .indigo, L("popbar.fontsize.label"))
             }
+            LabeledContent {
+                Picker("", selection: Binding(get: { store.style }, set: { store.setStyle($0) })) {
+                    Text(L("popbar.style.capsule")).tag(PopBarStyle.capsule)
+                    Text(L("popbar.style.wheel")).tag(PopBarStyle.wheel)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .frame(maxWidth: 180)
+            } label: {
+                iconLabel("circle.hexagongrid", .indigo, L("popbar.style.label"))
+            }
             Button { store.showPreview() } label: {
                 Label(L("popbar.preview.button"), systemImage: "eye")
             }
@@ -148,6 +159,7 @@ struct PopBarView: View {
         } footer: {
             VStack(alignment: .leading, spacing: 4) {
                 Text(L("popbar.actions.footer2"))
+                Text(L("popbar.style.footer"))
                 Text(L("popbar.autoheight.footer"))
                 Text(L("popbar.fontsize.footer"))
             }
