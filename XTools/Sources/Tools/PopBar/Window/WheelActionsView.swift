@@ -123,7 +123,20 @@ struct WheelActionsView: View {
             // always agree with what's drawn and the highlight tracks the cursor across
             // slices. The eoFill annulus `contentShape` keeps the hollow centre +
             // outside click-through; a tap fires the SAME `onAction` the capsule uses.
-            Color.clear
+            //
+            // The ring is PAINTED here (a near-invisible fill) rather than `Color.clear`
+            // so the NSWindow has real, non-transparent backing pixels across the band.
+            // Without that, the window server passes a mouse-DOWN straight THROUGH to the
+            // app behind before our `hitTest` ever runs — which is exactly why the Liquid
+            // Glass skin's clicks fell through (its `.glassEffect` is composited server-
+            // side and leaves the app backing clear; hover still worked because tracking
+            // areas aren't subject to click-through). The classic skin only worked by
+            // accident, via its opaque `VisualEffectBlur`/sector fills. Painting the
+            // interactive layer itself makes click capture identical for EVERY skin (UI
+            // differs, the click path is one and the same). Masked to the annulus so the
+            // hollow centre + corners stay click-through.
+            Annulus(innerRadius: layout.innerRadius, outerRadius: layout.outerRadius)
+                .fill(Color.white.opacity(0.02), style: FillStyle(eoFill: true))
                 .contentShape(Annulus(innerRadius: layout.innerRadius, outerRadius: layout.outerRadius),
                               eoFill: true)
                 .onContinuousHover(coordinateSpace: .local) { phase in
