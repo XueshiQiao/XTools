@@ -107,10 +107,18 @@ struct WheelActionsView: View {
     let actions: [PopBarActionConfig]
     var layout = WheelLayout()
     var skin: WheelSkin = .classic
+    /// Hide the ring when the pointer moves outside it (user setting; wheel styles only).
+    var autoHideOnExit: Bool = false
+    /// Called when the pointer leaves the ring and `autoHideOnExit` is on.
+    var onExitRing: () -> Void = {}
     let onAction: (PopBarActionConfig) -> Void
 
     /// id of the hovered slice (nil = none).
     @State private var hovered: String?
+    /// Becomes true once the pointer has been within the ring at least once, so we only
+    /// auto-hide on EXIT — not immediately when the wheel is clamped near a screen edge
+    /// and the cursor starts outside the ring. Reset each time the wheel appears.
+    @State private var enteredRing = false
 
     var body: some View {
         let d = layout.diameter
@@ -145,8 +153,20 @@ struct WheelActionsView: View {
                               eoFill: true)
                 .onContinuousHover(coordinateSpace: .local) { phase in
                     switch phase {
-                    case .active(let loc): hovered = sliceIndex(at: loc).map { actions[$0].id }
-                    case .ended:           hovered = nil
+                    case .active(let loc):
+                        hovered = sliceIndex(at: loc).map { actions[$0].id }
+                        // Auto-hide once the pointer leaves the ring (past the outer
+                        // edge). Arm only after it has first been within the ring, so a
+                        // wheel clamped near a screen edge — where the cursor can start
+                        // outside it — doesn't vanish on appear.
+                        let c = layout.diameter / 2
+                        let dist = hypot(loc.x - c, loc.y - c)
+                        if dist <= layout.outerRadius { enteredRing = true }
+                        else if autoHideOnExit && enteredRing { onExitRing() }
+                    case .ended:
+                        hovered = nil
+                        // Pointer left the wheel's frame entirely → outside the ring.
+                        if autoHideOnExit && enteredRing { onExitRing() }
                     }
                 }
                 .gesture(SpatialTapGesture(coordinateSpace: .local).onEnded { ev in
@@ -154,6 +174,7 @@ struct WheelActionsView: View {
                 })
         }
         .frame(width: d, height: d)
+        .onAppear { enteredRing = false }   // re-arm the auto-hide for each fresh wheel
     }
 
     // MARK: - Visuals (skin-specific; geometry shared)

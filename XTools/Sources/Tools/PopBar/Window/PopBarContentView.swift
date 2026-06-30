@@ -51,9 +51,14 @@ final class PopBarPanelModel: ObservableObject {
     /// Geometry for the wheel presentation (ignored by the capsule). `@Published` so a
     /// live settings change (dragging the radius sliders) re-renders the showing wheel.
     @Published var wheelLayout = WheelLayout()
+    /// Auto-hide the ring when the pointer leaves it (wheel + liquid-glass only;
+    /// the capsule ignores it). Seeded from prefs on each show.
+    var autoHideOnExitRing = false
 
     /// Wired by the controller.
     var onAction: ((PopBarActionConfig) -> Void)?
+    /// Fired when the pointer leaves the ring (wheel styles) and auto-hide is on.
+    var onExitRing: (() -> Void)?
     var onCopyResult: ((String) -> Void)?
     var onClose: (() -> Void)?
     var onTogglePin: (() -> Void)?
@@ -87,7 +92,9 @@ struct PopBarContentView: View {
                 // rounded-rect glass the capsule/loading/result share. `.liquidGlass`
                 // is the same wheel with the bright Liquid Glass skin.
                 WheelActionsView(actions: model.actions, layout: model.wheelLayout,
-                                 skin: model.style == .liquidGlass ? .liquid : .classic) { action in
+                                 skin: model.style == .liquidGlass ? .liquid : .classic,
+                                 autoHideOnExit: model.autoHideOnExitRing,
+                                 onExitRing: { model.onExitRing?() }) { action in
                     model.onAction?(action)
                 }
             } else {

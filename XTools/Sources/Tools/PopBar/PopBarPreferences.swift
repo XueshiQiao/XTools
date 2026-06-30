@@ -26,6 +26,7 @@ enum PopBarPreferences {
     private static let wheelInnerRadiusKey = "popbar.wheel.innerRadius"
     private static let wheelShowIconsKey = "popbar.wheel.showIcons"
     private static let wheelShowLabelsKey = "popbar.wheel.showLabels"
+    private static let wheelAutoHideOnExitKey = "popbar.wheel.autoHideOnExit"
 
     /// Allowed range + default for the result Markdown's base font size (issue #14).
     /// The user found the old ~12pt body too small, so the default is a touch larger.
@@ -105,6 +106,12 @@ enum PopBarPreferences {
     static var wheelShowLabels: Bool {
         get { bool(wheelShowLabelsKey, default: true) }
         set { UserDefaults.standard.set(newValue, forKey: wheelShowLabelsKey) }
+    }
+    /// Auto-hide the ring (wheel + liquid-glass only) when the pointer moves outside
+    /// it. Opt-out; default ON. The capsule style ignores this.
+    static var wheelAutoHideOnExit: Bool {
+        get { bool(wheelAutoHideOnExitKey, default: true) }
+        set { UserDefaults.standard.set(newValue, forKey: wheelAutoHideOnExitKey) }
     }
 
     /// A `WheelLayout` built from the current prefs. Inner is clamped to stay at least

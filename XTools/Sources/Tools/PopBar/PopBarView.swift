@@ -201,6 +201,9 @@ struct PopBarView: View {
                 Toggle(isOn: Binding(get: { store.wheelShowLabels }, set: { store.setWheelShowLabels($0) })) {
                     iconLabel("textformat", .indigo, L("popbar.wheel.showLabels"))
                 }
+                Toggle(isOn: Binding(get: { store.wheelAutoHideOnExit }, set: { store.setWheelAutoHideOnExit($0) })) {
+                    iconLabel("cursorarrow.motionlines", .indigo, L("popbar.wheel.autoHide"))
+                }
             }
             Button { store.showPreview() } label: {
                 Label(L("popbar.preview.button"), systemImage: "eye")

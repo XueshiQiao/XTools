@@ -116,6 +116,15 @@ final class PopBarWindowManager {
     private func wireTransient() {
         let session = transient
         session.panel.model.onAction = { [weak session] action in session?.runAction(action) }
+        // Wheel styles only: when the pointer leaves the ring (and the user's auto-hide
+        // setting is on), dismiss the transient — same as an outside click would. Guard
+        // on "still showing the ring": clicking an action removes the wheel view, which
+        // ALSO fires the hover's `.ended`; without this guard that stray event would
+        // dismiss the result panel we just opened (the auto-hide must not touch results).
+        session.panel.model.onExitRing = { [weak self, weak session] in
+            guard let session, session.isShowingActions else { return }
+            self?.dismissTransient()
+        }
         session.panel.model.onCopyResult = { [weak self, weak session] text in
             session?.copyResult(text)
             self?.dismissTransient()

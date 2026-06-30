@@ -442,6 +442,7 @@
 "popbar.wheel.inner" = "Inner radius";
 "popbar.wheel.showIcons" = "Show icons";
 "popbar.wheel.showLabels" = "Show labels";
+"popbar.wheel.autoHide" = "Auto-hide when the pointer leaves the ring";
 
 "popbar.loading" = "Working…";
 

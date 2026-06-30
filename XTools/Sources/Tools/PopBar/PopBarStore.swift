@@ -14,6 +14,7 @@ final class PopBarStore: ObservableObject {
     @Published var wheelInnerRadius: Double
     @Published var wheelShowIcons: Bool
     @Published var wheelShowLabels: Bool
+    @Published var wheelAutoHideOnExit: Bool
     @Published private(set) var isTrusted: Bool
 
     private let controller: PopBarController
@@ -28,6 +29,7 @@ final class PopBarStore: ObservableObject {
         self.wheelInnerRadius = PopBarPreferences.wheelInnerRadius
         self.wheelShowIcons = PopBarPreferences.wheelShowIcons
         self.wheelShowLabels = PopBarPreferences.wheelShowLabels
+        self.wheelAutoHideOnExit = PopBarPreferences.wheelAutoHideOnExit
         self.isTrusted = AccessibilityAuthorizer.isTrusted
     }
 
@@ -114,6 +116,12 @@ final class PopBarStore: ObservableObject {
         wheelShowLabels = on
         PopBarPreferences.wheelShowLabels = on
         controller.previewWheelLive()
+    }
+    /// Auto-hide the ring when the pointer leaves it (wheel + liquid-glass only).
+    /// Persisted; the next popup / preview reads it at show time.
+    func setWheelAutoHideOnExit(_ on: Bool) {
+        wheelAutoHideOnExit = on
+        PopBarPreferences.wheelAutoHideOnExit = on
     }
 
     func requestPermission() { AccessibilityAuthorizer.prompt() }

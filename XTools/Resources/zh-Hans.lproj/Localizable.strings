@@ -442,6 +442,7 @@
 "popbar.wheel.inner" = "内环半径";
 "popbar.wheel.showIcons" = "显示图标";
 "popbar.wheel.showLabels" = "显示文字";
+"popbar.wheel.autoHide" = "鼠标移出圆环时自动隐藏";
 
 "popbar.loading" = "处理中…";
 
