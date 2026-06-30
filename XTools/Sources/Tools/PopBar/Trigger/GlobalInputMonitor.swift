@@ -19,6 +19,14 @@ final class GlobalInputMonitor {
     private let gestures: [SelectionGesture]
     private let debounce: TimeInterval
     private var globalMonitor: Any?
+    /// Trailing-edge debounce: the pending (not-yet-fired) trigger. A new gesture
+    /// firing cancels and reschedules it, so a rapid multi-click (double→triple, which
+    /// fires the click gesture on BOTH the 2nd and 3rd mouse-down) collapses into a
+    /// SINGLE `onTrigger` after the last click. This matters for the clipboard-⌘C
+    /// selection path: without it, the earlier click's resolve injects a synthetic ⌘C
+    /// mid-multi-click and disrupts the app's own selection (apps whose selection is
+    /// AX-readable don't show this, since their resolve is a side-effect-free AX read).
+    private var pendingTrigger: DispatchWorkItem?
 
     /// Fired (on main) after a gesture completes and the debounce elapses.
     var onTrigger: (() -> Void)?
@@ -57,6 +65,8 @@ final class GlobalInputMonitor {
     func stop() {
         if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
         globalMonitor = nil
+        pendingTrigger?.cancel()
+        pendingTrigger = nil
         Self.log.info("stopped global input monitor")
     }
 
@@ -65,6 +75,14 @@ final class GlobalInputMonitor {
     // MARK: - Event handling (main thread — NSEvent monitors fire on main)
 
     private func handle(_ event: NSEvent) {
+        // Ignore the synthetic ⌘C we post ourselves (the clipboard-copy fallback): it
+        // arrives here as a real keyDown, and treating it as user input would dismiss
+        // the popup we're in the middle of showing (the triple-click "pop then vanish"
+        // in AX-opaque apps). Tagged in `KeySender`.
+        if event.cgEvent?.getIntegerValueField(.eventSourceUserData) == KeySender.syntheticUserData {
+            return
+        }
+
         let input: InputEvent
         switch event.type {
         case .leftMouseDown:
@@ -90,9 +108,17 @@ final class GlobalInputMonitor {
         var fired = false
         for gesture in gestures where gesture.consume(input) { fired = true }
         if fired {
-            DispatchQueue.main.asyncAfter(deadline: .now() + debounce) { [weak self] in
+            // Trailing-edge debounce: cancel any pending trigger and reschedule, so a
+            // rapid multi-click fires the resolve ONCE after the final click (see
+            // `pendingTrigger`). Coalescing also lets the selection settle (the OS
+            // grows a double→triple-click selection) before we read it.
+            pendingTrigger?.cancel()
+            let work = DispatchWorkItem { [weak self] in
+                self?.pendingTrigger = nil
                 self?.onTrigger?()
             }
+            pendingTrigger = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + debounce, execute: work)
         }
     }
 

@@ -31,11 +31,33 @@ final class ClipboardCopyStrategy: SelectionStrategy {
         // skip the copy silently (no beep). See AXSelectionProbe for the policy
         // and the AX-opaque (Electron) tradeoff.
         let decision = await MainActor.run { AXSelectionProbe.shouldAttemptCopy() }
-        guard decision.shouldCopy else {
-            Self.log.debug("skip ⌘C — no text selection (role=\(decision.role) selRangeLen=\(decision.rangeLength))")
+        var via = "ax"
+        var attempt = decision.shouldCopy
+        if !attempt, let pid = context.pid,
+           !AXSelectionProbe.isNonTextSelectionRole(decision.role) {
+            // AX saw no selection — but it can be AX-OPAQUE: some apps render selectable
+            // text as `AXStaticText` (or expose no focused element) and report a 0-length
+            // range even with a live selection (e.g. WeChat chat bubbles). The app's own
+            // Copy command is the authoritative signal — it's enabled iff something
+            // copyable is selected — so consult it as a second chance. A non-selectable
+            // label drag leaves Copy DISABLED, so we still skip and never beep (issue #15).
+            //
+            // We DON'T take this chance when the focus is a table/list/outline row or cell
+            // (`isNonTextSelectionRole`): those enable Copy for a row/cell selection that
+            // isn't text, so a drag over a table/sidebar/spreadsheet would otherwise
+            // false-trigger. File copies are additionally rejected below by the file-URL
+            // check after the copy lands.
+            let copyEnabled = await MainActor.run { AXSelectionProbe.copyMenuItemEnabled(forPID: pid) }
+            if copyEnabled == true {
+                attempt = true
+                via = "copy-menu-enabled"
+            }
+        }
+        guard attempt else {
+            Self.log.debug("skip ⌘C — no selection (role=\(decision.role) selRangeLen=\(decision.rangeLength), Copy menu not enabled)")
             return nil
         }
-        Self.log.debug("send ⌘C — role=\(decision.role) selRangeLen=\(decision.rangeLength)")
+        Self.log.debug("send ⌘C — via \(via) (role=\(decision.role) selRangeLen=\(decision.rangeLength))")
 
         let backup = await MainActor.run { Pasteboard.backup() }
         let initialChangeCount = await MainActor.run { NSPasteboard.general.changeCount }
@@ -46,10 +68,19 @@ final class ClipboardCopyStrategy: SelectionStrategy {
         let start = Date()
         while Date().timeIntervalSince(start) < pollTimeout {
             try await Task.sleep(nanoseconds: UInt64(pollInterval * 1_000_000_000))
-            let (changeCount, string) = await MainActor.run {
-                (NSPasteboard.general.changeCount, NSPasteboard.general.string(forType: .string))
+            let (changeCount, string, isFileCopy) = await MainActor.run { () -> (Int, String?, Bool) in
+                let pb = NSPasteboard.general
+                return (pb.changeCount, pb.string(forType: .string), pb.types?.contains(.fileURL) ?? false)
             }
             if changeCount != initialChangeCount {
+                // The Copy command also enables on NON-text selections — files in
+                // Finder, list / sidebar rows — which the `copy-menu-enabled` second
+                // chance can't tell apart from text up front. Those land a FILE URL on
+                // the pasteboard; reject them so a non-text drag never pops PopBar with a
+                // filename/path (that's the false-trigger class the AX gate guards — the
+                // second chance must not reopen it). A real text selection never carries
+                // a file URL.
+                if isFileCopy { break }
                 // Clipboard advanced. Accept a non-empty string; a changed-but-empty
                 // clipboard means another manager raced us — keep waiting briefly.
                 if let string, !string.isEmpty { captured = string; break }
