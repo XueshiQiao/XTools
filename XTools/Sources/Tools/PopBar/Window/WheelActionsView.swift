@@ -149,23 +149,33 @@ struct WheelActionsView: View {
             // hollow centre + corners stay click-through.
             Annulus(innerRadius: layout.innerRadius, outerRadius: layout.outerRadius)
                 .fill(Color.white.opacity(0.02), style: FillStyle(eoFill: true))
-                .contentShape(Annulus(innerRadius: layout.innerRadius, outerRadius: layout.outerRadius),
-                              eoFill: true)
+                // Tracked (hit-tested + hover) as a FULL disc out to outerRadius —
+                // deliberately NOT the same hollow shape the fill paints. If the tracked
+                // shape had the same hole, sliding from the ring back toward the centre
+                // would cross a shape boundary and SwiftUI would report the hover as
+                // "ended" — indistinguishable from actually exiting past the outer edge
+                // (this was the bug: centre → ring → centre falsely auto-hid the wheel).
+                // Making the hole part of the SAME tracked region means `.ended` only
+                // ever fires on a genuine outward exit. `innerRadius: 0` makes `Annulus`
+                // act as a plain disc; taps that land in the hole still no-op below
+                // (`sliceIndex` returns nil there), and real clicks never reach here
+                // anyway — AppKit's own ring-only hit-test (`FirstMouseHostingView`)
+                // already excludes the hole so they pass through to the app behind.
+                .contentShape(Annulus(innerRadius: 0, outerRadius: layout.outerRadius), eoFill: true)
                 .onContinuousHover(coordinateSpace: .local) { phase in
                     switch phase {
                     case .active(let loc):
                         hovered = sliceIndex(at: loc).map { actions[$0].id }
-                        // Auto-hide once the pointer leaves the ring (past the outer
-                        // edge). Arm only after it has first been within the ring, so a
+                        // Anywhere within outerRadius (band OR hole) counts as "on the
+                        // wheel". Arm only once the pointer has actually been here, so a
                         // wheel clamped near a screen edge — where the cursor can start
                         // outside it — doesn't vanish on appear.
-                        let c = layout.diameter / 2
-                        let dist = hypot(loc.x - c, loc.y - c)
-                        if dist <= layout.outerRadius { enteredRing = true }
-                        else if autoHideOnExit && enteredRing { onExitRing() }
+                        enteredRing = true
                     case .ended:
                         hovered = nil
-                        // Pointer left the wheel's frame entirely → outside the ring.
+                        // The tracked shape spans the full disc now, so this only fires
+                        // on a genuine outward exit past the outer edge (or the pointer
+                        // leaving the wheel's frame entirely).
                         if autoHideOnExit && enteredRing { onExitRing() }
                     }
                 }
