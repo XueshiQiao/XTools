@@ -26,6 +26,10 @@ final class PopBarSession {
 
     /// The text the visible capsule is acting on (this window's selection).
     private(set) var text = ""
+    /// The link associated with this window's selection, resolved at trigger time by
+    /// `LinkResolver` (nil if none / no web-preview action on the wheel). Consumed by
+    /// the web-preview action when tapped.
+    private(set) var url: URL?
 
     /// Bumped on every show/recycle of THIS window so a slow AI action can't apply
     /// its result onto a capsule that has since been replaced or dismissed.
@@ -56,16 +60,18 @@ final class PopBarSession {
     /// Update the captured selection text in place WITHOUT a hide/reposition —
     /// used for an in-place refresh (double→triple-click growing the same
     /// selection). The window doesn't move, so its placement is untouched.
-    func refreshSelection(text: String) {
+    func refreshSelection(text: String, url: URL?) {
         self.text = text
+        self.url = url
     }
 
     /// Show (or recycle) this window's capsule in its `.actions` phase, anchored at
     /// `anchor`, acting on `text`. Bumps the panel generation and cancels any prior
     /// in-flight action in THIS window so its stale tokens can't bleed into the new
     /// popup.
-    func show(text: String, anchor: CGPoint, actions: [PopBarActionConfig]) {
+    func show(text: String, url: URL?, anchor: CGPoint, actions: [PopBarActionConfig]) {
         self.text = text
+        self.url = url
         panelGeneration &+= 1
         actionTask?.cancel()
         actionTask = nil
@@ -111,6 +117,7 @@ final class PopBarSession {
     /// never cancelled by a selection or action in another window.
     func runAction(_ action: PopBarActionConfig) {
         let text = self.text
+        let url = self.url
         let generation = panelGeneration
         actionTask?.cancel()   // a tap replaces any prior in-flight action in THIS window
         actionGeneration &+= 1
@@ -122,12 +129,13 @@ final class PopBarSession {
         }
 
         guard action.isAI else {
-            // Local actions (copy) have no loading/result UI — run and apply.
+            // Local actions (copy / web preview) have no loading/result chrome — run
+            // and present. Web preview opens the mini-browser window (via `present`).
             actionTask = Task { [weak self] in
-                let outcome = await ActionRegistry.run(action, on: text, service: nil, config: nil)
+                let outcome = await ActionRegistry.run(action, on: text, url: url, service: nil, config: nil)
                 await MainActor.run {
                     guard let self, isCurrent(self) else { return }
-                    self.applyOutcome(outcome)
+                    self.present(outcome)
                 }
             }
             return
@@ -140,7 +148,7 @@ final class PopBarSession {
         let service = self.llm
         panel.applyPhase(.result(""))
         actionTask = Task { [weak self] in
-            let outcome = await ActionRegistry.runStreaming(action, on: text, service: service, config: config) { displayed in
+            let outcome = await ActionRegistry.runStreaming(action, on: text, url: url, service: service, config: config) { displayed in
                 // Every delta hops to main and bails if a newer popup OR a newer
                 // action on this same capsule took over, so stale tokens never leak.
                 Task { @MainActor [weak self] in
@@ -156,7 +164,7 @@ final class PopBarSession {
                 // FIRST: any delta still queued now fails `isCurrent` and is dropped,
                 // then apply the canonical final outcome.
                 self.actionGeneration &+= 1
-                self.applyOutcome(outcome)
+                self.present(outcome)
             }
         }
     }
@@ -172,15 +180,28 @@ final class PopBarSession {
         return llm.defaultConfig()
     }
 
-    /// What the session does when an action finishes. `.dismiss` is reported to the
-    /// owner (the manager) so a transient window auto-closes while a pinned window's
-    /// close is driven only by its own close button.
+    /// What the session does when an action finishes with `.none` (e.g. Copy) or opens
+    /// a web preview. Reported to the owner (the manager) so a transient window
+    /// auto-closes while a pinned window's close is driven only by its own close button.
     var onDismissOutcome: (() -> Void)?
+    /// Open the resolved link in the shared mini-browser. Wired by the manager.
+    var onWebPreview: ((URL) -> Void)?
 
-    private func applyOutcome(_ outcome: PopBarActionOutcome) {
-        switch outcome {
-        case .dismiss:                 onDismissOutcome?()
-        case .showResult(let output):  panel.applyPhase(.result(output))
+    /// Route a presentation to its surface — the single place output types map to UI.
+    /// Adding a new `PopBarPresentation` case means adding one branch here.
+    private func present(_ presentation: PopBarPresentation) {
+        switch presentation {
+        case .none:
+            onDismissOutcome?()
+        case .result(let output):
+            panel.applyPhase(.result(output))
+        case .webPreview(let url):
+            // Open the mini-browser, then dismiss this popup (the user's attention
+            // moves to the preview window, same one-shot feel as Copy) — but NEVER a
+            // pinned window: only transients auto-dismiss, so a pinned popup keeps its
+            // content when its web-preview action is used.
+            onWebPreview?(url)
+            if !isPinned { onDismissOutcome?() }
         }
     }
 

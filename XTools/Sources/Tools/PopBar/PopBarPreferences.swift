@@ -27,6 +27,8 @@ enum PopBarPreferences {
     private static let wheelShowIconsKey = "popbar.wheel.showIcons"
     private static let wheelShowLabelsKey = "popbar.wheel.showLabels"
     private static let wheelAutoHideOnExitKey = "popbar.wheel.autoHideOnExit"
+    private static let previewFallbackToSearchKey = "popbar.preview.fallbackToSearch"
+    private static let previewSearchEngineKey = "popbar.preview.searchEngine"
 
     /// Allowed range + default for the result Markdown's base font size (issue #14).
     /// The user found the old ~12pt body too small, so the default is a touch larger.
@@ -114,6 +116,22 @@ enum PopBarPreferences {
         set { UserDefaults.standard.set(newValue, forKey: wheelAutoHideOnExitKey) }
     }
 
+    // MARK: - Web preview (link fallback)
+
+    /// When the tapped "web preview" action finds no link in the selection, search the
+    /// web for the selected text instead (in the same preview window). Opt-out; default ON.
+    static var previewFallbackToSearch: Bool {
+        get { bool(previewFallbackToSearchKey, default: true) }
+        set { UserDefaults.standard.set(newValue, forKey: previewFallbackToSearchKey) }
+    }
+
+    /// Which engine the no-link fallback search uses. Absent/unknown → Bing (works
+    /// both inside and outside mainland China).
+    static var previewSearchEngine: PreviewSearchEngine {
+        get { PreviewSearchEngine(rawValue: UserDefaults.standard.string(forKey: previewSearchEngineKey) ?? "") ?? .bing }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: previewSearchEngineKey) }
+    }
+
     /// A `WheelLayout` built from the current prefs. Inner is clamped to stay at least
     /// `wheelMinThickness` below outer so the ring is always valid regardless of the
     /// stored values (e.g. if the user shrinks outer below a large inner).
@@ -122,5 +140,46 @@ enum PopBarPreferences {
         let inner = min(wheelInnerRadius, outer - wheelMinThickness)
         return WheelLayout(outerRadius: CGFloat(outer), innerRadius: CGFloat(inner),
                            showIcons: wheelShowIcons, showLabels: wheelShowLabels)
+    }
+}
+
+/// The engines the no-link fallback search can use. Brand names are shown verbatim
+/// (not localized). `bing` is the default.
+enum PreviewSearchEngine: String, CaseIterable, Hashable {
+    case bing, google, duckduckgo
+
+    var displayName: String {
+        switch self {
+        case .bing:       return "Bing"
+        case .google:     return "Google"
+        case .duckduckgo: return "DuckDuckGo"
+        }
+    }
+
+    /// Query-URL prefix; the percent-encoded query is appended.
+    var template: String {
+        switch self {
+        case .bing:       return "https://www.bing.com/search?q="
+        case .google:     return "https://www.google.com/search?q="
+        case .duckduckgo: return "https://duckduckgo.com/?q="
+        }
+    }
+}
+
+/// Builds a search URL for the current engine from selected text.
+enum PreviewSearch {
+    static func searchURL(for text: String) -> URL? {
+        let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Encode with only unreserved characters allowed, so query sub-delimiters in
+        // the SELECTED TEXT (`&`, `+`, `#`, `=`, …) are percent-escaped as data rather
+        // than restructuring the search URL — e.g. "C++ & Swift" stays a single query
+        // instead of splitting into extra parameters / spaces (`.urlQueryAllowed`
+        // leaves those characters intact, which would change the query).
+        var allowed = CharacterSet.alphanumerics
+        allowed.insert(charactersIn: "-._~")
+        guard !query.isEmpty,
+              let encoded = query.addingPercentEncoding(withAllowedCharacters: allowed)
+        else { return nil }
+        return URL(string: PopBarPreferences.previewSearchEngine.template + encoded)
     }
 }

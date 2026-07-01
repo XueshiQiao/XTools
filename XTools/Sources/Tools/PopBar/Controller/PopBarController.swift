@@ -102,11 +102,23 @@ final class PopBarController {
         let inPlace = windows.transientIsShowingActions
             && hypot(loc.x - lastAnchor.x, loc.y - lastAnchor.y) < sameSelectionRadius
 
+        // Only resolve the associated link when a web-preview action is actually on
+        // the wheel — otherwise the strategies attach no material and `LinkResolver`
+        // never runs, so the feature costs nothing when it isn't in use.
+        let resolvesLinks = actionStore.actions.contains { $0.kind == .webPreview }
+        // AX's global origin is the top-left of the PRIMARY display — the one at Cocoa
+        // origin (0,0). `NSScreen.screens.first` is NOT guaranteed to be that screen,
+        // so pick the origin-zero one explicitly; its height is the correct flip
+        // reference for a cursor on ANY display (including vertically-offset
+        // secondaries), since the flip `primaryHeight - cocoaY` is anchored there.
+        // Captured on the main thread so `LinkResolver` can flip off-main.
+        let flipHeight = (NSScreen.screens.first { $0.frame.origin == .zero } ?? NSScreen.main)?.frame.maxY ?? 0
         let context = SelectionContext(
             frontmostApp: front,
             mouseLocation: loc,
-            clipboardChangeCountAtGestureStart: monitor.gestureStartClipboardChangeCount)
-        Self.log.debug("trigger — front=\(front?.bundleIdentifier ?? front?.localizedName ?? "nil") inPlace=\(inPlace)")
+            clipboardChangeCountAtGestureStart: monitor.gestureStartClipboardChangeCount,
+            resolvesLinks: resolvesLinks)
+        Self.log.debug("trigger — front=\(front?.bundleIdentifier ?? front?.localizedName ?? "nil") inPlace=\(inPlace) resolvesLinks=\(resolvesLinks)")
 
         resolveTask?.cancel()
         resolveGeneration &+= 1
@@ -114,6 +126,16 @@ final class PopBarController {
         resolveTask = Task { [weak self] in
             guard let self else { return }
             let result = await self.resolver.resolve(context)
+            if Task.isCancelled { return }
+            // Resolve the associated link at trigger time (off-main), only when a
+            // web-preview action is on the wheel. The URL is consumed lazily — the
+            // preview window only opens if the user taps the web-preview action.
+            var url: URL?
+            if resolvesLinks, let result, !result.text.isEmpty {
+                let probe = LinkProbe(text: result.text, mouseLocation: loc, screenFlipHeight: flipHeight,
+                                      focusedElement: result.focusedElement, html: result.htmlData, rtf: result.rtfData)
+                url = LinkResolver.resolve(probe).url
+            }
             if Task.isCancelled { return }
             await MainActor.run {
                 guard generation == self.resolveGeneration, self.running else { return }
@@ -126,10 +148,10 @@ final class PopBarController {
                     // its placed anchor stays put. `lastAnchor` still tracks the raw
                     // selection location for the NEXT re-trigger's proximity check.
                     self.lastAnchor = loc
-                    self.windows.refreshTransientSelection(text: result.text)
+                    self.windows.refreshTransientSelection(text: result.text, url: url)
                 } else {
                     self.lastAnchor = loc
-                    self.windows.showTransient(text: result.text, anchor: loc, actions: self.actionStore.actions)
+                    self.windows.showTransient(text: result.text, url: url, anchor: loc, actions: self.actionStore.actions)
                 }
             }
         }
@@ -153,7 +175,7 @@ final class PopBarController {
     func showPreview() {
         let anchor = previewAnchor()
         lastAnchor = anchor
-        windows.showTransient(text: L("popbar.preview.sample"), anchor: anchor, actions: actionStore.actions)
+        windows.showTransient(text: L("popbar.preview.sample"), url: nil, anchor: anchor, actions: actionStore.actions)
         Self.log.info("showing preview capsule")
     }
 

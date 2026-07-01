@@ -511,3 +511,18 @@
 "popbar.editor.save" = "保存";
 "popbar.editor.cancel" = "取消";
 "popbar.editor.nokeyWarn" = "%@ 还没设置密钥 —— 请在「AI 模型」页面添加。";
+"popbar.editor.kind.webpreview" = "网页预览";
+
+/* 网页预览动作 + 迷你浏览器 */
+"popbar.action.webpreview" = "网页预览";
+"popbar.error.nolink" = "选区里没有找到链接。";
+"popbar.webpreview.section" = "网页预览";
+"popbar.webpreview.fallback" = "找不到链接时改为搜索网页";
+"popbar.webpreview.fallback.footer" = "当选区里没有链接时，「网页预览」动作会改用选中的文字搜索网页。关闭则只提示「未找到链接」。";
+"popbar.webpreview.engine" = "搜索引擎";
+"popbar.webpreview.back" = "后退";
+"popbar.webpreview.forward" = "前进";
+"popbar.webpreview.reload" = "刷新";
+"popbar.webpreview.copyurl" = "复制链接";
+"popbar.webpreview.openbrowser" = "在浏览器中打开";
+"popbar.webpreview.window.title" = "网页预览";

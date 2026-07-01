@@ -24,6 +24,9 @@ final class PopBarWindowManager {
 
     private let llm: LLMService
 
+    /// The single, shared mini-browser used by every session's web-preview action.
+    private let webPreview = WebPreviewController()
+
     /// The active, unpinned popup. Always present; recreated after a pin graduates
     /// the previous one.
     private var transient: PopBarSession
@@ -62,16 +65,16 @@ final class PopBarWindowManager {
     /// Refresh the transient window's captured selection in place (double→triple-
     /// click growing the same selection). No hide/reposition → no flicker, so the
     /// window's anchor is left untouched (it stays where it was placed).
-    func refreshTransientSelection(text: String) {
+    func refreshTransientSelection(text: String, url: URL?) {
         guard transient.isShowingActions else { return }
-        transient.refreshSelection(text: text)
+        transient.refreshSelection(text: text, url: url)
     }
 
     /// Show (or recycle) the transient window for a new selection. Works regardless
     /// of how many pinned windows exist.
-    func showTransient(text: String, anchor: CGPoint, actions: [PopBarActionConfig]) {
+    func showTransient(text: String, url: URL?, anchor: CGPoint, actions: [PopBarActionConfig]) {
         let placed = offsetAwayFromPinned(anchor)
-        transient.show(text: text, anchor: placed, actions: actions)
+        transient.show(text: text, url: url, anchor: placed, actions: actions)
     }
 
     /// Dismiss the transient window (outside click / auto-dismiss). Pinned windows
@@ -107,6 +110,7 @@ final class PopBarWindowManager {
             session.panel.hide()
         }
         pinned.removeAll()
+        webPreview.close()
     }
 
     // MARK: - Pin promotion & close
@@ -131,8 +135,10 @@ final class PopBarWindowManager {
         }
         session.panel.model.onClose = { [weak self] in self?.dismissTransient() }
         session.panel.model.onTogglePin = { [weak self] in self?.pinTransient() }
-        // A `.dismiss` outcome (e.g. the Copy action) closes the transient.
+        // A `.none` outcome (e.g. the Copy action) closes the transient.
         session.onDismissOutcome = { [weak self] in self?.dismissTransient() }
+        // The web-preview action opens the shared mini-browser.
+        session.onWebPreview = { [weak self] url in self?.webPreview.open(url) }
     }
 
     /// Promote the current transient into the pinned set and create a fresh
@@ -176,6 +182,7 @@ final class PopBarWindowManager {
             guard let session else { return }
             self?.closePinned(session)
         }
+        session.onWebPreview = { [weak self] url in self?.webPreview.open(url) }
     }
 
     /// Close one pinned window: cancel its stream, hide it, and drop our strong

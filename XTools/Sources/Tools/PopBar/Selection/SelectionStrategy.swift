@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 
 /// The selected-text retrieval abstraction.
 ///
@@ -37,6 +38,11 @@ struct SelectionContext {
     /// with that option) — and read it directly. Scoping the comparison to this
     /// single gesture is what keeps it from ever picking up stale clipboard text.
     let clipboardChangeCountAtGestureStart: Int
+    /// Whether a web-preview action is currently on the wheel. When true the
+    /// strategies attach the cheap link-resolution material (focused AX element /
+    /// copied rich pasteboard) and the controller runs `LinkResolver`. When false,
+    /// zero link work happens — the feature isn't on, so it costs nothing.
+    let resolvesLinks: Bool
 
     var bundleID: String? { frontmostApp?.bundleIdentifier }
     var pid: pid_t? { frontmostApp?.processIdentifier }
@@ -49,6 +55,13 @@ struct SelectionResult {
     let text: String
     let via: SelectionStrategyID
     var bounds: CGRect?
+    /// Trigger-time raw material for `LinkResolver`, attached ONLY when the context
+    /// has `resolvesLinks == true`. `focusedElement` feeds the point/selection link
+    /// tiers; `htmlData`/`rtfData` are the copied rich pasteboard for the HTML/RTF
+    /// tier. The final resolved URL is computed by the controller, not stored here.
+    var focusedElement: AXUIElement? = nil
+    var htmlData: Data? = nil
+    var rtfData: Data? = nil
 }
 
 /// Why a strategy failed. Only `permissionDenied` is *fatal* — it aborts the

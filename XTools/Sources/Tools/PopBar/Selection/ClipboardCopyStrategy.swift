@@ -87,6 +87,19 @@ final class ClipboardCopyStrategy: SelectionStrategy {
             }
         }
 
+        // Before restoring, grab the rich pasteboard (+ focused element) for
+        // LinkResolver — the copied HTML/RTF carries the anchor's href, and it's gone
+        // once we restore the user's original clipboard.
+        var capturedHTML: Data?
+        var capturedRTF: Data?
+        var capturedElement: AXUIElement?
+        if context.resolvesLinks, captured != nil {
+            (capturedHTML, capturedRTF, capturedElement) = await MainActor.run { () -> (Data?, Data?, AXUIElement?) in
+                let pb = NSPasteboard.general
+                return (pb.data(forType: .html), pb.data(forType: .rtf), AXSelectionProbe.focusedElement())
+            }
+        }
+
         // Always restore, whether or not we captured anything.
         await MainActor.run { Pasteboard.restore(backup) }
 
@@ -94,6 +107,10 @@ final class ClipboardCopyStrategy: SelectionStrategy {
             Self.log.debug("clipboard copy did not land within \(Int(self.pollTimeout * 1000))ms")
             return nil
         }
-        return SelectionResult(text: text, via: id, bounds: nil)
+        var result = SelectionResult(text: text, via: id, bounds: nil)
+        result.focusedElement = capturedElement
+        result.htmlData = capturedHTML
+        result.rtfData = capturedRTF
+        return result
     }
 }

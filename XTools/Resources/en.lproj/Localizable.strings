@@ -511,3 +511,18 @@
 "popbar.editor.save" = "Save";
 "popbar.editor.cancel" = "Cancel";
 "popbar.editor.nokeyWarn" = "No API key for %@ — set it on the AI Models page.";
+"popbar.editor.kind.webpreview" = "Web preview";
+
+/* Web preview action + mini-browser */
+"popbar.action.webpreview" = "Web Preview";
+"popbar.error.nolink" = "No link found in the selection.";
+"popbar.webpreview.section" = "Web preview";
+"popbar.webpreview.fallback" = "Search the web when no link is found";
+"popbar.webpreview.fallback.footer" = "When the selection has no link, the Web Preview action searches the web for the selected text instead. Turn off to just show a “no link” note.";
+"popbar.webpreview.engine" = "Search engine";
+"popbar.webpreview.back" = "Back";
+"popbar.webpreview.forward" = "Forward";
+"popbar.webpreview.reload" = "Reload";
+"popbar.webpreview.copyurl" = "Copy link";
+"popbar.webpreview.openbrowser" = "Open in browser";
+"popbar.webpreview.window.title" = "Web Preview";

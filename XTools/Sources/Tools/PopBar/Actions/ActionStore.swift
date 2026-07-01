@@ -20,6 +20,8 @@ final class ActionStore: ObservableObject {
         return dir.appendingPathComponent("popbar-actions.json")
     }()
 
+    private static let webPreviewMigrationKey = "popbar.migratedWebPreview"
+
     init() {
         if let data = try? Data(contentsOf: fileURL),
            let decoded = try? JSONDecoder().decode([PopBarActionConfig].self, from: data),
@@ -29,6 +31,20 @@ final class ActionStore: ObservableObject {
             actions = DefaultActions.seed()
             save()
         }
+        migrateWebPreviewIfNeeded()
+    }
+
+    /// One-time, non-destructive append of the "Web Preview" action for existing
+    /// users whose saved list predates it. Runs once (guarded by a flag), never
+    /// removes or reorders anything, and is a no-op when the action is already present
+    /// (fresh installs seed it). Respects the data-safety rule: only grows the list.
+    private func migrateWebPreviewIfNeeded() {
+        guard !UserDefaults.standard.bool(forKey: Self.webPreviewMigrationKey) else { return }
+        UserDefaults.standard.set(true, forKey: Self.webPreviewMigrationKey)
+        guard !actions.contains(where: { $0.kind == .webPreview }) else { return }
+        actions.append(DefaultActions.webPreviewAction())
+        save()
+        Self.log.info("migrated: appended Web Preview action to existing list")
     }
 
     // MARK: - CRUD

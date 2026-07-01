@@ -27,6 +27,7 @@ struct ActionEditorView: View {
                     Picker(L("popbar.editor.kind"), selection: $draft.kind) {
                         Text(L("popbar.editor.kind.ai")).tag(PopBarActionConfig.Kind.ai)
                         Text(L("popbar.editor.kind.copy")).tag(PopBarActionConfig.Kind.copy)
+                        Text(L("popbar.editor.kind.webpreview")).tag(PopBarActionConfig.Kind.webPreview)
                     }
                 }
 
@@ -59,7 +60,8 @@ struct ActionEditorView: View {
 
     private var isValid: Bool {
         let titleOK = !draft.title.trimmingCharacters(in: .whitespaces).isEmpty
-        let promptOK = draft.kind == .copy || !draft.prompt.trimmingCharacters(in: .whitespaces).isEmpty
+        // Only the AI kind needs a prompt; local kinds (copy / web preview) don't.
+        let promptOK = draft.kind != .ai || !draft.prompt.trimmingCharacters(in: .whitespaces).isEmpty
         return titleOK && promptOK
     }
 
@@ -140,6 +142,7 @@ struct ActionEditorView: View {
     // Curated SF Symbols (all available on macOS 13).
     private static let icons: [String] = [
         "character.bubble", "globe", "globe.asia.australia", "globe.americas",
+        "safari", "safari.fill", "link", "network",
         "wand.and.stars", "sparkles", "lightbulb", "questionmark.circle",
         "doc.on.doc", "text.bubble", "quote.bubble", "bubble.left.and.bubble.right",
         "textformat", "textformat.abc", "textformat.size", "character.book.closed",

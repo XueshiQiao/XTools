@@ -1,9 +1,18 @@
 import Foundation
 
-/// The result of running an action.
-enum PopBarActionOutcome {
-    case dismiss
-    case showResult(String)
+/// What running an action *presents* — the open-ended output axis. An action's job
+/// is to produce one of these; the session's `present(_:)` routes each case to its
+/// surface (nothing / the result panel / the web-preview window). Adding a future
+/// output type (e.g. `case markdownPreview(String)`, `case image(URL)`) is a new
+/// case here + one routing branch — the action-execution and selection layers don't
+/// change.
+enum PopBarPresentation {
+    /// No UI — just dismiss (e.g. Copy).
+    case none
+    /// A text/Markdown result page in the popup panel (AI output, error messages).
+    case result(String)
+    /// The selection's associated link, in the floating mini-browser.
+    case webPreview(URL)
 }
 
 /// Optional per-action model override. The API key is resolved per-provider from
@@ -21,8 +30,9 @@ struct ModelOverride: Codable, Equatable {
 struct PopBarActionConfig: Codable, Identifiable, Equatable {
 
     enum Kind: String, Codable {
-        case copy   // local: write the selection to the clipboard
-        case ai     // send `prompt` + the selection to a model
+        case copy         // local: write the selection to the clipboard
+        case ai           // send `prompt` + the selection to a model
+        case webPreview   // local: open the selection's associated link in the mini-browser
     }
 
     var schemaVersion: Int
@@ -46,8 +56,10 @@ struct PopBarActionConfig: Codable, Identifiable, Equatable {
         self.modelOverride = modelOverride
     }
 
-    var isLocal: Bool { kind == .copy }
+    /// Runs entirely on-device (no LLM) — Copy and Web Preview. Drives the "REAL" tag.
+    var isLocal: Bool { kind == .copy || kind == .webPreview }
     var isAI: Bool { kind == .ai }
+    var isWebPreview: Bool { kind == .webPreview }
 
     // Forward-compatible decode: tolerate older/newer payloads missing fields.
     enum CodingKeys: String, CodingKey { case schemaVersion, id, title, iconSymbol, kind, prompt, modelOverride }
@@ -93,8 +105,14 @@ enum DefaultActions {
                                kind: .ai, prompt: polishPrompt),
             PopBarActionConfig(title: L("popbar.action.explain"), iconSymbol: "lightbulb",
                                kind: .ai, prompt: explainPrompt),
+            webPreviewAction(),
             PopBarActionConfig(title: L("popbar.action.copy"), iconSymbol: "doc.on.doc",
                                kind: .copy),
         ]
+    }
+
+    /// The seed / migration "Web Preview" action.
+    static func webPreviewAction() -> PopBarActionConfig {
+        PopBarActionConfig(title: L("popbar.action.webpreview"), iconSymbol: "safari", kind: .webPreview)
     }
 }

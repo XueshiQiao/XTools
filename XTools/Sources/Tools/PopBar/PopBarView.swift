@@ -12,6 +12,8 @@ struct PopBarView: View {
     @ObservedObject private var actions: ActionStore
 
     @State private var editingAction: PopBarActionConfig?
+    @State private var previewFallback = PopBarPreferences.previewFallbackToSearch
+    @State private var previewEngine = PopBarPreferences.previewSearchEngine
 
     private let trustPoll = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
@@ -26,6 +28,9 @@ struct PopBarView: View {
             statusSection
             if !store.isTrusted { permissionSection }
             actionsSection
+            if actions.actions.contains(where: { $0.kind == .webPreview }) {
+                webPreviewSection
+            }
             resultSection
             displaySection
             aboutSection
@@ -131,6 +136,32 @@ struct PopBarView: View {
             Text(L("popbar.actions.header"))
         } footer: {
             Text(L("popbar.actions.footer2"))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    // MARK: - Web preview (link fallback)
+
+    private var webPreviewSection: some View {
+        Section {
+            Toggle(isOn: $previewFallback) {
+                iconLabel("magnifyingglass", .indigo, L("popbar.webpreview.fallback"))
+            }
+            .onChange(of: previewFallback) { PopBarPreferences.previewFallbackToSearch = $0 }
+            if previewFallback {
+                Picker(selection: $previewEngine) {
+                    ForEach(PreviewSearchEngine.allCases, id: \.self) { engine in
+                        Text(engine.displayName).tag(engine)
+                    }
+                } label: {
+                    iconLabel("globe", .indigo, L("popbar.webpreview.engine"))
+                }
+                .onChange(of: previewEngine) { PopBarPreferences.previewSearchEngine = $0 }
+            }
+        } header: {
+            Text(L("popbar.webpreview.section"))
+        } footer: {
+            Text(L("popbar.webpreview.fallback.footer"))
                 .fixedSize(horizontal: false, vertical: true)
         }
     }

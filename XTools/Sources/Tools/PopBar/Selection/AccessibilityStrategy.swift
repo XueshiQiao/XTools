@@ -33,12 +33,16 @@ final class AccessibilityStrategy: SelectionStrategy {
 
         // 1) Plain selected-text attribute.
         if let text = copyString(focused, kAXSelectedTextAttribute), !text.isEmpty {
-            return SelectionResult(text: text, via: id, bounds: selectionBounds(focused))
+            var result = SelectionResult(text: text, via: id, bounds: selectionBounds(focused))
+            if context.resolvesLinks { result.focusedElement = focused }
+            return result
         }
 
         // 2) WebKit text-marker range (browsers / WebViews).
         if let text = textViaMarkerRange(focused), !text.isEmpty {
-            return SelectionResult(text: text, via: id, bounds: selectionBounds(focused))
+            var result = SelectionResult(text: text, via: id, bounds: selectionBounds(focused))
+            if context.resolvesLinks { result.focusedElement = focused }
+            return result
         }
 
         // Empty: this app may simply not expose AX yet (Electron/Chromium).

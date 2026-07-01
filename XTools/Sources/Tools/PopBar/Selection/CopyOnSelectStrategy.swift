@@ -60,6 +60,18 @@ final class CopyOnSelectStrategy: SelectionStrategy {
         guard let text = clipboard, !text.isEmpty else { return nil }
 
         Self.log.info("copy-on-select hit — read \(text.count) char(s) from clipboard (role=\(decision.role))")
-        return SelectionResult(text: text, via: id, bounds: nil)
+        var result = SelectionResult(text: text, via: id, bounds: nil)
+        if context.resolvesLinks {
+            // The app's copy-on-select may have put rich text on the clipboard too;
+            // capture it (+ the focused element) for LinkResolver.
+            let (html, rtf, elem) = await MainActor.run { () -> (Data?, Data?, AXUIElement?) in
+                let pb = NSPasteboard.general
+                return (pb.data(forType: .html), pb.data(forType: .rtf), AXSelectionProbe.focusedElement())
+            }
+            result.focusedElement = elem
+            result.htmlData = html
+            result.rtfData = rtf
+        }
+        return result
     }
 }
