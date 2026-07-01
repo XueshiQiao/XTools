@@ -36,9 +36,10 @@ struct WheelLayout: Equatable {
 
 /// Which visual skin the wheel uses. Geometry + interaction are identical for both;
 /// only the rendering differs. `.classic` = flat frosted sectors + accent fill.
-/// `.liquid` = the locked bright "Liquid Glass" look (`docs/popbar-wheel-liquid.html`):
-/// a translucent frosted ring (no borders), soft volumetric depth, and a clear-bright
-/// liquid glow on the hovered compartment.
+/// `.liquid` = the locked "Liquid Glass" look (`docs/popbar-wheel-liquid.html`): a
+/// translucent frosted ring (no borders) with soft volumetric depth that adapts to the
+/// popup's appearance — bright ring + dark glyphs in light mode, dark ring + light
+/// glyphs in dark mode.
 enum WheelSkin { case classic, liquid }
 
 /// One equal slice of the ring as an annular sector. Used BOTH to fill the wedge
@@ -112,6 +113,25 @@ struct WheelActionsView: View {
     /// Called when the pointer leaves the ring and `autoHideOnExit` is on.
     var onExitRing: () -> Void = {}
     let onAction: (PopBarActionConfig) -> Void
+
+    /// Whether the popup is in dark mode. The locked mockup
+    /// (`docs/popbar-wheel-liquid.html`) defined BOTH a light and a dark variant, but
+    /// the first implementation only baked in the light palette — so in dark mode the
+    /// dark-navy glyphs vanished against the dark ring.
+    ///
+    /// IMPORTANT: this reads the SYSTEM dark-mode setting directly, NOT SwiftUI's
+    /// `@Environment(\.colorScheme)` nor the window/app `effectiveAppearance`. On
+    /// macOS 26 the Liquid Glass material promotes the popup WINDOW to a light "glass"
+    /// appearance, which flips BOTH the SwiftUI colorScheme AND the effective
+    /// appearance of the popup's content to light even while the system is in dark
+    /// mode (verified: dark-branch glyph tint + ring scrim never applied when keyed off
+    /// either). The global `AppleInterfaceStyle` default is the raw OS setting, immune
+    /// to that per-window promotion, so it's the reliable dark signal. The popup is
+    /// transient (rebuilt on every show), so not auto-reacting to a live switch is
+    /// fine — the next popup picks up the new value.
+    private var isDark: Bool {
+        UserDefaults.standard.string(forKey: "AppleInterfaceStyle") == "Dark"
+    }
 
     /// id of the hovered slice (nil = none).
     @State private var hovered: String?
@@ -244,15 +264,30 @@ struct WheelActionsView: View {
 
     /// LIQUID GLASS: on macOS 26+ this is the REAL system Liquid Glass material
     /// (`.glassEffect`) — genuinely translucent/refractive, clipped to a ring. On older
-    /// systems it falls back to a hand-rolled translucent frost. Both keep dark icons
-    /// and a gentle glow on the hovered compartment. Matches the locked mockup
-    /// `docs/popbar-wheel-liquid.html` (which previewed the intended look).
+    /// systems it falls back to a hand-rolled translucent frost. Both adapt to the
+    /// popup's appearance: dark-navy glyphs on the bright ring in light mode, near-white
+    /// glyphs on the dark ring in dark mode. Matches the locked mockup
+    /// `docs/popbar-wheel-liquid.html` (which previewed both variants).
     private var liquidVisuals: some View {
         let d = layout.diameter
+        let o = layout.outerRadius, ir = layout.innerRadius
         return ZStack {
             // NO drop shadow: a blurred ellipse behind a circular ring peeked out
             // unevenly and read as an irregular dark outline around the wheel.
             liquidMaterial
+
+            // Dark mode: the macOS 26 Liquid Glass samples whatever sits behind the
+            // popup, so over dark content the ring goes near-black and the glyphs lose
+            // all contrast (the reported bug). A controlled dark scrim on the band
+            // pins the ring to a predictable dark glass — light glyphs then read on ANY
+            // backdrop, not just the one the glass happened to sample. Light mode keeps
+            // the bright glass untouched. Masked to the annulus so the hollow centre
+            // stays clear.
+            if isDark {
+                Annulus(innerRadius: ir, outerRadius: o)
+                    .fill(Color.black.opacity(0.34), style: FillStyle(eoFill: true))
+                    .frame(width: o * 2, height: o * 2)
+            }
 
             // selected compartment indicator — a small dot (paired with bold label)
             if let i = hoveredIndex { selectionDot(i) }
@@ -290,16 +325,19 @@ struct WheelActionsView: View {
     /// sheen + a masked specular hotspot (no borders).
     private var liquidFrostFallback: some View {
         let o = layout.outerRadius, ir = layout.innerRadius, tube = o - ir, mid = layout.midRadius
+        let dark = isDark
         return ZStack {
-            LiquidGlassBlur()
+            LiquidGlassBlur(dark: dark)
                 .frame(width: o * 2, height: o * 2)
-                .overlay(Color.white.opacity(0.10))
+                .overlay(Color.white.opacity(dark ? 0.08 : 0.10))
                 .mask(Annulus(innerRadius: ir, outerRadius: o).fill(style: FillStyle(eoFill: true)))
             Circle().fill(depthGradient).frame(width: o * 2, height: o * 2)
             Circle().fill(sheenGradient).frame(width: o * 2, height: o * 2)
                 .mask(Annulus(innerRadius: ir, outerRadius: o).fill(style: FillStyle(eoFill: true)))
-                .blendMode(.overlay)
-            Circle().fill(RadialGradient(colors: [.white.opacity(0.95), .clear],
+                // Overlay pops highlights on the bright glass; soft-light keeps the
+                // dark ring from blowing out (mirrors the mockup's per-theme blend).
+                .blendMode(dark ? .softLight : .overlay)
+            Circle().fill(RadialGradient(colors: [.white.opacity(dark ? 0.55 : 0.95), .clear],
                                          center: .center, startRadius: 0, endRadius: tube * 0.85))
                 .frame(width: tube * 1.7, height: tube * 1.7).blur(radius: 3).opacity(0.85)
                 .offset(x: CGFloat(cos(-Double.pi * 0.62)) * mid,
@@ -309,9 +347,12 @@ struct WheelActionsView: View {
         }
     }
 
-    /// Icons + labels (dark, with a soft white halo for legibility on the light glass).
+    /// Icons + labels. Light mode: dark-navy ink with a soft white halo on the bright
+    /// glass. Dark mode: near-white glyphs with a soft dark halo — the mockup's dark
+    /// variant — so they stay legible on the system's dark Liquid Glass.
     private var liquidIcons: some View {
         let d = layout.diameter, mid = layout.midRadius
+        let dark = isDark
         return ForEach(Array(actions.enumerated()), id: \.element.id) { idx, action in
             let a = angles(idx)
             let m = a.mid.radians
@@ -331,12 +372,27 @@ struct WheelActionsView: View {
                         .frame(maxWidth: layout.labelWidth)
                 }
             }
-            .foregroundStyle(hot ? Color(red: 0.05, green: 0.09, blue: 0.16)
-                                 : Color(red: 0.17, green: 0.21, blue: 0.27))
-            .shadow(color: .white.opacity(0.6), radius: 2)
+            .foregroundStyle(glyphColor(hot: hot, dark: dark))
+            // Halo lifts the glyphs off the glass: a white glow on the bright ring,
+            // a soft dark glow on the dark ring (mirrors the mockup's per-theme
+            // text-shadow — light: white .6, dark: black .55).
+            .shadow(color: dark ? .black.opacity(0.55) : .white.opacity(0.6),
+                    radius: dark ? 1.5 : 2)
             // NO scaleEffect — selecting a slice must NOT enlarge it (per the user).
             .position(x: d / 2 + cos(m) * mid, y: d / 2 + sin(m) * mid)
         }
+    }
+
+    /// Glyph tint for the liquid ring, per appearance (`docs/popbar-wheel-liquid.html`
+    /// tokens). Light: locked dark-navy ink (`--glyph`/`--glyphHot`). Dark: near-white
+    /// glyphs (`rgba(255,255,255,.92)` → white when hot) so nothing washes out on the
+    /// dark Liquid Glass.
+    private func glyphColor(hot: Bool, dark: Bool) -> Color {
+        if dark {
+            return hot ? .white : Color.white.opacity(0.92)
+        }
+        return hot ? Color(red: 0.05, green: 0.09, blue: 0.16)
+                   : Color(red: 0.17, green: 0.21, blue: 0.27)
     }
 
     private var hoveredIndex: Int? {
@@ -356,29 +412,38 @@ struct WheelActionsView: View {
         let d = layout.diameter, o = layout.outerRadius
         let a = angles(i), m = a.mid.radians
         Circle()
-            .fill(Color(red: 0.10, green: 0.13, blue: 0.20))
+            .fill(isDark ? Color.white.opacity(0.9) : Color(red: 0.10, green: 0.13, blue: 0.20))
             .frame(width: 5, height: 5)
             .position(x: d / 2 + cos(m) * (o - 11), y: d / 2 + sin(m) * (o - 11))
     }
 
     private var depthGradient: RadialGradient {
         let o = layout.outerRadius, ir = layout.innerRadius, tube = o - ir, mid = layout.midRadius
+        // Cross-section edges + mid highlight, per appearance (mockup `edge`/`edge2`/
+        // `midGlow`). Light: cool blue-grey rims. Dark: near-black rims so the tube
+        // reads as recessed glass, with a fainter white mid-line.
+        let edge  = isDark ? Color(red: 0.03, green: 0.05, blue: 0.09).opacity(0.66)
+                           : Color(red: 0.35, green: 0.45, blue: 0.63).opacity(0.30)
+        let edge2 = isDark ? Color(red: 0.02, green: 0.04, blue: 0.07).opacity(0.70)
+                           : Color(red: 0.31, green: 0.39, blue: 0.59).opacity(0.34)
+        let midGlow = Color.white.opacity(isDark ? 0.14 : 0.34)
         return RadialGradient(gradient: Gradient(stops: [
             .init(color: .clear, location: max(0, (ir - 1) / o)),
-            .init(color: Color(red: 0.35, green: 0.45, blue: 0.63).opacity(0.30), location: (ir + 1.5) / o),
+            .init(color: edge, location: (ir + 1.5) / o),
             .init(color: .clear, location: (ir + tube * 0.34) / o),
-            .init(color: .white.opacity(0.34), location: mid / o),
+            .init(color: midGlow, location: mid / o),
             .init(color: .clear, location: (o - tube * 0.32) / o),
-            .init(color: Color(red: 0.31, green: 0.39, blue: 0.59).opacity(0.34), location: (o - 1) / o),
+            .init(color: edge2, location: (o - 1) / o),
             .init(color: .clear, location: 1),
         ]), center: .center, startRadius: 0, endRadius: o)
     }
 
     private var sheenGradient: RadialGradient {
         let o = layout.outerRadius
+        // Top-down specular sheen, dimmer in dark mode (mockup: top white .75 → .5).
         return RadialGradient(gradient: Gradient(stops: [
-            .init(color: .white.opacity(0.70), location: 0),
-            .init(color: .white.opacity(0.10), location: 0.42),
+            .init(color: .white.opacity(isDark ? 0.50 : 0.70), location: 0),
+            .init(color: .white.opacity(isDark ? 0.06 : 0.10), location: 0.42),
             .init(color: .clear, location: 0.70),
         ]), center: UnitPoint(x: 0.5, y: 0.06), startRadius: 0, endRadius: o * 1.25)
     }
@@ -421,21 +486,24 @@ struct WheelActionsView: View {
     }
 }
 
-/// A forced-light frosted material for the liquid-glass ring. Pins the appearance to
-/// `.aqua` so the ring reads bright/translucent (the locked look) regardless of the
-/// system's dark mode, while still blurring whatever is behind the popup.
+/// The frosted material for the liquid-glass ring (pre-macOS-26 fallback). Pins the
+/// appearance to `.aqua` in light mode / `.darkAqua` in dark mode so the frost matches
+/// the popup's appearance — the locked mockup defines both — while still blurring
+/// whatever is behind the popup.
 private struct LiquidGlassBlur: NSViewRepresentable {
+    var dark: Bool = false
+    private var pinned: NSAppearance? { NSAppearance(named: dark ? .darkAqua : .aqua) }
     func makeNSView(context: Context) -> NSVisualEffectView {
         let v = NSVisualEffectView()
         v.material = .popover
         v.blendingMode = .behindWindow
         v.state = .active
-        v.appearance = NSAppearance(named: .aqua)
+        v.appearance = pinned
         v.wantsLayer = true
         v.layer?.masksToBounds = true
         return v
     }
     func updateNSView(_ v: NSVisualEffectView, context: Context) {
-        v.appearance = NSAppearance(named: .aqua)
+        v.appearance = pinned
     }
 }
