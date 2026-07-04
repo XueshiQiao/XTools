@@ -72,6 +72,8 @@ jobs:
 
       - name: Sign App
         if: ${{ env.HAS_APPLE_SECRETS == 'true' }}
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           APP_PATH="build/Release/XTools.app"
           ENTITLEMENTS="XTools/XTools.entitlements"
@@ -103,13 +105,27 @@ jobs:
             done
           fi
 
-          # Sign the main app bundle with entitlements
+          # Sign the main app bundle with entitlements.
+          # codesign signs the entitlements plist VERBATIM — unlike Xcode it does NOT
+          # expand $(AppIdentifierPrefix). Left literal, the restricted
+          # keychain-access-groups entitlement fails AMFI validation at launch
+          # ("restricted entitlements not validated / no matching profile") and the
+          # notarized app is SIGKILLed on spawn. Expand it to the team prefix here.
+          SIGN_ENT="${RUNNER_TEMP:-/tmp}/XTools.signing.entitlements"
+          sed "s/\$(AppIdentifierPrefix)/${TEAM_ID}./g" "$ENTITLEMENTS" > "$SIGN_ENT"
+          echo "Signing entitlements (expanded):"; cat "$SIGN_ENT"
+          if grep -q 'AppIdentifierPrefix' "$SIGN_ENT"; then
+            echo "::error::\$(AppIdentifierPrefix) was not expanded — is the APPLE_TEAM_ID secret set?"; exit 1
+          fi
           codesign --force --options runtime --timestamp \
-            --entitlements "$ENTITLEMENTS" \
+            --entitlements "$SIGN_ENT" \
             --sign "Developer ID Application" "$APP_PATH"
 
-          # Verify
+          # Verify the signature AND that the signed keychain group is team-prefixed —
+          # guards against ever re-shipping the AMFI-kill bug.
           codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          codesign -d --entitlements - "$APP_PATH" 2>/dev/null | grep -q "${TEAM_ID}.me.xueshi.xtools.keychain" \
+            || { echo "::error::signed keychain-access-group is not team-prefixed — AMFI would kill the app"; exit 1; }
 
       - name: Notarize App
         if: ${{ env.HAS_APPLE_SECRETS == 'true' }}
