@@ -289,7 +289,11 @@ final class PopBarPanel {
         let screenCap = (screen?.visibleFrame.height).map { $0 * resultScreenFraction } ?? resultMaxHeight
         let cap = min(resultMaxHeight, screenCap)
         let lower = min(resultMinHeight, cap)   // never above the cap on a tiny screen
-        return min(max(measured, lower), cap)
+        // Round the content height UP to a whole point before clamping. The measurement
+        // already covers the FULL scroll content (Markdown + bottom anchor); the ceil
+        // just absorbs sub-point layout rounding so the scroll frame is never a fraction
+        // shorter than its content — which is what would leave a 1px scrollbar behind.
+        return min(max(measured.rounded(.up), lower), cap)
     }
 
     func hide() {

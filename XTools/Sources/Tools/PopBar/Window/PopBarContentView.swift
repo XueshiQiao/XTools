@@ -167,7 +167,15 @@ struct PopBarContentView: View {
             }
             ScrollViewReader { proxy in
                 ScrollView {
-                    Group {
+                    // Measure the WHOLE scroll content — the rendered Markdown AND the
+                    // bottom scroll anchor — as one stack. Measuring only the Markdown
+                    // (as before) left the 1pt anchor out of the reported height, so the
+                    // scroll frame we sized to it came out 1pt shorter than the actual
+                    // content. That constant 1px overflow forced a scrollbar on EVERY
+                    // result, however short — verified at the AppKit layer (documentView
+                    // 1pt taller than the clip view). Measuring the stack as a whole makes
+                    // the reported height == the real content, so frame == content.
+                    VStack(alignment: .leading, spacing: 0) {
                         if text.isEmpty {
                             // Pre-first-token: a quiet placeholder so the chrome is
                             // visible immediately without a blank void.
@@ -192,10 +200,14 @@ struct PopBarContentView: View {
                                 .markdownImageProvider(NoRemoteImageProvider())
                                 .textSelection(.enabled)
                         }
+                        // Anchor used to keep the view pinned to the bottom as text grows.
+                        // Kept INSIDE the measured stack so its 1pt counts toward the
+                        // reported height (otherwise the frame is 1pt too short).
+                        Color.clear.frame(height: 1).id(Self.bottomAnchor)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    // Measure the rendered content's natural height so the panel can
-                    // grow to fit it when auto-expand is ON. The probe sits in a
+                    // Report this full content height so the panel can size the frame to
+                    // fit it exactly when auto-expand is ON. The probe sits in a
                     // background so it never affects layout; it only reports a size.
                     .background(
                         GeometryReader { geo in
@@ -203,8 +215,6 @@ struct PopBarContentView: View {
                                                    value: geo.size.height)
                         }
                     )
-                    // Anchor used to keep the view pinned to the bottom as text grows.
-                    Color.clear.frame(height: 1).id(Self.bottomAnchor)
                 }
                 .frame(width: resultWidth, height: resultHeight)
                 // Report the measured natural height to the panel (it clamps against
