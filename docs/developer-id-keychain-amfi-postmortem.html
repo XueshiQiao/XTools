@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The notarized app that refused to launch — XTools postmortem</title>
+<style>
+  :root {
+    --bg: #faf9f5; --surface: #ffffff; --ink: #1f1e1c; --ink-soft: #5a5751; --ink-faint: #8a857c;
+    --rule: #e6e2d4; --rule-soft: #efece1; --code-bg: #f3f0e6;
+    --accent: #d97757; --accent-soft: #f4e2d6; --good: #4f8a5c; --warn: #b6711c; --bad: #b14338;
+    --serif: "Tiempos", "Source Serif Pro", "Iowan Old Style", Georgia, serif;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    --mono: "JetBrains Mono", "SF Mono", Menlo, Monaco, "Cascadia Code", monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px;
+    line-height: 1.65; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+  .container { max-width: 880px; margin: 0 auto; padding: 80px 40px 120px; }
+  header.hero { margin-bottom: 56px; }
+  .eyebrow { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: 18px; }
+  h1 { font-family: var(--serif); font-weight: 500; font-size: 48px; line-height: 1.1; margin: 0 0 20px; letter-spacing: -0.015em; }
+  .lede { font-family: var(--serif); font-size: 22px; line-height: 1.45; color: var(--ink-soft); margin: 0; max-width: 660px; }
+  h2 { font-family: var(--serif); font-weight: 500; font-size: 30px; line-height: 1.2; margin: 64px 0 16px; letter-spacing: -0.01em; }
+  h3 { font-family: var(--sans); font-weight: 600; font-size: 17px; margin: 36px 0 10px; letter-spacing: -0.005em; }
+  p { margin: 0 0 16px; }
+  p, li { color: var(--ink); }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent-soft); }
+  a:hover { border-bottom-color: var(--accent); }
+  ul, ol { padding-left: 24px; margin: 0 0 16px; }
+  li { margin-bottom: 8px; }
+  li code { font-size: 0.92em; }
+  code { font-family: var(--mono); background: var(--code-bg); padding: 1px 6px; border-radius: 4px; font-size: 0.9em; }
+  pre { background: #1f1e1c; color: #f6f3eb; padding: 20px 24px; border-radius: 8px; overflow-x: auto; line-height: 1.55; font-size: 13.5px; margin: 20px 0 28px; }
+  pre code { background: transparent; padding: 0; color: inherit; font-size: inherit; }
+  .tok-comment { color: #9b9081; font-style: italic; }
+  .tok-keyword { color: #e89b6f; }
+  .tok-fn { color: #f0d68a; }
+  .tok-string { color: #b8d49d; }
+  .tok-num { color: #d8b9e3; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 18px 32px; margin: 32px 0 48px; padding: 18px 0;
+    border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); font-family: var(--mono); font-size: 12.5px; color: var(--ink-soft); }
+  .meta-row b { color: var(--ink); font-weight: 500; margin-right: 8px; }
+  .callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 18px 22px; margin: 28px 0; border-radius: 0 6px 6px 0; }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout .label { font-family: var(--mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); font-weight: 600; margin-bottom: 6px; display: block; }
+  .figure { margin: 36px 0; background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 28px 24px 18px; }
+  .figure svg { display: block; width: 100%; height: auto; }
+  .figure .caption { font-family: var(--mono); font-size: 12px; color: var(--ink-faint); margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--rule); }
+  .figure .caption b { color: var(--ink-soft); font-weight: 600; }
+  table { border-collapse: collapse; width: 100%; margin: 24px 0 32px; font-size: 14.5px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { font-weight: 600; color: var(--ink-soft); background: var(--rule-soft); font-size: 13px; letter-spacing: 0.01em; }
+  td code { font-size: 0.88em; }
+  .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: 0.04em; }
+  .pill.good { background: #e3f0e2; color: var(--good); }
+  .pill.warn { background: #f5e7d0; color: var(--warn); }
+  .pill.bad { background: #f5dad6; color: var(--bad); }
+  .pill.neutral { background: var(--rule-soft); color: var(--ink-soft); }
+  .footer { margin-top: 96px; padding-top: 24px; border-top: 1px solid var(--rule); font-family: var(--mono); font-size: 12px; color: var(--ink-faint); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  svg text { font-family: var(--sans); font-size: 12.5px; }
+  svg .label-mono { font-family: var(--mono); font-size: 11.5px; fill: var(--ink-soft); }
+  svg .label-soft { fill: var(--ink-soft); }
+  svg .label-faint { fill: var(--ink-faint); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="hero">
+  <div class="eyebrow">Engineering note · XTools · 2026-07-04</div>
+  <h1>The notarized app that refused to launch</h1>
+  <p class="lede">Four signed, notarized, stapled releases passed every check we could run — and every one was killed by the kernel the instant a user double-clicked it. The culprit was a single restricted entitlement with no provisioning profile to authorize it.</p>
+</header>
+
+<div class="meta-row">
+  <span><b>Subsystem</b><code>CI signing · Keychain</code></span>
+  <span><b>Fix commit</b><code>ad07a42</code></span>
+  <span><b>Shipped</b><span class="pill good">v26.07.10</span></span>
+  <span><b>Broken</b><span class="pill bad">v26.06.5 – v26.07.9</span></span>
+</div>
+
+<h2>1 · The symptom</h2>
+<p>A user downloaded the release DMG, mounted it, double-clicked <code>XTools.app</code> — and nothing opened. No window, no Dock bounce, no crash reporter. From the terminal the failure was terse and strange:</p>
+
+<pre><code><span class="tok-comment"># open (LaunchServices path)</span>
+$ open /Volumes/XTools/XTools.app
+The application cannot be opened for an unexpected reason,
+  RBSRequestErrorDomain Code=5 "Launch failed"
+  NSPOSIXErrorDomain Code=163 "Launchd job spawn failed"
+
+<span class="tok-comment"># exec the binary directly</span>
+$ /Volumes/XTools/XTools.app/Contents/MacOS/XTools
+Killed: 9        <span class="tok-comment"># exit 137 = 128 + SIGKILL. No stdout. No crash log.</span></code></pre>
+
+<p>Exit <b>137</b> is <code>SIGKILL</code> — the process was executed and then killed by the system <em>before it ran a single line of our code</em>, which is why there was no crash report. This is not a bug in the app. It's the launch gate refusing to let the app run.</p>
+
+<div class="figure">
+<svg viewBox="0 0 800 250" xmlns="http://www.w3.org/2000/svg" aria-label="Timeline of a failing launch">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5a5751"/>
+    </marker>
+  </defs>
+  <text x="0" y="22" font-weight="600" fill="#1f1e1c">A launch that dies before main()</text>
+
+  <line x1="40" y1="86" x2="760" y2="86" stroke="#e6e2d4" stroke-width="1.5"/>
+  <line x1="40" y1="84" x2="40" y2="88" stroke="#5a5751"/>
+  <line x1="760" y1="84" x2="760" y2="88" stroke="#5a5751"/>
+
+  <circle cx="90" cy="86" r="6" fill="#d97757"/>
+  <text x="90" y="66" text-anchor="middle" class="label-mono" fill="#d97757">double-click</text>
+  <text x="90" y="112" text-anchor="middle" class="label-soft" font-size="11.5">LaunchServices</text>
+
+  <circle cx="300" cy="86" r="6" fill="#1f1e1c"/>
+  <text x="300" y="66" text-anchor="middle" class="label-mono">posix_spawn</text>
+  <text x="300" y="112" text-anchor="middle" class="label-soft" font-size="11.5">launchd / RunningBoard</text>
+
+  <circle cx="510" cy="86" r="6" fill="#1f1e1c"/>
+  <text x="510" y="66" text-anchor="middle" class="label-mono">AMFI check</text>
+  <text x="510" y="112" text-anchor="middle" class="label-soft" font-size="11.5">amfid validates entitlements</text>
+
+  <circle cx="700" cy="86" r="7" fill="#b14338"/>
+  <text x="700" y="66" text-anchor="middle" class="label-mono" fill="#b14338">SIGKILL</text>
+  <text x="700" y="112" text-anchor="middle" class="label-soft" font-size="11.5" fill="#b14338">exit 137 · no crash log</text>
+
+  <line x1="96" y1="86" x2="694" y2="86" stroke="#5a5751" stroke-dasharray="4 3" marker-end="url(#arr)"/>
+
+  <g transform="translate(40, 150)">
+    <rect x="0" y="0" width="720" height="72" rx="6" fill="#1f1e1c"/>
+    <text x="16" y="26" font-size="12" font-family="'JetBrains Mono',monospace" fill="#f0d68a">amfid: Failure validating against provisioning profiles</text>
+    <text x="16" y="46" font-size="12" font-family="'JetBrains Mono',monospace" fill="#e89b6f">amfid: Restricted entitlements not validated, bailing out.</text>
+    <text x="16" y="62" font-size="12" font-family="'JetBrains Mono',monospace" fill="#b8d49d">  Code=-413 "No matching profile found"  (err -67671)</text>
+  </g>
+</svg>
+<div class="caption"><b>Figure 1.</b> The kill happens inside <code>amfid</code> during spawn, before <code>main()</code>. The <code>log show --predicate 'process=="amfid"'</code> line names the reason outright — it is looking for a provisioning profile and not finding one.</div>
+</div>
+
+<h2>2 · Why every static check lied</h2>
+<p>The confusing part: this app is genuinely signed with a Developer ID Application certificate, genuinely notarized by Apple, and the notarization ticket is genuinely stapled. Every tool you'd reach for to "prove" it's fine says it's fine:</p>
+
+<div class="figure">
+<svg viewBox="0 0 800 210" xmlns="http://www.w3.org/2000/svg" aria-label="Static checks pass but runtime gate kills">
+  <text x="0" y="22" font-weight="600">Four green gates, then a wall</text>
+
+  <g font-family="'JetBrains Mono',monospace" font-size="11.5">
+    <!-- static gates -->
+    <g transform="translate(0,50)">
+      <rect x="0" y="0" width="150" height="60" rx="8" fill="#ffffff" stroke="#e6e2d4"/>
+      <text x="75" y="26" text-anchor="middle" fill="#4f8a5c" font-weight="600">codesign</text>
+      <text x="75" y="44" text-anchor="middle" fill="#4f8a5c">✓ valid</text>
+    </g>
+    <g transform="translate(165,50)">
+      <rect x="0" y="0" width="150" height="60" rx="8" fill="#ffffff" stroke="#e6e2d4"/>
+      <text x="75" y="26" text-anchor="middle" fill="#4f8a5c" font-weight="600">spctl</text>
+      <text x="75" y="44" text-anchor="middle" fill="#4f8a5c">✓ accepted</text>
+    </g>
+    <g transform="translate(330,50)">
+      <rect x="0" y="0" width="150" height="60" rx="8" fill="#ffffff" stroke="#e6e2d4"/>
+      <text x="75" y="26" text-anchor="middle" fill="#4f8a5c" font-weight="600">notarize</text>
+      <text x="75" y="44" text-anchor="middle" fill="#4f8a5c">✓ succeeded</text>
+    </g>
+    <g transform="translate(495,50)">
+      <rect x="0" y="0" width="150" height="60" rx="8" fill="#ffffff" stroke="#e6e2d4"/>
+      <text x="75" y="26" text-anchor="middle" fill="#4f8a5c" font-weight="600">stapler</text>
+      <text x="75" y="44" text-anchor="middle" fill="#4f8a5c">✓ worked</text>
+    </g>
+    <!-- runtime wall -->
+    <g transform="translate(660,42)">
+      <rect x="0" y="0" width="140" height="76" rx="8" fill="#f5dad6" stroke="#b14338"/>
+      <text x="70" y="30" text-anchor="middle" fill="#b14338" font-weight="600">AMFI</text>
+      <text x="70" y="48" text-anchor="middle" fill="#b14338">(runtime)</text>
+      <text x="70" y="66" text-anchor="middle" fill="#b14338" font-weight="600">✗ SIGKILL</text>
+    </g>
+  </g>
+
+  <g transform="translate(0, 150)">
+    <rect x="0" y="0" width="800" height="46" rx="6" fill="#efece1"/>
+    <text x="16" y="21" font-size="12.5" fill="#5a5751"><tspan font-weight="700">The gap:</tspan> codesign / spctl / notarization check that the signature is valid and the app is not malware. None of them</text>
+    <text x="16" y="38" font-size="12.5" fill="#5a5751">check whether a <tspan font-weight="700">restricted entitlement is authorized</tspan>. Only AMFI does that — and only at launch.</text>
+  </g>
+</svg>
+<div class="caption"><b>Figure 2.</b> The static toolchain validates <em>authenticity</em>; AMFI validates <em>authorization</em>. A signed, notarized DMG can still ship an app that cannot legally run.</div>
+</div>
+
+<div class="callout">
+<span class="label">Core insight</span>
+<p>A green CI pipeline is not proof the app opens. The only proof is to download the artifact, apply a real <code>com.apple.quarantine</code> xattr, and watch it launch. We had four "successful" releases that no downloader could ever open.</p>
+</div>
+
+<h2>3 · Why Debug worked and Release didn't</h2>
+<p>The tell was that the local <b>Debug</b> build — same entitlements, same Hardened Runtime — launched perfectly, every day. The difference is one file that Xcode quietly adds and manual CI signing does not.</p>
+
+<div class="figure">
+<svg viewBox="0 0 800 250" xmlns="http://www.w3.org/2000/svg" aria-label="Debug vs Release vs AnyDrag comparison">
+  <text x="0" y="22" font-weight="600">Same entitlement, three outcomes</text>
+
+  <g font-size="12">
+    <!-- headers column -->
+    <text x="0" y="66" class="label-soft" font-size="11.5">Hardened Runtime</text>
+    <text x="0" y="98" class="label-soft" font-size="11.5">keychain-access-groups</text>
+    <text x="0" y="130" class="label-soft" font-size="11.5">embedded.provisionprofile</text>
+    <text x="0" y="168" class="label-soft" font-size="11.5" font-weight="600">Launches when downloaded?</text>
+
+    <!-- Debug -->
+    <g transform="translate(250,40)">
+      <rect x="0" y="0" width="160" height="150" rx="8" fill="#ffffff" stroke="#e6e2d4"/>
+      <text x="80" y="-10" text-anchor="middle" font-weight="600">Debug (Xcode)</text>
+      <text x="80" y="26" text-anchor="middle">yes</text>
+      <text x="80" y="58" text-anchor="middle">yes</text>
+      <text x="80" y="90" text-anchor="middle" fill="#4f8a5c" font-weight="600">YES ← Xcode</text>
+      <text x="80" y="128" text-anchor="middle" fill="#4f8a5c" font-weight="600">✓ works</text>
+    </g>
+    <!-- Release broken -->
+    <g transform="translate(425,40)">
+      <rect x="0" y="0" width="160" height="150" rx="8" fill="#fdf1ef" stroke="#b14338"/>
+      <text x="80" y="-10" text-anchor="middle" font-weight="600">Release (was)</text>
+      <text x="80" y="26" text-anchor="middle">yes</text>
+      <text x="80" y="58" text-anchor="middle">yes</text>
+      <text x="80" y="90" text-anchor="middle" fill="#b14338" font-weight="600">NONE</text>
+      <text x="80" y="128" text-anchor="middle" fill="#b14338" font-weight="600">✗ SIGKILL</text>
+    </g>
+    <!-- AnyDrag -->
+    <g transform="translate(600,40)">
+      <rect x="0" y="0" width="180" height="150" rx="8" fill="#ffffff" stroke="#e6e2d4"/>
+      <text x="90" y="-10" text-anchor="middle" font-weight="600">AnyDrag (sibling)</text>
+      <text x="90" y="26" text-anchor="middle">yes</text>
+      <text x="90" y="58" text-anchor="middle" fill="#8a857c">none</text>
+      <text x="90" y="90" text-anchor="middle" fill="#8a857c">n/a</text>
+      <text x="90" y="128" text-anchor="middle" fill="#4f8a5c" font-weight="600">✓ works</text>
+    </g>
+  </g>
+  <line x1="0" y1="145" x2="780" y2="145" stroke="#e6e2d4" stroke-dasharray="3 3"/>
+</svg>
+<div class="caption"><b>Figure 3.</b> Two ways to be launchable: carry the restricted entitlement <em>with</em> an authorizing profile (Debug), or don't carry it at all (AnyDrag ships zero keychain entitlements). The broken Release did neither.</div>
+</div>
+
+<p>The root cause is two independent defects that had to both be fixed:</p>
+<ul>
+  <li><b>Layer 1 — the macro was never expanded.</b> <code>codesign</code> signs the entitlements plist <em>verbatim</em>; unlike Xcode it does not expand <code>$(AppIdentifierPrefix)</code>. So the signed keychain group was the literal string <code>$(AppIdentifierPrefix)me.xueshi.xtools.keychain</code> — malformed.</li>
+  <li><b>Layer 2 — no profile to authorize it.</b> <code>keychain-access-groups</code> is a <em>restricted</em> entitlement (Apple TN3125). Under Hardened Runtime it must be allowlisted by an embedded provisioning profile. Developer ID distribution embeds none by default. Fixing layer 1 alone still died — AMFI wants the profile.</li>
+</ul>
+
+<h2>4 · The fix</h2>
+<p>Keep the entitlement (so both builds use the prompt-free data-protection keychain, staying consistent), and give the release what Xcode gives Debug: an embedded provisioning profile. Concretely, the CI <code>Sign App</code> step now expands the macro <em>and</em> writes a Developer ID profile into the bundle before signing.</p>
+
+<pre><code><span class="tok-comment"># .github/workflows/build.yml — Sign App (essentials)</span>
+
+<span class="tok-comment"># 1. Authorize the restricted entitlement: embed the Developer ID profile</span>
+<span class="tok-comment">#    BEFORE codesign so it's covered by the seal.</span>
+echo -n "$MAC_PROVISION_PROFILE_BASE64" | base64 --decode \
+  -o "$APP_PATH/Contents/embedded.provisionprofile"
+
+<span class="tok-comment"># 2. Expand $(AppIdentifierPrefix) → &lt;TEAMID&gt;. (codesign won't)</span>
+sed "s/\$(AppIdentifierPrefix)/${TEAM_ID}./g" "$ENTITLEMENTS" &gt; "$SIGN_ENT"
+
+codesign --force --options runtime --timestamp \
+  --entitlements "$SIGN_ENT" \
+  --sign "Developer ID Application" "$APP_PATH"
+
+<span class="tok-comment"># 3. Guards — fail the build rather than ship the kill again</span>
+codesign -d --entitlements - "$APP_PATH" | grep -q "${TEAM_ID}.me.xueshi.xtools.keychain"
+test -f "$APP_PATH/Contents/embedded.provisionprofile"</code></pre>
+
+<p>The profile itself is a <b>Developer ID</b> provisioning profile (<code>ProvisionsAllDevices = true</code>), generated from the explicit App ID <code>me.xueshi.xtools</code> and the Developer ID Application certificate. Any explicit App ID auto-includes <code>keychain-access-groups = [TEAMID.*]</code> in its profiles — there is no separate "Keychain Sharing" toggle to hunt for. It's stored as a base64 GitHub secret, never committed.</p>
+
+<div class="callout">
+<span class="label">Why the entitlement at all</span>
+<p>The data-protection keychain gates access by <b>entitlement / team</b>, not by the binary's code signature — so it never re-prompts "wants to access the keychain" across rebuilds. The legacy keychain binds its ACL to the app's Designated Requirement, which changes on every re-sign, so it prompts forever. Keeping the entitlement (with a profile) is what buys the prompt-free experience in both Debug and Release.</p>
+</div>
+
+<h2>5 · Verification — the only test that counts</h2>
+<p>Not "CI is green." The real test reproduces a user: download the published DMG, stamp it with a browser-download quarantine, mount, and run the exact two commands that failed before.</p>
+
+<table>
+  <thead>
+    <tr><th>Check on the downloaded DMG</th><th>v26.06.5 – v26.07.9</th><th>v26.07.10</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>Contents/embedded.provisionprofile</code></td><td><span class="pill bad">absent</span></td><td><span class="pill good">12377 bytes</span></td></tr>
+    <tr><td>signed keychain group</td><td>literal macro / unauthorized</td><td><code>584KQTRF3B.me.xueshi.xtools.keychain</code></td></tr>
+    <tr><td>Gatekeeper / notarization / staple</td><td><span class="pill good">pass</span> (but useless)</td><td><span class="pill good">pass</span></td></tr>
+    <tr><td><code>open XTools.app</code></td><td><span class="pill bad">exit 1 · spawn failed</span></td><td><span class="pill good">exit 0 · running</span></td></tr>
+    <tr><td>direct <code>exec</code></td><td><span class="pill bad">137 · SIGKILL</span></td><td><span class="pill good">alive</span></td></tr>
+  </tbody>
+</table>
+
+<p>The app launches. The AMFI kill is gone — confirmed against a real quarantined download, not a claim.</p>
+
+<h2>6 · What would break if you removed each piece</h2>
+<table>
+  <thead>
+    <tr><th>Remove…</th><th>Symptom</th><th>Severity</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>embedded.provisionprofile</code> embed step</td>
+      <td>Back to square one — AMFI SIGKILLs the notarized app at launch (<code>-413 no matching profile</code>).</td>
+      <td><span class="pill bad">HIGH</span></td>
+    </tr>
+    <tr>
+      <td>the <code>sed</code> macro expansion</td>
+      <td>Signed keychain group stays the literal <code>$(AppIdentifierPrefix)…</code>; it no longer matches the profile's allowlist → AMFI rejects it.</td>
+      <td><span class="pill bad">HIGH</span></td>
+    </tr>
+    <tr>
+      <td>the post-sign guards</td>
+      <td>Build stays green while silently shipping the kill again — exactly how four releases went out unnoticed.</td>
+      <td><span class="pill warn">MEDIUM</span></td>
+    </tr>
+    <tr>
+      <td>the whole entitlement (drop it)</td>
+      <td>App launches fine (matches AnyDrag), but the keychain "wants to access" prompt returns on every signature change — one-time for release users, recurring for debug rebuilds.</td>
+      <td><span class="pill neutral">TRADE-OFF</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout">
+<span class="label">Reusable rule</span>
+<p>Any notarized Developer-ID macOS app that claims <code>keychain-access-groups</code> <b>must embed a provisioning profile</b> to authorize it, or it is SIGKILLed at launch — while every static check passes. This applies to every Developer-ID app in this family that touches the keychain.</p>
+</div>
+
+<div class="footer">
+  <span>XTools · Developer ID keychain / AMFI postmortem · 2026-07-04</span>
+  <span>fix <code>ad07a42</code> · shipped <code>v26.07.10</code></span>
+</div>
+
+</div>
+</body>
+</html>
