@@ -5,11 +5,25 @@
     <link>https://github.com/XueshiQiao/XTools</link>
     <language>en</language>
     <item>
-      <title>Version 26.07.9</title>
+      <title>Version 26.07.10</title>
       <description><![CDATA[<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
 <body>
+
+<h3>What's New in 26.07.10</h3>
+<ul>
+  <li><b>Fixes app launch:</b> Earlier 26.07.x builds could fail to open after download (“the application cannot be opened”). This is now fully resolved and the app launches normally.</li>
+  <li><b>Web Preview, refreshed:</b> The pop-up mini-browser has a single slim glass toolbar — back, forward and reload on the left, the page title in the middle, and copy-link and open-in-browser on the right.</li>
+  <li><b>Tidier result window:</b> Short AI results no longer show a needless scrollbar.</li>
+</ul>
+
+<h3>26.07.10 更新内容</h3>
+<ul>
+  <li><b>修复无法打开：</b>此前 26.07.x 下载后可能打不开(“应用程序无法打开”),现已彻底解决,可正常启动。</li>
+  <li><b>网页预览焕新：</b>弹出的迷你浏览器换成一条纤薄的玻璃工具栏——后退 / 前进 / 刷新在左，页面标题居中，复制链接与用浏览器打开靠右。</li>
+  <li><b>结果窗口更整洁：</b>短的 AI 结果不再显示多余的滚动条。</li>
+</ul>
 
 <h3>What's New in 26.07.9</h3>
 <ul>
@@ -87,11 +101,11 @@
 
 </body>
 </html>]]></description>
-      <pubDate>Sat, 04 Jul 2026 07:13:21 +0000</pubDate>
-      <sparkle:version>9</sparkle:version>
-      <sparkle:shortVersionString>26.07.9</sparkle:shortVersionString>
+      <pubDate>Sat, 04 Jul 2026 11:59:21 +0000</pubDate>
+      <sparkle:version>10</sparkle:version>
+      <sparkle:shortVersionString>26.07.10</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://github.com/XueshiQiao/XTools/releases/download/v26.07.9/XTools.dmg" length="8002545" type="application/octet-stream" sparkle:edSignature="GSkulY8W28/UrLnvWHr/ne3VMSh2AORZLTG98FJ8gAlSsU/9Z3StdNh6HaDnCcqSABix42kBzv7hJPouYyafDQ==" />
+      <enclosure url="https://github.com/XueshiQiao/XTools/releases/download/v26.07.10/XTools.dmg" length="8037851" type="application/octet-stream" sparkle:edSignature="NGdQb1InWJPSmyY2eZs8H7VAPI3AYIz7kGfaGjgEOfuKHLW7KWF9WT6Q03izY9CDCgnjE5r6Amakp+iZNka4Bw==" />
     </item>
   </channel>
 </rss>
