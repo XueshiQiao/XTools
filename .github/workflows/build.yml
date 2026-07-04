@@ -74,6 +74,7 @@ jobs:
         if: ${{ env.HAS_APPLE_SECRETS == 'true' }}
         env:
           TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          MAC_PROVISION_PROFILE_BASE64: ${{ secrets.MAC_PROVISION_PROFILE_BASE64 }}
         run: |
           APP_PATH="build/Release/XTools.app"
           ENTITLEMENTS="XTools/XTools.entitlements"
@@ -105,12 +106,22 @@ jobs:
             done
           fi
 
+          # Embed the Developer ID provisioning profile that AUTHORIZES the restricted
+          # keychain-access-groups entitlement. keychain-access-groups is a *restricted*
+          # entitlement (Apple TN3125): under Hardened Runtime it must be allowlisted by
+          # an embedded profile, or AMFI SIGKILLs the notarized app at launch
+          # ("restricted entitlements not validated / no matching profile found").
+          # Must be in place BEFORE codesign so it's covered by the seal.
+          if [ -z "$MAC_PROVISION_PROFILE_BASE64" ]; then
+            echo "::error::MAC_PROVISION_PROFILE_BASE64 secret is missing — keychain-access-groups would fail AMFI at launch"; exit 1
+          fi
+          echo -n "$MAC_PROVISION_PROFILE_BASE64" | base64 --decode -o "$APP_PATH/Contents/embedded.provisionprofile"
+          echo "Embedded provisioning profile ($(stat -f%z "$APP_PATH/Contents/embedded.provisionprofile") bytes)"
+
           # Sign the main app bundle with entitlements.
           # codesign signs the entitlements plist VERBATIM — unlike Xcode it does NOT
-          # expand $(AppIdentifierPrefix). Left literal, the restricted
-          # keychain-access-groups entitlement fails AMFI validation at launch
-          # ("restricted entitlements not validated / no matching profile") and the
-          # notarized app is SIGKILLed on spawn. Expand it to the team prefix here.
+          # expand $(AppIdentifierPrefix). The signed keychain group must be team-prefixed
+          # so it matches the profile's allowlist, so expand it to the team prefix here.
           SIGN_ENT="${RUNNER_TEMP:-/tmp}/XTools.signing.entitlements"
           sed "s/\$(AppIdentifierPrefix)/${TEAM_ID}./g" "$ENTITLEMENTS" > "$SIGN_ENT"
           echo "Signing entitlements (expanded):"; cat "$SIGN_ENT"
@@ -121,11 +132,13 @@ jobs:
             --entitlements "$SIGN_ENT" \
             --sign "Developer ID Application" "$APP_PATH"
 
-          # Verify the signature AND that the signed keychain group is team-prefixed —
-          # guards against ever re-shipping the AMFI-kill bug.
+          # Verify: signature valid, keychain group team-prefixed, AND the authorizing
+          # profile is embedded — guards against ever re-shipping the AMFI-kill bug.
           codesign --verify --deep --strict --verbose=2 "$APP_PATH"
           codesign -d --entitlements - "$APP_PATH" 2>/dev/null | grep -q "${TEAM_ID}.me.xueshi.xtools.keychain" \
             || { echo "::error::signed keychain-access-group is not team-prefixed — AMFI would kill the app"; exit 1; }
+          test -f "$APP_PATH/Contents/embedded.provisionprofile" \
+            || { echo "::error::embedded.provisionprofile missing after signing — AMFI would kill the app"; exit 1; }
 
       - name: Notarize App
         if: ${{ env.HAS_APPLE_SECRETS == 'true' }}
