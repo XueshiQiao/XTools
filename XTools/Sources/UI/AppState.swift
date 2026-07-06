@@ -38,14 +38,17 @@ final class AppState: ObservableObject {
         self.llm = llm
         let tools = ToolRegistry.makeAllTools(llm: llm)
         self.tools = tools
-        // Default to the Dashboard overview; `XTOOLS_TAB=<tool id>` overrides
-        // (dev/screenshot affordance, inert in normal use), and `XTOOLS_TAB=dashboard`
-        // is honored explicitly.
-        let envTab = ProcessInfo.processInfo.environment["XTOOLS_TAB"]
-        if let envTab, envTab == "dashboard" {
+        // Default to the Dashboard overview; a launch override can pre-select a
+        // tab (dev/screenshot affordance, inert in normal use). Accept it from
+        // either `open … --args --tab <id>` (so screenshots go through `open`,
+        // never a raw-binary/nohup launch) or the legacy `XTOOLS_TAB` env var.
+        // `--tab dashboard` / `XTOOLS_TAB=dashboard` is honored explicitly.
+        let launchTab = Self.launchArgument("--tab")
+            ?? ProcessInfo.processInfo.environment["XTOOLS_TAB"]
+        if launchTab == "dashboard" {
             self.selection = .dashboard
-        } else if let envTab, tools.contains(where: { $0.id == envTab }) {
-            self.selection = .tool(envTab)
+        } else if let launchTab, tools.contains(where: { $0.id == launchTab }) {
+            self.selection = .tool(launchTab)
         } else {
             self.selection = .dashboard
         }
@@ -66,6 +69,15 @@ final class AppState: ObservableObject {
 
     func tool(for id: String) -> (any XToolModule)? {
         tools.first { $0.id == id }
+    }
+
+    /// The value following a `--flag` in the process launch arguments (as passed
+    /// by `open … --args --flag <value>`), or nil if absent.
+    private static func launchArgument(_ flag: String) -> String? {
+        let args = CommandLine.arguments
+        guard let i = args.firstIndex(of: flag), i + 1 < args.count else { return nil }
+        let value = args[i + 1]
+        return value.hasPrefix("-") ? nil : value
     }
 
     /// Stop all tools' background work (called from `applicationWillTerminate`).

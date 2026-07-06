@@ -42,12 +42,14 @@ Finds and cleans up "ghost" background processes left running after an app is qu
 ```bash
 brew install xcodegen
 xcodegen generate
-scripts/run.sh          # kill old → build → relaunch (Debug)
+scripts/run.sh                    # kill old → build → relaunch (Debug), always via `open`
+scripts/run.sh --tab now-playing  # …and pre-select a tool tab (for screenshots)
 # or: open XTools.xcodeproj  then Cmd+R
 ```
 - The Debug build is `XTools-Debug.app` (bundle id `me.xueshi.xtools.debug`).
 - Logs: `~/Library/Logs/XTools/XTools.log` (`tail -F` it).
-- `XTOOLS_AUTOOPEN=1` opens the window on launch (dev/screenshot affordance; inert otherwise).
+- **Always launch via `open`**, never a raw-binary/`nohup` direct-exec — the latter comes up behind other windows and won't foreground cleanly. The window opens on launch regardless (no env var needed).
+- To pre-select a tab for a screenshot: `open <app> --args --tab <tool-id>` (e.g. `--tab now-playing`). The app reads `--tab` from argv; the legacy `XTOOLS_TAB` env var still works too.
 
 ## Release / CI
 - `.github/workflows/build.yml` (modeled on AnyDrag): PRs to `main` and manual `workflow_dispatch` validate an unsigned universal build; pushing a `v*` tag does the full **sign → notarize → DMG → Sparkle-sign → appcast.xml → GitHub Release**. Steps degrade gracefully when secrets are absent.
