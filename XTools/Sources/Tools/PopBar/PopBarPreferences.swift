@@ -51,11 +51,11 @@ enum PopBarPreferences {
     }
 
     /// Whether the result panel auto-grows its HEIGHT to fit the content (up to a
-    /// max, then scrolls). Opt-in: defaults to off (absent key → false), so the
-    /// result panel keeps its fixed compact size unless the user turns this on.
-    /// Width is always fixed.
+    /// max, then scrolls). Opt-out: defaults to ON (absent key → true), so the
+    /// result fits its content out of the box; a user who explicitly turned it off
+    /// (stored `false`) is respected. Width is always fixed.
     static var autoExpandHeight: Bool {
-        get { UserDefaults.standard.bool(forKey: autoExpandHeightKey) }
+        get { bool(autoExpandHeightKey, default: true) }
         set { UserDefaults.standard.set(newValue, forKey: autoExpandHeightKey) }
     }
 
