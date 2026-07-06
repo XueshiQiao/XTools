@@ -13,6 +13,7 @@ enum ToolRegistry {
             PopBarTool(llm: llm),
             LaunchManagerTool(),
             WakeLocksTool(),
+            NowPlayingTool(),
             PowerInsightsTool(),
             DNSToolsTool(),
             DefaultAppsTool(),

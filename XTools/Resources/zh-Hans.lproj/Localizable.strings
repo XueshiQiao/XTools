@@ -53,6 +53,30 @@
 "wake.msg.changed" = "「%@」自上次扫描后已变化——已刷新。";
 "wake.msg.failed" = "无法结束「%@」。";
 
+/* ───────────── 正在播放 ───────────── */
+"tool.nowplaying.title" = "正在播放";
+"nowplaying.status.title" = "音频输出";
+"nowplaying.status.none" = "当前无播放";
+"nowplaying.status.count" = "%ld 个 App 正在播放音频";
+"nowplaying.empty" = "当前没有 App 在播放音频。";
+"nowplaying.header" = "正在播放";
+"nowplaying.footer" = "当前持有音频输出锁的 App(音乐、视频、通话)。macOS 无法暂停别的 App 的音频——唯一停下它的办法是退出该 App。系统(root)进程不处理。";
+"nowplaying.playing" = "播放中 · %@";
+"nowplaying.output.unknown" = "音频输出";
+"nowplaying.device.builtinSpeaker" = "内置扬声器";
+"nowplaying.device.headphones" = "耳机";
+"nowplaying.quit" = "退出";
+"nowplaying.reveal" = "在 Finder 中显示";
+"nowplaying.root.hint" = "系统进程——请手动处理。";
+"nowplaying.quit.confirm.title" = "退出此 App?";
+"nowplaying.quit.confirm.action" = "退出";
+"nowplaying.quit.confirm.message" = "退出「%@」以停止它的音频?";
+"nowplaying.msg.quit" = "已请求「%@」退出。";
+"nowplaying.msg.ended" = "已结束「%@」。";
+"nowplaying.msg.rootSkip" = "「%@」不归你所有(root/其他用户)——请手动退出。";
+"nowplaying.msg.changed" = "「%@」自上次扫描后已变化——已刷新。";
+"nowplaying.msg.failed" = "无法退出「%@」。";
+
 /* ───────────── 电源与电池洞察 ───────────── */
 "tool.power.title" = "电源与电池";
 

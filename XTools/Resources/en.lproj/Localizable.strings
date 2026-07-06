@@ -53,6 +53,30 @@
 "wake.msg.changed" = "%@ changed since the scan — refreshed.";
 "wake.msg.failed" = "Couldn't end %@.";
 
+/* ───────────── Now Playing ───────────── */
+"tool.nowplaying.title" = "Now Playing";
+"nowplaying.status.title" = "Audio output";
+"nowplaying.status.none" = "Nothing is playing";
+"nowplaying.status.count" = "%ld app(s) playing audio";
+"nowplaying.empty" = "No app is playing audio right now.";
+"nowplaying.header" = "Playing Now";
+"nowplaying.footer" = "Apps that currently hold an audio-output lock (music, video, a call). macOS can't pause another app's audio — the only way to stop it is to quit the app. System (root) processes are left alone.";
+"nowplaying.playing" = "playing · %@";
+"nowplaying.output.unknown" = "Audio output";
+"nowplaying.device.builtinSpeaker" = "Built-in Speakers";
+"nowplaying.device.headphones" = "Headphones";
+"nowplaying.quit" = "Quit";
+"nowplaying.reveal" = "Reveal in Finder";
+"nowplaying.root.hint" = "System process — handle manually.";
+"nowplaying.quit.confirm.title" = "Quit this app?";
+"nowplaying.quit.confirm.action" = "Quit";
+"nowplaying.quit.confirm.message" = "Quit %@ to stop its audio?";
+"nowplaying.msg.quit" = "Asked %@ to quit.";
+"nowplaying.msg.ended" = "Ended %@.";
+"nowplaying.msg.rootSkip" = "%@ isn't owned by you (root/other user) — quit it manually.";
+"nowplaying.msg.changed" = "%@ changed since the scan — refreshed.";
+"nowplaying.msg.failed" = "Couldn't quit %@.";
+
 /* ───────────── Power & Battery Insights ───────────── */
 "tool.power.title" = "Power & Battery";
 
