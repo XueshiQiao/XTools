@@ -17,6 +17,7 @@ struct DashboardView: View {
                 MemoryCard(data: store.data)
                 if store.data.battery.isPresent { BatteryCard(battery: store.data.battery) }
                 WakeCard(count: store.data.wakeDisplayCount)
+                NowPlayingCard(sources: store.data.audioSources)
                 PortsCard(listening: store.data.portsListening, connections: store.data.portsConnections)
                 DiskCard(free: store.data.diskFree, total: store.data.diskTotal)
                 SwapCard(used: store.data.memory.swapUsed, total: store.data.memory.swapTotal)
@@ -140,6 +141,42 @@ private struct WakeCard: View {
             Text(count == 0 ? L("dashboard.wake.none") : String(format: L("dashboard.wake.count"), count))
                 .font(.system(size: 12)).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct NowPlayingCard: View {
+    let sources: [AudioSource]
+    var body: some View {
+        CardShell(title: L("dashboard.card.nowplaying"), symbol: "waveform", tint: .pink,
+                  destination: .tool("now-playing")) {
+            if sources.isEmpty {
+                Metric(value: "0", unit: "", color: .green)
+                Text(L("dashboard.nowplaying.none"))
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Metric(value: "\(sources.count)", unit: L("dashboard.nowplaying.unit"), color: .pink)
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(sources.prefix(3)) { source in
+                        HStack(spacing: 8) {
+                            Image(nsImage: source.appIcon)
+                                .resizable().frame(width: 18, height: 18)
+                            Text(source.processName)
+                                .font(.system(size: 12)).lineLimit(1).truncationMode(.middle)
+                            Spacer(minLength: 4)
+                            if let held = source.heldFor {
+                                Text(AudioSource.durationText(held))
+                                    .font(.system(size: 11)).foregroundStyle(.tertiary).monospacedDigit()
+                            }
+                        }
+                    }
+                    if sources.count > 3 {
+                        Text(String(format: L("dashboard.nowplaying.more"), sources.count - 3))
+                            .font(.system(size: 11)).foregroundStyle(.tertiary)
+                    }
+                }
+            }
         }
     }
 }

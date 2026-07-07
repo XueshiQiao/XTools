@@ -9,6 +9,7 @@ struct DashboardData {
     var memory = MemorySnapshot()
     var battery = BatteryInfo()
     var wakeDisplayCount = 0          // processes blocking *display* sleep
+    var audioSources: [AudioSource] = []   // apps currently playing audio (output)
     var portsListening = 0
     var portsConnections = 0
     var diskFree: Int64 = 0
@@ -42,6 +43,7 @@ final class DashboardStore: ObservableObject {
             d.memory = MemoryReader.read()
             d.battery = BatteryReader.read()
             d.wakeDisplayCount = AssertionScanner.scan().filter { $0.preventsDisplaySleep }.count
+            d.audioSources = NowPlayingScanner.scan()
             let conns = PortScanner.scan()
             d.portsListening = conns.filter { $0.isListening }.count
             d.portsConnections = conns.count - d.portsListening

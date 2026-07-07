@@ -94,7 +94,7 @@ struct NowPlayingView: View {
                 Text(source.devices.isEmpty ? L("nowplaying.output.unknown") : source.devices.joined(separator: ", "))
                     .font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.tail)
                 if let held = source.heldFor {
-                    Text(String(format: L("nowplaying.playing"), durationString(held)))
+                    Text(String(format: L("nowplaying.playing"), AudioSource.durationText(held)))
                         .font(.system(size: 10)).foregroundStyle(.tertiary)
                 }
             }
@@ -133,30 +133,13 @@ struct NowPlayingView: View {
     }
 
     private func icon(for source: AudioSource) -> Image {
-        if let app = NSRunningApplication(processIdentifier: source.pid), let ic = app.icon {
-            return Image(nsImage: ic)
-        }
-        // Helper processes have no NSRunningApplication — use the OWNING .app's
-        // icon so it reads as the real app (Chrome, Setapp…) rather than the
-        // generic "executable" icon you'd get from the inner Mach-O path.
-        if let bp = source.bundlePath {
-            return Image(nsImage: NSWorkspace.shared.icon(forFile: bp))
-        }
-        if let p = source.executablePath {
-            return Image(nsImage: NSWorkspace.shared.icon(forFile: p))
-        }
-        return Image(systemName: "waveform")
+        // Icon resolution (running app → owning .app bundle → executable →
+        // generic glyph) lives on `AudioSource.appIcon`, shared with the
+        // Dashboard card.
+        Image(nsImage: source.appIcon)
     }
 
     // MARK: - Pieces
-
-    private func durationString(_ interval: TimeInterval) -> String {
-        let s = max(0, Int(interval))
-        let h = s / 3600, m = (s % 3600) / 60, sec = s % 60
-        if h > 0 { return "\(h)h \(m)m" }
-        if m > 0 { return "\(m)m \(sec)s" }
-        return "\(sec)s"
-    }
 
     private func messageBanner(_ message: String) -> some View {
         HStack(spacing: 8) {

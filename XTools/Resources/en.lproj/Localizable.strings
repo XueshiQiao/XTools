@@ -416,6 +416,10 @@
 "dashboard.card.wake" = "Wake Locks";
 "dashboard.wake.none" = "Nothing blocking display sleep";
 "dashboard.wake.count" = "%ld blocking display sleep";
+"dashboard.card.nowplaying" = "Now Playing";
+"dashboard.nowplaying.unit" = "playing";
+"dashboard.nowplaying.none" = "No app is playing audio";
+"dashboard.nowplaying.more" = "+%ld more";
 "dashboard.card.ports" = "Ports";
 "dashboard.ports.unit" = "listening";
 "dashboard.ports.sub" = "%ld active connections";
