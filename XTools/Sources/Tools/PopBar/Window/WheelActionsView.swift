@@ -139,6 +139,10 @@ struct WheelActionsView: View {
     /// auto-hide on EXIT — not immediately when the wheel is clamped near a screen edge
     /// and the cursor starts outside the ring. Reset each time the wheel appears.
     @State private var enteredRing = false
+    /// Last hover location (view-`.local`), used by the `.ended` handler to tell a
+    /// genuine outward exit from a spurious one: only a pointer that was actually
+    /// at/past the ring's outer edge when the hover ended counts as leaving.
+    @State private var lastHover: CGPoint?
 
     var body: some View {
         let d = layout.diameter
@@ -191,12 +195,23 @@ struct WheelActionsView: View {
                         // wheel clamped near a screen edge — where the cursor can start
                         // outside it — doesn't vanish on appear.
                         enteredRing = true
+                        lastHover = loc
                     case .ended:
                         hovered = nil
-                        // The tracked shape spans the full disc now, so this only fires
-                        // on a genuine outward exit past the outer edge (or the pointer
-                        // leaving the wheel's frame entirely).
-                        if autoHideOnExit && enteredRing { onExitRing() }
+                        // Only auto-hide on a GENUINE outward exit: the pointer's last
+                        // tracked position must be at/past the ring's OUTER edge.
+                        // `onContinuousHover` tracks the whole square frame and ALSO fires
+                        // `.ended` spuriously while the pointer is still well inside the
+                        // wheel — notably when the ring is recycled/rebuilt for a new
+                        // selection with the cursor near its centre (a view/tracking-area
+                        // teardown, not a real exit). Logging the exit distance proved the
+                        // split: false exits sit at dist ≪ outer (often dead centre), real
+                        // exits at dist ≥ outer. Gating on the distance drops the spurious
+                        // ones — the "centre→ring→centre / recycled-ring vanish" bug.
+                        let c = d / 2
+                        let exitDist = lastHover.map { hypot($0.x - c, $0.y - c) } ?? 0
+                        let genuineExit = exitDist >= layout.outerRadius
+                        if autoHideOnExit && enteredRing && genuineExit { onExitRing() }
                     }
                 }
                 .gesture(SpatialTapGesture(coordinateSpace: .local).onEnded { ev in

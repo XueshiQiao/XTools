@@ -13,23 +13,54 @@ import SwiftUI
 /// click lands on background — and SwiftUI's own controls (buttons) intercept the
 /// click first, so they keep working. (Verified by dragging the live capsule.)
 private final class FirstMouseHostingView<Content: View>: NSHostingView<Content> {
-    /// Wheel mode only: restrict AppKit hit-testing to the visible ring `[inner,
-    /// outer]` from the view's center. SwiftUI's `.contentShape` governs only its own
-    /// gesture resolution; the panel is still a square window, so without this a click
-    /// in the hollow centre or a transparent corner is eaten by XTools instead of
-    /// passing THROUGH to the app behind (and reaching the global dismiss monitor).
-    /// nil = capsule mode → the whole opaque view hit-tests as before.
+    /// Wheel mode only: the visible ring's `[inner, outer]` radii from the view's
+    /// center, used to scope AppKit hit-testing (the panel is still a square window).
+    /// The transparent CORNERS (past `outer`) are fully click-through; the hollow
+    /// CENTRE (inside `inner`) is click-through for mouse-DOWN only but stays
+    /// hover-tracked, so dipping the cursor into the centre isn't misread as leaving
+    /// the ring (see `hitTest`). SwiftUI's `.contentShape` governs only its own gesture
+    /// resolution. nil = capsule mode → the whole opaque view hit-tests as before.
     var ringHitTest: (inner: CGFloat, outer: CGFloat)?
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     override var mouseDownCanMoveWindow: Bool { true }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
-        if let ring = ringHitTest {
-            let p = convert(point, from: superview)   // → this view's coordinate space
-            let dist = hypot(p.x - bounds.midX, p.y - bounds.midY)
-            if dist < ring.inner || dist > ring.outer { return nil }   // transparent → click-through
+        guard let ring = ringHitTest else { return super.hitTest(point) }
+        let p = convert(point, from: superview)   // → this view's coordinate space
+        let dist = hypot(p.x - bounds.midX, p.y - bounds.midY)
+
+        // Past the OUTER edge (the transparent corners): always click-through. This
+        // region is genuinely "off the wheel" — a click there should reach the app
+        // behind, and the hover exit there IS the real auto-hide signal.
+        if dist > ring.outer { return nil }
+
+        // The hollow CENTRE must stay transparent to EVERYTHING the app behind might
+        // want — clicks, scrolls, trackpad gestures — because there's no slice there and
+        // the selection shows through it. The ONE exception is AppKit's hover tracking:
+        // AppKit routes tracking-area crossings through hitTest, so returning nil for a
+        // mouse-MOVED event here makes it believe the cursor LEFT the view and it fires a
+        // spurious `mouseExited`. SwiftUI's `onContinuousHover` reads that as `.ended`,
+        // and with the ring's auto-hide-on-exit setting on (the default) the wheel then
+        // vanishes the instant the cursor dips from a slice back into the centre — the
+        // "centre → ring → centre hides the ring" bug.
+        //
+        // So invert the test: answer ONLY the mouse-tracking events with the view (to
+        // keep hover alive); every other event type — click, scroll, magnify/rotate/
+        // swipe, pressure, … — still returns nil and passes THROUGH exactly as the
+        // fully-transparent hole did before. (A naive "click-only" carve-out would
+        // instead swallow scrolls + gestures over the centre.) A genuine outward exit
+        // past `outer` (handled above) remains the only thing that ends the hover.
+        if dist < ring.inner {
+            switch NSApp.currentEvent?.type {
+            case .mouseMoved, .mouseEntered, .mouseExited:
+                return super.hitTest(point)    // keep hover/tracking alive in the hole
+            default:
+                return nil                     // click / scroll / gesture → through
+            }
         }
+
+        // On the ring band itself.
         return super.hitTest(point)
     }
 }
