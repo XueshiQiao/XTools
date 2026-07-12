@@ -412,10 +412,12 @@
 "dashboard.card.battery" = "电池";
 "dashboard.battery.charging" = "充电中";
 "dashboard.battery.onBattery" = "使用电池";
-"dashboard.battery.health" = "健康 %ld%%";
+"dashboard.battery.chargeLabel" = "电量";
+"dashboard.battery.healthLabel" = "健康";
 "dashboard.card.wake" = "唤醒占用";
 "dashboard.wake.none" = "无进程阻止息屏";
-"dashboard.wake.count" = "%ld 个进程阻止息屏";
+"dashboard.wake.unit" = "个阻止息屏";
+"dashboard.wake.more" = "还有 %ld 个";
 "dashboard.card.nowplaying" = "正在播放";
 "dashboard.nowplaying.unit" = "在播放";
 "dashboard.nowplaying.none" = "当前无 App 播放音频";

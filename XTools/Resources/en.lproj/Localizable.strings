@@ -412,10 +412,12 @@
 "dashboard.card.battery" = "Battery";
 "dashboard.battery.charging" = "Charging";
 "dashboard.battery.onBattery" = "On battery";
-"dashboard.battery.health" = "Health %ld%%";
+"dashboard.battery.chargeLabel" = "charge";
+"dashboard.battery.healthLabel" = "health";
 "dashboard.card.wake" = "Wake Locks";
 "dashboard.wake.none" = "Nothing blocking display sleep";
-"dashboard.wake.count" = "%ld blocking display sleep";
+"dashboard.wake.unit" = "blocking sleep";
+"dashboard.wake.more" = "+%ld more";
 "dashboard.card.nowplaying" = "Now Playing";
 "dashboard.nowplaying.unit" = "playing";
 "dashboard.nowplaying.none" = "No app is playing audio";

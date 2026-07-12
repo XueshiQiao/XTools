@@ -16,11 +16,10 @@ struct DashboardView: View {
             LazyVGrid(columns: columns, spacing: 14) {
                 MemoryCard(data: store.data)
                 if store.data.battery.isPresent { BatteryCard(battery: store.data.battery) }
-                WakeCard(count: store.data.wakeDisplayCount)
+                WakeCard(count: store.data.wakeDisplayCount, holders: store.data.wakeDisplayList)
                 NowPlayingCard(sources: store.data.audioSources)
                 PortsCard(listening: store.data.portsListening, connections: store.data.portsConnections)
                 DiskCard(free: store.data.diskFree, total: store.data.diskTotal)
-                SwapCard(used: store.data.memory.swapUsed, total: store.data.memory.swapTotal)
                 PlaceholderCard()
             }
             .padding(20)
@@ -93,23 +92,44 @@ private struct CardShell<Content: View>: View {
 
 private struct MemoryCard: View {
     let data: DashboardData
+    private var swapFraction: Double {
+        data.memory.swapTotal > 0 ? Double(data.memory.swapUsed) / Double(data.memory.swapTotal) : 0
+    }
     var body: some View {
         CardShell(title: L("dashboard.card.memory"), symbol: "memorychip.fill", tint: .pink,
                   destination: .tool("memory")) {
-            HStack(spacing: 16) {
-                CompositionRing(categories: data.memory.categories,
-                                total: data.memory.totalRAM,
-                                center: data.memory.freePercent.map { "\($0)%" } ?? "—")
-                    .frame(width: 84, height: 84)
-                VStack(alignment: .leading, spacing: 7) {
-                    Pill(text: String(format: L("dashboard.pressure"), data.memory.pressure.label),
-                         color: data.memory.pressure.color)
-                    Text(String(format: L("dashboard.memory.used"),
-                                byteText(data.memoryUsed), byteText(data.memory.totalRAM)))
-                        .font(.system(size: 12)).foregroundStyle(.secondary)
-                    Text(L("dashboard.free.label")).font(.system(size: 11)).foregroundStyle(.tertiary)
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 16) {
+                    CompositionRing(categories: data.memory.categories,
+                                    total: data.memory.totalRAM,
+                                    center: data.memory.freePercent.map { "\($0)%" } ?? "—")
+                        .frame(width: 84, height: 84)
+                    VStack(alignment: .leading, spacing: 7) {
+                        Pill(text: String(format: L("dashboard.pressure"), data.memory.pressure.label),
+                             color: data.memory.pressure.color)
+                        Text(String(format: L("dashboard.memory.used"),
+                                    byteText(data.memoryUsed), byteText(data.memory.totalRAM)))
+                            .font(.system(size: 12)).foregroundStyle(.secondary)
+                        Text(L("dashboard.free.label")).font(.system(size: 11)).foregroundStyle(.tertiary)
+                    }
+                    Spacer(minLength: 0)
                 }
-                Spacer(minLength: 0)
+                // Swap lives inside the memory card: it's disk-backed overflow
+                // for RAM, strongly tied to memory pressure — not a standalone
+                // concept, so it reads as a sub-section here.
+                Divider().opacity(0.5)
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.left.arrow.right")
+                            .font(.system(size: 10, weight: .semibold)).foregroundStyle(.cyan)
+                        Text(L("dashboard.card.swap")).font(.system(size: 12)).foregroundStyle(.secondary)
+                        Spacer(minLength: 4)
+                        Text("\(byteText(data.memory.swapUsed)) / \(byteText(data.memory.swapTotal))")
+                            .font(.system(size: 12)).foregroundStyle(.secondary).monospacedDigit()
+                    }
+                    MiniBar(fraction: swapFraction, color: .orange)
+                    Text(L("dashboard.swap.sub")).font(.system(size: 11)).foregroundStyle(.tertiary)
+                }
             }
         }
     }
@@ -117,16 +137,56 @@ private struct MemoryCard: View {
 
 private struct BatteryCard: View {
     let battery: BatteryInfo
+
+    private var isCharging: Bool { battery.power?.isCharging ?? false }
+    private var chargeFraction: Double {
+        battery.power?.chargePercent.map { Double($0) / 100 } ?? 0
+    }
+    private var healthFraction: Double {
+        battery.maxCapacityPercent.map { Double($0) / 100 } ?? 0
+    }
+    private var chargeCenter: String { battery.power?.chargePercent.map { "\($0)%" } ?? "—" }
+    private var healthCenter: String { battery.maxCapacityPercent.map { "\($0)%" } ?? "—" }
+
+    /// Charge ring color: green while charging, otherwise driven by how much
+    /// charge is left (green ≥ 50, yellow 20–49, red below).
+    private var chargeColor: Color {
+        if isCharging { return .green }
+        guard let pct = battery.power?.chargePercent else { return .gray }
+        switch pct {
+        case 50...:   return .green
+        case 20..<50: return .yellow
+        default:      return .red
+        }
+    }
+
+    /// Health ring color: orange when macOS flags service, otherwise driven by
+    /// max-capacity health (green ≥ 80, yellow 60–79, red below).
+    private var healthColor: Color {
+        if battery.condition?.isHealthy == false { return .orange }
+        guard let pct = battery.maxCapacityPercent else { return .gray }
+        switch pct {
+        case 80...:   return .green
+        case 60..<80: return .yellow
+        default:      return .red
+        }
+    }
+
     var body: some View {
         CardShell(title: L("dashboard.card.battery"), symbol: "battery.100", tint: .green,
                   destination: .tool("power-insights")) {
-            Metric(value: battery.power?.chargePercent.map { "\($0)" } ?? "—", unit: "%")
-            let charging = battery.power?.isCharging ?? false
-            Text(charging ? L("dashboard.battery.charging") : L("dashboard.battery.onBattery"))
-                .font(.system(size: 12)).foregroundStyle(charging ? .green : .secondary)
-            if let health = battery.maxCapacityPercent {
-                Text(String(format: L("dashboard.battery.health"), health))
-                    .font(.system(size: 11)).foregroundStyle(.tertiary)
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 16) {
+                    ProgressRing(fraction: chargeFraction, color: chargeColor,
+                                 center: chargeCenter, caption: L("dashboard.battery.chargeLabel"))
+                        .frame(width: 84, height: 84)
+                    ProgressRing(fraction: healthFraction, color: healthColor,
+                                 center: healthCenter, caption: L("dashboard.battery.healthLabel"))
+                        .frame(width: 84, height: 84)
+                    Spacer(minLength: 0)
+                }
+                Text(isCharging ? L("dashboard.battery.charging") : L("dashboard.battery.onBattery"))
+                    .font(.system(size: 12)).foregroundStyle(isCharging ? .green : .secondary)
             }
         }
     }
@@ -134,13 +194,39 @@ private struct BatteryCard: View {
 
 private struct WakeCard: View {
     let count: Int
+    let holders: [WakeGlance]
     var body: some View {
         CardShell(title: L("dashboard.card.wake"), symbol: "cup.and.saucer.fill", tint: .orange,
                   destination: .tool("wake-locks")) {
-            Metric(value: "\(count)", unit: "", color: count == 0 ? .green : .orange)
-            Text(count == 0 ? L("dashboard.wake.none") : String(format: L("dashboard.wake.count"), count))
-                .font(.system(size: 12)).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+            if holders.isEmpty {
+                Metric(value: "\(count)", unit: "", color: .green)
+                Text(L("dashboard.wake.none"))
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                // Mirror the Now Playing card: big count, then the top blockers as
+                // icon + name + how long they've held the display awake.
+                Metric(value: "\(count)", unit: L("dashboard.wake.unit"), color: .orange)
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(holders.prefix(3)) { holder in
+                        HStack(spacing: 8) {
+                            Image(nsImage: holder.appIcon)
+                                .resizable().frame(width: 18, height: 18)
+                            Text(holder.processName)
+                                .font(.system(size: 12)).lineLimit(1).truncationMode(.middle)
+                            Spacer(minLength: 4)
+                            if let held = holder.heldFor {
+                                Text(AudioSource.durationText(held))
+                                    .font(.system(size: 11)).foregroundStyle(.tertiary).monospacedDigit()
+                            }
+                        }
+                    }
+                    if count > 3 {
+                        Text(String(format: L("dashboard.wake.more"), count - 3))
+                            .font(.system(size: 11)).foregroundStyle(.tertiary)
+                    }
+                }
+            }
         }
     }
 }
@@ -208,20 +294,6 @@ private struct DiskCard: View {
     }
 }
 
-private struct SwapCard: View {
-    let used: UInt64
-    let total: UInt64
-    private var fraction: Double { total > 0 ? Double(used) / Double(total) : 0 }
-    var body: some View {
-        CardShell(title: L("dashboard.card.swap"), symbol: "arrow.left.arrow.right", tint: .cyan,
-                  destination: .tool("memory")) {
-            Metric(value: byteText(used), unit: "/ \(byteText(total))")
-            MiniBar(fraction: fraction, color: .orange)
-            Text(L("dashboard.swap.sub")).font(.system(size: 11)).foregroundStyle(.tertiary)
-        }
-    }
-}
-
 private struct PlaceholderCard: View {
     var body: some View {
         VStack(spacing: 8) {
@@ -278,6 +350,41 @@ private struct CompositionRing: View {
             VStack(spacing: 0) {
                 Text(center).font(.system(size: 18, weight: .semibold))
                 Text(L("dashboard.free.short")).font(.system(size: 9)).foregroundStyle(.tertiary)
+            }
+        }
+    }
+}
+
+/// A single-arc progress ring (0…1) with a centered big-number + caption label.
+/// Matches `CompositionRing`'s 84×84 sizing and stroke weight so every Dashboard
+/// ring reads as one family; a round cap keeps the progress arc's tip clean.
+private struct ProgressRing: View {
+    let fraction: Double
+    let color: Color
+    let center: String
+    let caption: String
+
+    var body: some View {
+        ZStack {
+            Canvas { ctx, size in
+                let lw: CGFloat = 11
+                let r = (min(size.width, size.height) - lw) / 2
+                let c = CGPoint(x: size.width / 2, y: size.height / 2)
+                // Full background track (same gray as CompositionRing's empty state).
+                var track = Path()
+                track.addArc(center: c, radius: r, startAngle: .degrees(0), endAngle: .degrees(360), clockwise: false)
+                ctx.stroke(track, with: .color(.gray.opacity(0.3)), style: StrokeStyle(lineWidth: lw))
+                // Colored progress arc from 12 o'clock, clockwise.
+                let sweep = max(0, min(1, fraction)) * 360
+                guard sweep > 0 else { return }
+                var arc = Path()
+                arc.addArc(center: c, radius: r,
+                           startAngle: .degrees(-90), endAngle: .degrees(-90 + sweep), clockwise: false)
+                ctx.stroke(arc, with: .color(color), style: StrokeStyle(lineWidth: lw, lineCap: .round))
+            }
+            VStack(spacing: 0) {
+                Text(center).font(.system(size: 18, weight: .semibold))
+                Text(caption).font(.system(size: 9)).foregroundStyle(.tertiary)
             }
         }
     }

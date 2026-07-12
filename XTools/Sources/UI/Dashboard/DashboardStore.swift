@@ -9,6 +9,7 @@ struct DashboardData {
     var memory = MemorySnapshot()
     var battery = BatteryInfo()
     var wakeDisplayCount = 0          // processes blocking *display* sleep
+    var wakeDisplayList: [WakeGlance] = []   // top few blockers (icon + name + age), for glance
     var audioSources: [AudioSource] = []   // apps currently playing audio (output)
     var portsListening = 0
     var portsConnections = 0
@@ -20,6 +21,25 @@ struct DashboardData {
         guard let pct = memory.freePercent, memory.totalRAM > 0 else { return 0 }
         let avail = Double(memory.totalRAM) * Double(pct) / 100
         return UInt64(max(0, Double(memory.totalRAM) - avail))
+    }
+}
+
+/// A single display-sleep blocker, distilled for the Dashboard's Wake card so it
+/// can mirror the Now Playing card (icon + name + how long it's been held). Icon
+/// resolution is deferred to render time (main thread), exactly like `AudioSource`.
+struct WakeGlance: Identifiable {
+    let pid: pid_t
+    let processName: String
+    let executablePath: String?
+    let heldFor: TimeInterval?   // captured at scan time (like AudioSource.heldFor)
+
+    var id: pid_t { pid }
+
+    /// Running app's icon, else the executable's icon, else the wake glyph.
+    var appIcon: NSImage {
+        if let app = NSRunningApplication(processIdentifier: pid), let ic = app.icon { return ic }
+        if let p = executablePath { return NSWorkspace.shared.icon(forFile: p) }
+        return NSImage(systemSymbolName: "cup.and.saucer.fill", accessibilityDescription: nil) ?? NSImage()
     }
 }
 
@@ -42,7 +62,13 @@ final class DashboardStore: ObservableObject {
             var d = DashboardData()
             d.memory = MemoryReader.read()
             d.battery = BatteryReader.read()
-            d.wakeDisplayCount = AssertionScanner.scan().filter { $0.preventsDisplaySleep }.count
+            let wakeHolders = AssertionScanner.scan().filter { $0.preventsDisplaySleep }
+            d.wakeDisplayCount = wakeHolders.count
+            let now = Date()
+            d.wakeDisplayList = wakeHolders.prefix(3).map { h in
+                WakeGlance(pid: h.pid, processName: h.processName, executablePath: h.executablePath,
+                           heldFor: h.since.map { now.timeIntervalSince($0) })
+            }
             d.audioSources = NowPlayingScanner.scan()
             let conns = PortScanner.scan()
             d.portsListening = conns.filter { $0.isListening }.count
