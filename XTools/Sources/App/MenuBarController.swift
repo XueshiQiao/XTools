@@ -16,23 +16,6 @@ final class MenuBarController: NSObject {
         self.updateController = updateController
         super.init()
         setupStatusItem()
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(languageChanged(_:)),
-            name: .xtoolsLanguageChanged,
-            object: nil
-        )
-    }
-
-    deinit {
-        NotificationCenter.default.removeObserver(self)
-    }
-
-    @objc private func languageChanged(_ note: Notification) {
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            self.statusItem.menu = self.buildMenu()
-        }
     }
 
     // MARK: - Setup
@@ -41,8 +24,34 @@ final class MenuBarController: NSObject {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = statusItem.button {
             button.image = NSImage(systemSymbolName: Self.iconSymbol, accessibilityDescription: "XTools")
+            // Left-click opens the main window directly; right-click (or
+            // Control-click) pops the menu. The menu is attached on demand in
+            // `statusItemClicked` so a permanent `statusItem.menu` doesn't
+            // swallow the left-click.
+            button.target = self
+            button.action = #selector(statusItemClicked(_:))
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
-        statusItem.menu = buildMenu()
+    }
+
+    @objc private func statusItemClicked(_ sender: NSStatusBarButton) {
+        let event = NSApp.currentEvent
+        let isRightClick = event?.type == .rightMouseUp
+        let isControlClick = event?.modifierFlags.contains(.control) ?? false
+        if isRightClick || isControlClick {
+            popUpMenu()
+        } else {
+            showMainWindow()
+        }
+    }
+
+    /// Attach the menu just long enough to pop it, then detach so the next
+    /// left-click routes back to `statusItemClicked` instead of the menu.
+    private func popUpMenu() {
+        let menu = buildMenu()
+        statusItem.menu = menu
+        statusItem.button?.performClick(nil)
+        statusItem.menu = nil
     }
 
     private func buildMenu() -> NSMenu {
