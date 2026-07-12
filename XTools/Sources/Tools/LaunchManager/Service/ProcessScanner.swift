@@ -3,9 +3,11 @@ import AppKit
 import Darwin
 
 /// Enumerates running processes via `sysctl(KERN_PROC_ALL)` and resolves each
-/// executable path via `proc_pidpath`. No special privilege is needed to LIST
-/// every pid, but `proc_pidpath` only succeeds for processes we own — root
-/// processes typically resolve to a nil path (handled by the plist inventory).
+/// executable path via `proc_pidpath`. Neither needs privilege, and — unlike the
+/// libproc calls that read a task's CPU/memory, which return EPERM for any process
+/// we don't own — `proc_pidpath` DOES resolve root-owned processes: measured
+/// 134/140 root pids on macOS 26, the misses being processes that exited mid-scan.
+/// A nil path therefore means "gone or unreadable", not "root".
 enum ProcessScanner {
 
     private static let log = FileLog("ProcessScanner")
@@ -15,7 +17,8 @@ enum ProcessScanner {
         let raw = rawProcessList()
         return raw.map { p in
             ManagedProcess(pid: p.pid, ppid: p.ppid, uid: p.uid,
-                           executablePath: executablePath(pid: p.pid))
+                           executablePath: executablePath(pid: p.pid),
+                           state: ProcessState(rawStat: p.stat))
         }
     }
 
@@ -56,7 +59,7 @@ enum ProcessScanner {
 
     // MARK: - sysctl
 
-    private struct RawProc { let pid: pid_t; let ppid: pid_t; let uid: uid_t }
+    private struct RawProc { let pid: pid_t; let ppid: pid_t; let uid: uid_t; let stat: Int32 }
 
     private static func rawProcessList() -> [RawProc] {
         let stride = MemoryLayout<kinfo_proc>.stride
@@ -91,7 +94,10 @@ enum ProcessScanner {
                 let kp = procs[i]
                 let pid = kp.kp_proc.p_pid
                 guard pid > 0 else { continue }
-                result.append(RawProc(pid: pid, ppid: kp.kp_eproc.e_ppid, uid: kp.kp_eproc.e_ucred.cr_uid))
+                result.append(RawProc(pid: pid,
+                                      ppid: kp.kp_eproc.e_ppid,
+                                      uid: kp.kp_eproc.e_ucred.cr_uid,
+                                      stat: Int32(kp.kp_proc.p_stat)))
             }
             return result
         }
