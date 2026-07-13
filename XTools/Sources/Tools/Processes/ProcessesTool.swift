@@ -22,11 +22,21 @@ final class ProcessesTool: XToolModule {
     let color = Color.purple
 
     private let llm: LLMService
-    private lazy var store = ProcessesStore()
+    private var _store: ProcessesStore?
+    private var store: ProcessesStore {
+        if let s = _store { return s }
+        let s = ProcessesStore(llm: llm)
+        _store = s
+        return s
+    }
 
     init(llm: LLMService) {
         self.llm = llm
     }
+
+    /// Explicitly kill the top child at app termination (HR7.5). Guarded so a
+    /// never-opened tool doesn't build its store just to shut it down.
+    func shutdown() { _store?.shutdown() }
 
     func makeRootView() -> AnyView { AnyView(ProcessesView(store: store)) }
 }

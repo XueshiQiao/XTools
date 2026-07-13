@@ -591,3 +591,77 @@
 "processes.argv.policy.ask" = "Ask each time";
 "processes.argv.policy.always" = "Always include";
 "processes.argv.policy.never" = "Never include";
+"processes.argv.policy" = "Send arguments to AI";
+"processes.settings" = "Options";
+"processes.settings.help" = "AI options for this tool.";
+
+/* Facts panel (deterministic, computed locally) */
+"processes.facts.signature" = "Signature";
+"processes.facts.bundleid" = "Bundle ID";
+"processes.facts.launchd" = "Launchd job";
+"processes.facts.args" = "Arguments";
+"processes.facts.args.none" = "(none)";
+"processes.facts.args.unreadable" = "(could not read)";
+"processes.facts.parents" = "Parents";
+"processes.facts.computing" = "Reading signature and launch info…";
+"processes.sign.apple" = "Apple system";
+"processes.sign.devid" = "Developer ID: %@";
+"processes.sign.other" = "Signed (not Developer ID)";
+"processes.sign.unsigned" = "Unsigned";
+"processes.sign.invalid" = "Invalid signature";
+"processes.sign.unreadable" = "Signature unreadable";
+"processes.sign.team" = "Team %@";
+"processes.sign.notarized" = "notarized";
+"processes.sign.notNotarized" = "not notarized";
+
+/* AI panel */
+"processes.ai.title" = "AI EXPLANATION";
+"processes.ai.analyze" = "Explain with AI";
+"processes.ai.configure" = "Set up a model to use AI…";
+"processes.ai.disclaimer" = "AI-generated — may be wrong. Verify before acting.";
+"processes.ai.collecting" = "Collecting local facts…";
+"processes.ai.waiting" = "Waiting for the model…";
+"processes.ai.stop" = "Stop";
+"processes.ai.stopped" = "Stopped.";
+"processes.ai.retry" = "Retry";
+"processes.ai.cached" = "cached";
+"processes.ai.followUp.prompt" = "Ask a follow-up…";
+"processes.ai.error.noModel" = "No AI model is configured.";
+"processes.ai.userInstruction" = "Explain this macOS process to me. Answer in English.";
+"processes.ai.clearCache" = "Clear AI cache";
+"processes.ai.cacheCleared" = "AI cache cleared.";
+
+/* Payload disclosure + confirmation gate */
+"processes.ai.payload.will" = "What will be sent";
+"processes.ai.payload.sent" = "What was sent";
+"processes.ai.payload.redacted" = "%d value(s) redacted locally";
+"processes.ai.payload.truncated" = "Truncated to fit the length limit";
+"processes.ai.payload.withheld" = "Command-line arguments are not included";
+"processes.ai.change" = "Change…";
+"processes.ai.notice" = "First time: after you press Send, the JSON below — and nothing else — goes to %@. Nothing is sent without your confirmation.";
+"processes.ai.gate.includeArgv" = "Also send command-line arguments";
+"processes.ai.gate.remember" = "Remember my choice";
+"processes.ai.gate.confirm" = "Send";
+"processes.ai.gate.cancel" = "Cancel";
+
+/* Actions (Quit / Force Quit / Reveal / Copy) */
+"processes.action.quit" = "Quit";
+"processes.action.forceQuit" = "Force Quit";
+"processes.action.reveal" = "Reveal in Finder";
+"processes.action.copyPath" = "Copy Path";
+"processes.action.copied" = "Path copied.";
+"processes.action.quit.help" = "Ask the process to quit, so it can save first.";
+"processes.action.forceQuit.help" = "Kill immediately. Unsaved data is lost.";
+"processes.action.protected" = "Core macOS process — the system cannot run without it.";
+"processes.action.exited" = "“%@” has exited — nothing was signalled.";
+"processes.action.sent.quit" = "Asked “%@” to quit.";
+"processes.action.sent.term" = "Sent quit signal to “%@”.";
+"processes.action.sent.kill" = "Force-quit “%@”.";
+"processes.action.cancelled" = "Cancelled — nothing was signalled.";
+"processes.action.failed" = "Could not signal “%@”.";
+"processes.action.confirm.quit.title" = "Quit “%@”?";
+"processes.action.confirm.forceQuit.title" = "Force quit “%@”?";
+"processes.action.confirm.forceQuit.own" = "It will be killed immediately. Unsaved data will be lost.";
+"processes.action.confirm.forceQuit.root" = "This process belongs to %@. macOS will ask for an administrator password, then the process is killed immediately.";
+"processes.action.confirm.quit.root" = "This process belongs to %@. macOS will ask for an administrator password to send it the quit signal.";
+"processes.action.confirm.cancel" = "Cancel";

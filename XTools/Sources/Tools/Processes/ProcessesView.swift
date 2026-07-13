@@ -46,12 +46,49 @@ struct ProcessesView: View {
                 }
                 .disabled(store.isRefreshing)
             }
+            ToolbarItem {
+                Menu {
+                    Picker(L("processes.argv.policy"), selection: $prefs.argvPolicy) {
+                        ForEach(ArgvPolicy.allCases) { Text($0.label).tag($0) }
+                    }
+                    .pickerStyle(.inline)
+                    Divider()
+                    Button(L("processes.ai.clearCache")) {
+                        store.explainer.clearCache()
+                        store.actionMessage = L("processes.ai.cacheCleared")
+                    }
+                } label: {
+                    Label(L("processes.settings"), systemImage: "gearshape")
+                }
+                .help(L("processes.settings.help"))
+            }
         }
         // Sampling runs only while this page is actually on screen. The window is
         // often left open all day, so an unattended tab must not keep paying for a
-        // metrics stream nobody is looking at.
+        // metrics stream nobody is looking at. onAppear/onDisappear track the tab;
+        // the WindowAccessor hands the store its NSWindow so occlusion (minimised,
+        // fully covered, other Space) can stop the pipeline too — a covered window
+        // never fires onDisappear.
         .onAppear { store.start() }
         .onDisappear { store.stop() }
+        .background(WindowAccessor { [weak store] window in store?.attach(window: window) })
+        // Confirmation for destructive actions (§7): Force Quit always, and any
+        // root / other-uid signal (those also cost an admin password prompt).
+        // The pending row is a snapshot — ProcActions re-verifies the pid's
+        // fingerprint on confirm, so a stale dialog can never kill a recycled pid.
+        .alert(store.pendingAction?.title ?? "",
+               isPresented: Binding(get: { store.pendingAction != nil },
+                                    set: { if !$0 { store.pendingAction = nil } }),
+               presenting: store.pendingAction) { pending in
+            Button(pending.confirmTitle, role: .destructive) {
+                store.confirmPendingAction()
+            }
+            Button(L("processes.action.confirm.cancel"), role: .cancel) {
+                store.pendingAction = nil
+            }
+        } message: { pending in
+            Text(pending.message)
+        }
     }
 
     // MARK: - Status bar
@@ -90,5 +127,28 @@ struct ProcessesView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
         .background(.bar)
+    }
+}
+
+/// Reports the NSWindow this view lives in (and nil when it leaves one), so the
+/// store can watch that window's occlusion state. SwiftUI has no native way to
+/// reach the hosting window on macOS 13.
+private struct WindowAccessor: NSViewRepresentable {
+    let onWindow: (NSWindow?) -> Void
+
+    func makeNSView(context: Context) -> ProbeView { ProbeView(onWindow: onWindow) }
+    func updateNSView(_ nsView: ProbeView, context: Context) {}
+
+    final class ProbeView: NSView {
+        let onWindow: (NSWindow?) -> Void
+        init(onWindow: @escaping (NSWindow?) -> Void) {
+            self.onWindow = onWindow
+            super.init(frame: .zero)
+        }
+        required init?(coder: NSCoder) { fatalError("unused") }
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            onWindow(window)
+        }
     }
 }

@@ -3,9 +3,9 @@ import Darwin
 
 /// One process's metrics, from whichever source produced them.
 struct ProcMetrics: Equatable {
-    var cpuPercent: Double?
-    var memoryBytes: UInt64?
-    var threadCount: Int?
+    var cpuPercent: Double? = nil
+    var memoryBytes: UInt64? = nil
+    var threadCount: Int? = nil
 }
 
 /// Metrics via `/bin/ps`. Two jobs, one implementation:

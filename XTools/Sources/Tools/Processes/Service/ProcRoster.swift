@@ -47,7 +47,7 @@ enum ProcRoster {
                 // nil start time (process exited mid-sweep) → 0. It only ever makes
                 // the identity *more* likely to be seen as changed, which fails
                 // safe: the action layer refuses to signal on a fingerprint miss.
-                startTime: ProcessScanner.processStartTime(pid: p.pid) ?? 0,
+                startTime: startTime(pid: p.pid) ?? 0,
                 name: p.name,
                 isAppleSystem: isSystemProcess(path: path),
                 cpuPercent: nil,
@@ -95,10 +95,42 @@ enum ProcRoster {
             || p.hasPrefix("/bin/")
     }
 
+    // MARK: - Start time (works for EVERY uid — this is why it isn't ProcessScanner's)
+
+    /// A process's start time in microseconds since the epoch: half of the
+    /// instance fingerprint that keeps a recycled pid from being mistaken for the
+    /// original (HR8.2).
+    ///
+    /// Read via `sysctl(KERN_PROC_PID)`, NOT `proc_pidinfo(PROC_PIDTBSDINFO)` as
+    /// `ProcessScanner.processStartTime` does. That difference is load-bearing and
+    /// was measured, not assumed: libproc denies PROC_PIDTBSDINFO for any process
+    /// we do not own — `proc_pidinfo` on `opendirectoryd` (root) returns 0 with
+    /// EPERM, while sysctl returns `1780642209.389673`. LaunchManager never
+    /// noticed because it only ever fingerprints processes of our own uid.
+    ///
+    /// This tool lists and signals EVERY uid, so a libproc-based fingerprint would
+    /// be 0 for all ~200 root processes — and since the action layer refuses to
+    /// signal on a fingerprint it cannot confirm, the entire root column of §7's
+    /// table would silently never work. sysctl is not permission-gated and returns
+    /// the IDENTICAL value for processes we do own (verified on our own pid), so
+    /// one source works for the whole list.
+    static func startTime(pid: pid_t) -> UInt64? {
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
+        var kp = kinfo_proc()
+        var size = MemoryLayout<kinfo_proc>.stride
+        guard sysctl(&mib, u_int(mib.count), &kp, &size, nil, 0) == 0, size > 0 else { return nil }
+        // A pid that has exited comes back as a zero-filled struct, not an error.
+        guard kp.kp_proc.p_pid == pid else { return nil }
+        let tv = kp.kp_proc.p_un.__p_starttime
+        return UInt64(tv.tv_sec) &* 1_000_000 &+ UInt64(tv.tv_usec)
+    }
+
     /// Re-read a single pid's instance fingerprint. Used by the action layer right
     /// before it signals, to prove the pid still names the same process instance.
+    /// Uses the SAME start-time source as `snapshot()` — if the two disagreed,
+    /// every signal would be refused (or, far worse, wrongly allowed).
     static func fingerprint(pid: pid_t) -> (startTime: UInt64?, path: String?) {
-        (ProcessScanner.processStartTime(pid: pid), ProcessScanner.currentExecutablePath(pid: pid))
+        (startTime(pid: pid), ProcessScanner.currentExecutablePath(pid: pid))
     }
 
     static func logSweep(count: Int, ms: Double) {

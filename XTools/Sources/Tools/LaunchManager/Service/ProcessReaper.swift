@@ -54,15 +54,84 @@ enum ProcessReaper {
         return signalled.map { $0.proc.pid }
     }
 
+    /// An instance fingerprint a SHELL can re-check: `ps -o lstart=,comm=` for one
+    /// pid. Start time + command, in a format both sides read the same way.
+    ///
+    /// It exists because the in-process fingerprint cannot survive the trip through
+    /// the privileged path: the check happens here, but the signal is sent minutes
+    /// later by a root shell, after the user has typed a password. Only a check
+    /// INSIDE that shell closes the window.
+    static func psFingerprint(pid: pid_t) -> String? {
+        let p = Process()
+        p.executableURL = URL(fileURLWithPath: "/bin/ps")
+        p.arguments = ["-o", "lstart=,comm=", "-p", String(pid)]
+        p.environment = ["LC_ALL": "C"]        // stable date format, locale-independent
+        let pipe = Pipe()
+        p.standardOutput = pipe
+        p.standardError = FileHandle.nullDevice
+        do { try p.run() } catch { return nil }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        p.waitUntilExit()
+        let out = String(data: data, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return out.isEmpty ? nil : out
+    }
+
     /// Reap ROOT-owned pids via one admin prompt. Blocks on the password dialog,
-    /// so call off the main thread. (pids are integers — no injection surface.)
-    static func reapRootPrivileged(pids: [pid_t]) -> Result<String, PrivilegedRunner.RunError> {
+    /// so call off the main thread.
+    ///
+    /// `guards` maps a pid to the `psFingerprint` captured BEFORE the prompt. Any
+    /// pid with a guard is re-verified inside the privileged shell immediately
+    /// before each signal — and again after the grace period, because the pid can
+    /// die and be recycled during those two seconds as easily as during the
+    /// password dialog. A pid whose fingerprint changed is skipped, not killed.
+    ///
+    /// Without this, the whole in-process fingerprint check (HR8.2) is decorative
+    /// on the root path: a user can leave the password dialog open for minutes,
+    /// and macOS will happily hand the freed pid to something else in the meantime.
+    /// pids and fingerprints both go through `PrivilegedRunner`'s shell quoting, so
+    /// there is no injection surface even though `comm` is attacker-controlled.
+    static func reapRootPrivileged(pids: [pid_t],
+                                   force: Bool = true,
+                                   guards: [pid_t: String] = [:]) -> Result<String, PrivilegedRunner.RunError> {
         let targets = pids.filter { $0 > 1 }
         guard !targets.isEmpty else { return .success("") }
-        let list = targets.map(String.init).joined(separator: " ")
-        // TERM, brief settle, then KILL survivors. Ignore errors from already-gone pids.
-        let inner = "/bin/kill -TERM \(list) 2>/dev/null; sleep 2; /bin/kill -KILL \(list) 2>/dev/null; true"
-        return PrivilegedRunner.run("/bin/sh", ["-c", inner])
+
+        // Per pid: verify identity, signal, and (when forcing) verify AGAIN before
+        // the SIGKILL. `sh` single-quoting is applied by PrivilegedRunner.
+        var lines: [String] = ["set -u"]
+        for pid in targets {
+            let p = String(pid)
+            if let want = guards[pid] {
+                let q = shSingleQuote(want)
+                lines.append("""
+                cur=$(/bin/ps -o lstart=,comm= -p \(p) 2>/dev/null | sed -e 's/^ *//' -e 's/ *$//')
+                if [ "$cur" = \(q) ]; then
+                  /bin/kill -TERM \(p) 2>/dev/null || true
+                """)
+                if force {
+                    lines.append("""
+                      sleep 2
+                      cur2=$(/bin/ps -o lstart=,comm= -p \(p) 2>/dev/null | sed -e 's/^ *//' -e 's/ *$//')
+                      if [ "$cur2" = \(q) ]; then /bin/kill -KILL \(p) 2>/dev/null || true; fi
+                    """)
+                }
+                lines.append("fi")
+            } else {
+                // No guard supplied (legacy callers): previous behaviour.
+                lines.append("/bin/kill -TERM \(p) 2>/dev/null || true")
+                if force {
+                    lines.append("sleep 2; /bin/kill -KILL \(p) 2>/dev/null || true")
+                }
+            }
+        }
+        lines.append("true")
+        return PrivilegedRunner.run("/bin/sh", ["-c", lines.joined(separator: "\n")])
+    }
+
+    /// Wrap a value in single quotes for /bin/sh (the canonical `'\''` escape).
+    private static func shSingleQuote(_ s: String) -> String {
+        "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'"
     }
 
     /// Whether a pid is still alive (and signalable by us).

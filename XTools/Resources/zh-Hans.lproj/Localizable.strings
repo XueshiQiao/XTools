@@ -591,3 +591,77 @@
 "processes.argv.policy.ask" = "每次询问";
 "processes.argv.policy.always" = "始终包含";
 "processes.argv.policy.never" = "始终不包含";
+"processes.argv.policy" = "发送参数给 AI";
+"processes.settings" = "选项";
+"processes.settings.help" = "此工具的 AI 选项。";
+
+/* Facts panel (deterministic, computed locally) */
+"processes.facts.signature" = "签名";
+"processes.facts.bundleid" = "Bundle ID";
+"processes.facts.launchd" = "启动项";
+"processes.facts.args" = "参数";
+"processes.facts.args.none" = "（无）";
+"processes.facts.args.unreadable" = "（无法读取）";
+"processes.facts.parents" = "父进程";
+"processes.facts.computing" = "正在读取签名与启动信息…";
+"processes.sign.apple" = "Apple 系统组件";
+"processes.sign.devid" = "Developer ID：%@";
+"processes.sign.other" = "已签名（非 Developer ID）";
+"processes.sign.unsigned" = "未签名";
+"processes.sign.invalid" = "签名无效";
+"processes.sign.unreadable" = "无法读取签名";
+"processes.sign.team" = "Team %@";
+"processes.sign.notarized" = "已公证";
+"processes.sign.notNotarized" = "未公证";
+
+/* AI panel */
+"processes.ai.title" = "AI 解读";
+"processes.ai.analyze" = "AI 分析";
+"processes.ai.configure" = "去设置模型…";
+"processes.ai.disclaimer" = "AI 生成，可能有误，操作前请自行核实。";
+"processes.ai.collecting" = "正在收集本地事实…";
+"processes.ai.waiting" = "等待模型响应…";
+"processes.ai.stop" = "停止";
+"processes.ai.stopped" = "已停止。";
+"processes.ai.retry" = "重试";
+"processes.ai.cached" = "缓存";
+"processes.ai.followUp.prompt" = "继续追问…";
+"processes.ai.error.noModel" = "尚未配置 AI 模型。";
+"processes.ai.userInstruction" = "向我解释这个 macOS 进程。用中文回答。";
+"processes.ai.clearCache" = "清空 AI 缓存";
+"processes.ai.cacheCleared" = "已清空 AI 缓存。";
+
+/* Payload disclosure + confirmation gate */
+"processes.ai.payload.will" = "将要发送的内容";
+"processes.ai.payload.sent" = "已发送的内容";
+"processes.ai.payload.redacted" = "本地已隐去 %d 处";
+"processes.ai.payload.truncated" = "已截断以符合长度上限";
+"processes.ai.payload.withheld" = "命令行参数未包含在内";
+"processes.ai.change" = "更改…";
+"processes.ai.notice" = "首次使用：按下「发送」后，下方 JSON（且仅此内容）会发给 %@。不确认就不会发送任何内容。";
+"processes.ai.gate.includeArgv" = "一并发送命令行参数";
+"processes.ai.gate.remember" = "记住我的选择";
+"processes.ai.gate.confirm" = "发送";
+"processes.ai.gate.cancel" = "取消";
+
+/* Actions (Quit / Force Quit / Reveal / Copy) */
+"processes.action.quit" = "退出";
+"processes.action.forceQuit" = "强制退出";
+"processes.action.reveal" = "在 Finder 中显示";
+"processes.action.copyPath" = "拷贝路径";
+"processes.action.copied" = "路径已拷贝。";
+"processes.action.quit.help" = "请求进程退出，它可以先保存数据。";
+"processes.action.forceQuit.help" = "立即终止，未保存的数据会丢失。";
+"processes.action.protected" = "macOS 核心进程——系统离开它无法运行。";
+"processes.action.exited" = "“%@”已退出——未发送任何信号。";
+"processes.action.sent.quit" = "已请求“%@”退出。";
+"processes.action.sent.term" = "已向“%@”发送退出信号。";
+"processes.action.sent.kill" = "已强制退出“%@”。";
+"processes.action.cancelled" = "已取消——未发送任何信号。";
+"processes.action.failed" = "无法向“%@”发送信号。";
+"processes.action.confirm.quit.title" = "要退出“%@”吗？";
+"processes.action.confirm.forceQuit.title" = "要强制退出“%@”吗？";
+"processes.action.confirm.forceQuit.own" = "它将被立即终止，未保存的数据会丢失。";
+"processes.action.confirm.forceQuit.root" = "该进程属于 %@。macOS 会要求输入管理员密码，然后立即终止该进程。";
+"processes.action.confirm.quit.root" = "该进程属于 %@。macOS 会要求输入管理员密码，以向它发送退出信号。";
+"processes.action.confirm.cancel" = "取消";

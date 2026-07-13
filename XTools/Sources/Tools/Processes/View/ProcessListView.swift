@@ -57,10 +57,32 @@ struct ProcessListView: View {
             }
             .width(min: 58, ideal: 72)
         }
+        // Right-click actions on a row. Same 2×2 dispatch as the detail pane's
+        // buttons (one code path in ProcActions — never a second kill path).
+        // pid 0 / pid 1 keep their items DISABLED, not hidden (§7); menus can't
+        // show tooltips, so the detail pane's buttons carry the explanation.
+        .contextMenu(forSelectionType: ProcID.self) { ids in
+            if let id = ids.first, let row = store.row(for: id) {
+                contextMenuItems(row)
+            }
+        }
         // The memory column's HEADER depends on which metric is in the rows, so the
         // table must be rebuilt when the mode flips (footprint ⇄ resident) — the
         // number and its name must never disagree.
         .id(store.memoryMetric == .footprint ? "footprint" : "resident")
+    }
+
+    @ViewBuilder
+    private func contextMenuItems(_ row: ProcRow) -> some View {
+        Button(L("processes.action.quit")) { store.requestQuit(row) }
+            .disabled(!row.canTerminate)
+        Button(L("processes.action.forceQuit")) { store.requestForceQuit(row) }
+            .disabled(!row.canTerminate)
+        Divider()
+        Button(L("processes.action.reveal")) { store.revealInFinder(row) }
+            .disabled(!row.canTerminate || row.executablePath == nil)
+        Button(L("processes.action.copyPath")) { store.copyPath(row) }
+            .disabled(!row.canTerminate || row.executablePath == nil)
     }
 
     private var memoryColumnTitle: String {
