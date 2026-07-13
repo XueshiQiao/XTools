@@ -34,6 +34,12 @@ struct ManagedProcess: Identifiable, Hashable {
     let uid: uid_t
     let executablePath: String?
 
+    /// The kernel's short process name (`p_comm`, ≤16 chars). Always available,
+    /// even when `executablePath` is nil because the running binary's file was
+    /// deleted or replaced (a `claude` upgraded by npm mid-run resolves its path to
+    /// nothing, but `p_comm` is still "claude"). The fallback for `name`.
+    var comm: String = ""
+
     /// BSD process state, straight from `kinfo_proc.kp_proc.p_stat`.
     ///
     /// It matters because a ZOMBIE is not a process any more: it is a dead one
@@ -51,11 +57,14 @@ struct ManagedProcess: Identifiable, Hashable {
     /// Runs as root → killing it needs a privileged (password-prompt) path.
     var runsAsRoot: Bool { uid == 0 }
 
-    /// Display name: the executable's last path component, else "pid N".
+    /// Display name: the executable's last path component; else the kernel's short
+    /// name (`p_comm`), which survives the binary being deleted/replaced; else a
+    /// "pid N" placeholder as the last resort.
     var name: String {
         if let p = executablePath, !p.isEmpty {
             return (p as NSString).lastPathComponent
         }
+        if !comm.isEmpty { return comm }
         return "pid \(pid)"
     }
 

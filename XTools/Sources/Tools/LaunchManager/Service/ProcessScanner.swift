@@ -18,6 +18,7 @@ enum ProcessScanner {
         return raw.map { p in
             ManagedProcess(pid: p.pid, ppid: p.ppid, uid: p.uid,
                            executablePath: executablePath(pid: p.pid),
+                           comm: p.comm,
                            state: ProcessState(rawStat: p.stat))
         }
     }
@@ -59,7 +60,7 @@ enum ProcessScanner {
 
     // MARK: - sysctl
 
-    private struct RawProc { let pid: pid_t; let ppid: pid_t; let uid: uid_t; let stat: Int32 }
+    private struct RawProc { let pid: pid_t; let ppid: pid_t; let uid: uid_t; let stat: Int32; let comm: String }
 
     private static func rawProcessList() -> [RawProc] {
         let stride = MemoryLayout<kinfo_proc>.stride
@@ -91,13 +92,23 @@ enum ProcessScanner {
             var result: [RawProc] = []
             result.reserveCapacity(count)
             for i in 0..<count {
-                let kp = procs[i]
+                var kp = procs[i]
                 let pid = kp.kp_proc.p_pid
                 guard pid > 0 else { continue }
+                // p_comm: the kernel's short process name (≤16 chars), always
+                // present even when proc_pidpath fails — e.g. a running binary whose
+                // file was deleted or replaced by an update. It is a fixed-size C
+                // char array; read it as a NUL-terminated string.
+                let comm = withUnsafePointer(to: &kp.kp_proc.p_comm) {
+                    $0.withMemoryRebound(to: CChar.self, capacity: Int(MAXCOMLEN) + 1) {
+                        String(cString: $0)
+                    }
+                }
                 result.append(RawProc(pid: pid,
                                       ppid: kp.kp_eproc.e_ppid,
                                       uid: kp.kp_eproc.e_ucred.cr_uid,
-                                      stat: Int32(kp.kp_proc.p_stat)))
+                                      stat: Int32(kp.kp_proc.p_stat),
+                                      comm: comm))
             }
             return result
         }

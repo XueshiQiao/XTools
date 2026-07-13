@@ -1,7 +1,7 @@
-# Design: XTools「进程」工具 — AI 优先的轻量 process list
+# Design: XTools「进程洞察 / Process Insight」工具 — AI 优先的轻量 process list
 
 Date: 2026-07-12
-Status: Approved (design, 含 10 条硬性要求); implementation not started
+Status: Implemented on branch `feat/process-insight`（Stage 1–6）; 待 owner 决定是否 merge/release。10 条硬性要求全部落地并实测。未在 macOS 13/14/15 VM 与 Intel 上验证（HR4.4，由自校准 + 自动降级兜底）。
 Owner: Xueshi
 
 ---
