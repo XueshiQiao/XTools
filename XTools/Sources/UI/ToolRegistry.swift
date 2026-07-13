@@ -20,6 +20,7 @@ enum ToolRegistry {
             PortsTool(),
             ProcessesTool(llm: llm),
             MemoryTool(),
+            NagaTool(),
             // Add future tools here.
         ]
     }

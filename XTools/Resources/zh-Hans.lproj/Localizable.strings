@@ -53,6 +53,17 @@
 "wake.msg.changed" = "「%@」自上次扫描后已变化——已刷新。";
 "wake.msg.failed" = "无法结束「%@」。";
 
+/* ───────────── Naga 侧键 ───────────── */
+"tool.naga.title" = "Naga 侧键";
+"naga.listening" = "监听中";
+"naga.notlistening" = "未监听";
+"naga.press.hint" = "按一下侧键试试…";
+"naga.recent" = "最近按键";
+"naga.clear" = "清空";
+"naga.mappings" = "按键映射";
+"naga.recorder.recording" = "按下快捷键…";
+"naga.recorder.empty" = "未设置";
+
 /* ───────────── 正在播放 ───────────── */
 "tool.nowplaying.title" = "正在播放";
 "nowplaying.status.title" = "音频输出";

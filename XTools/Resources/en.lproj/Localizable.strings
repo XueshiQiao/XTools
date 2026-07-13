@@ -53,6 +53,17 @@
 "wake.msg.changed" = "%@ changed since the scan — refreshed.";
 "wake.msg.failed" = "Couldn't end %@.";
 
+/* ───────────── Naga side buttons ───────────── */
+"tool.naga.title" = "Naga Keys";
+"naga.listening" = "Listening";
+"naga.notlistening" = "Not listening";
+"naga.press.hint" = "Press a side button…";
+"naga.recent" = "Recent presses";
+"naga.clear" = "Clear";
+"naga.mappings" = "Button mappings";
+"naga.recorder.recording" = "Press keys…";
+"naga.recorder.empty" = "Not set";
+
 /* ───────────── Now Playing ───────────── */
 "tool.nowplaying.title" = "Now Playing";
 "nowplaying.status.title" = "Audio output";
