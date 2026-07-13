@@ -35,11 +35,18 @@ protocol XToolModule: AnyObject {
     /// The tool's root SwiftUI page. Built lazily when first shown; the tool
     /// owns its (stable) store, so rebuilding the view is cheap.
     func makeRootView() -> AnyView
+
+    /// Extra window width this page needs beyond the shared default. Most tools are
+    /// a single narrow column and return 0; a tool with an extra side panel (the
+    /// process list's detail column) returns its width, and the shell grows the
+    /// window by that much while this tool is selected, restoring it on the way out.
+    var preferredExtraWidth: CGFloat { get }
 }
 
 extension XToolModule {
     func activate() {}
     func shutdown() {}
+    var preferredExtraWidth: CGFloat { 0 }
 }
 
 /// What the sidebar can select: the dashboard, a tool (by id), or one of the

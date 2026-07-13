@@ -11,7 +11,6 @@ enum ToolRegistry {
     static func makeAllTools(llm: LLMService) -> [any XToolModule] {
         [
             PopBarTool(llm: llm),
-            ProcessesTool(llm: llm),
             LaunchManagerTool(),
             WakeLocksTool(),
             NowPlayingTool(),
@@ -19,6 +18,7 @@ enum ToolRegistry {
             DNSToolsTool(),
             DefaultAppsTool(),
             PortsTool(),
+            ProcessesTool(llm: llm),
             MemoryTool(),
             // Add future tools here.
         ]

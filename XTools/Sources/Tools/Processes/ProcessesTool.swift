@@ -21,6 +21,10 @@ final class ProcessesTool: XToolModule {
     let symbol = "cpu"
     let color = Color.purple
 
+    /// This page has a detail column its siblings don't, so the shell widens the
+    /// window by this much while it's selected and restores the width on exit.
+    var preferredExtraWidth: CGFloat { ProcessesStore.detailColumnWidth }
+
     private let llm: LLMService
     private var _store: ProcessesStore?
     private var store: ProcessesStore {

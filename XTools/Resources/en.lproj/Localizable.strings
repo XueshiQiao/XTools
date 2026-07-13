@@ -650,6 +650,8 @@
 "processes.action.reveal" = "Reveal in Finder";
 "processes.action.copyPath" = "Copy Path";
 "processes.action.copied" = "Path copied.";
+"processes.action.pin" = "Pin to Top";
+"processes.action.unpin" = "Unpin";
 "processes.action.quit.help" = "Ask the process to quit, so it can save first.";
 "processes.action.forceQuit.help" = "Kill immediately. Unsaved data is lost.";
 "processes.action.protected" = "Core macOS process — the system cannot run without it.";

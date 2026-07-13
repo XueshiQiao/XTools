@@ -61,6 +61,13 @@ final class MainWindowController: NSObject, NSWindowDelegate {
 struct MainView: View {
     @EnvironmentObject var appState: AppState
 
+    /// The host window, captured once, for the per-page width adjustment below.
+    @State private var window: NSWindow?
+    /// The width the window has on a normal (no-extra-width) page. Captured the
+    /// first time we leave the default width, and restored when returning to a
+    /// normal page — so a width the user chose for the regular pages is respected.
+    @State private var baseWidth: CGFloat?
+
     var body: some View {
         NavigationSplitView {
             List(selection: $appState.selection) {
@@ -79,7 +86,11 @@ struct MainView: View {
                 }
             }
             .listStyle(.sidebar)
-            .navigationSplitViewColumnWidth(min: 210, ideal: 220, max: 250)
+            // Pin the sidebar to a FIXED width (min == max). Without this, when the
+            // window is dragged narrow the split view squeezes the sidebar and clips
+            // the tab labels — the sidebar must never shrink; only the content area
+            // (list + detail) resizes.
+            .navigationSplitViewColumnWidth(220)
             .safeAreaInset(edge: .top, spacing: 0) { brand }
             .safeAreaInset(edge: .bottom, spacing: 0) { statusFooter }
         } detail: {
@@ -95,11 +106,68 @@ struct MainView: View {
                     }
                 }
         }
-        .frame(minWidth: 760, minHeight: 540)
+        .frame(minWidth: windowMinWidth, minHeight: 540)
         // Re-key the whole tree when the in-app language changes so every
         // NSLocalizedString-derived label re-reads. `selection` is store-backed,
         // so the selected page survives the rebuild.
         .id(appState.languageRevision)
+        .background(HostWindowReader { win in
+            if window !== win { window = win; applyWidth(animated: false) }
+        })
+        .onChange(of: appState.selection) { _ in applyWidth(animated: true) }
+    }
+
+    /// Extra width the currently-selected page wants beyond a normal tool page.
+    private var selectedExtraWidth: CGFloat {
+        if case .tool(let id) = appState.selection, let tool = appState.tool(for: id) {
+            return tool.preferredExtraWidth
+        }
+        return 0
+    }
+
+    /// The narrowest the window may be dragged. A page with an extra column needs
+    /// room for the pinned sidebar (220) + the list's minimum (320) + that column +
+    /// the two split dividers, so neither the sidebar nor the detail is ever
+    /// squeezed; a normal page keeps the default. The +40 is divider/inset headroom
+    /// — without it the columns' mins sum to exactly the window width and the
+    /// overflow gets taken out of the sidebar, clipping the tab labels.
+    private var windowMinWidth: CGFloat {
+        let extra = selectedExtraWidth
+        return extra > 0 ? 220 + 320 + extra + 40 : 760
+    }
+
+    /// Grow the window by the selected page's extra width, or shrink back to the
+    /// base width on a normal page. `baseWidth` is captured lazily so the width the
+    /// user picked for the ordinary pages becomes the baseline.
+    private func applyWidth(animated: Bool) {
+        guard let window else { return }
+        let extra = selectedExtraWidth
+        let current = window.frame.width
+
+        let target: CGFloat
+        if extra > 0 {
+            // Entering an extra-width page: remember the normal width if we haven't.
+            let base = baseWidth ?? current
+            baseWidth = base
+            target = base + extra
+            // Stop persisting the frame while widened, so a quit on this page can't
+            // reopen every page at the widened width next launch.
+            window.setFrameAutosaveName("")
+        } else {
+            // Back on a normal page: restore the remembered base, then forget it.
+            target = baseWidth ?? current
+            baseWidth = nil
+            window.setFrameAutosaveName("XToolsMain")   // resume persisting normal width
+        }
+
+        var frame = window.frame
+        let width = max(window.minSize.width, target)
+        guard abs(frame.width - width) > 0.5 else { return }
+        frame.size.width = width   // only width changes → top-left corner stays put
+        if let vis = (window.screen ?? NSScreen.main)?.visibleFrame, frame.maxX > vis.maxX {
+            frame.origin.x = max(vis.minX, vis.maxX - width)
+        }
+        window.setFrame(frame, display: true, animate: animated)
     }
 
     @ViewBuilder
@@ -175,5 +243,22 @@ struct MainView: View {
     private func toggleSidebar() {
         NSApp.keyWindow?.firstResponder?.tryToPerform(
             #selector(NSSplitViewController.toggleSidebar(_:)), with: nil)
+    }
+}
+
+/// Hands back the `NSWindow` hosting this SwiftUI tree, once it's in the hierarchy,
+/// so the shell can size it per selected page. Reports on the next runloop turn,
+/// by which point the window's real frame (not a placeholder) is set.
+private struct HostWindowReader: NSViewRepresentable {
+    let onResolve: (NSWindow) -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView(frame: .zero)
+        DispatchQueue.main.async { if let w = view.window { onResolve(w) } }
+        return view
+    }
+
+    func updateNSView(_ view: NSView, context: Context) {
+        DispatchQueue.main.async { if let w = view.window { onResolve(w) } }
     }
 }

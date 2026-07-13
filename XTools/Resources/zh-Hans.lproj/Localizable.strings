@@ -650,6 +650,8 @@
 "processes.action.reveal" = "在 Finder 中显示";
 "processes.action.copyPath" = "拷贝路径";
 "processes.action.copied" = "路径已拷贝。";
+"processes.action.pin" = "置顶";
+"processes.action.unpin" = "取消置顶";
 "processes.action.quit.help" = "请求进程退出，它可以先保存数据。";
 "processes.action.forceQuit.help" = "立即终止，未保存的数据会丢失。";
 "processes.action.protected" = "macOS 核心进程——系统离开它无法运行。";

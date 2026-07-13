@@ -55,6 +55,12 @@ final class ProcessesStore: ObservableObject {
     @Published var sortOrder: [KeyPathComparator<ProcRow>] = [
         .init(\ProcRow.cpuSort, order: .reverse)
     ] { didSet { scheduleRecompute() } }
+
+    /// Pids the user pinned to the top, in pin order (first pinned = highest).
+    /// Session-only by design: not persisted, keyed by pid — when the process
+    /// exits, the sweep prunes the pin so a recycled pid can't inherit it.
+    /// Published so the row's pin icon flips the instant it is toggled.
+    @Published private(set) var pinnedPIDs: [pid_t] = []
     @Published var selection: ProcID? {
         didSet {
             guard oldValue != selection else { return }
@@ -151,6 +157,12 @@ final class ProcessesStore: ObservableObject {
     // Space, screen awake) AND the login session active (fast user switching).
     // Any of these dropping kills the top child immediately; restoring respawns it
     // (first block ~1.2s; a ps seed covers the gap).
+
+    /// Extra width the detail column needs beyond a normal tool page. The shell
+    /// reads this (via `ProcessesTool.preferredExtraWidth`) and widens the window
+    /// on entry / restores it on exit — done at the shell level because the window
+    /// is reliably laid out there, unlike the tool view's onAppear timing.
+    static let detailColumnWidth: CGFloat = 320
 
     func start() {
         viewVisible = true
@@ -378,10 +390,12 @@ final class ProcessesStore: ObservableObject {
         let hideSystem: Bool
         let query: String
         let sort: [KeyPathComparator<ProcRow>]
+        let pinned: [pid_t]
     }
 
     private func displayContext() -> DisplayContext {
-        DisplayContext(hideSystem: prefs.hideSystemProcesses, query: query, sort: sortOrder)
+        DisplayContext(hideSystem: prefs.hideSystemProcesses, query: query,
+                       sort: sortOrder, pinned: pinnedPIDs)
     }
 
     /// On the `work` queue: join the roster against the current metrics table,
@@ -392,7 +406,8 @@ final class ProcessesStore: ObservableObject {
     private func joinAndPublish(roster: [ProcRow], ctx: DisplayContext, becomeTop: Bool) {
         let t0 = Date()
         let joined = Self.join(roster: roster, metrics: metricsByPid)
-        let display = Self.display(joined, hideSystem: ctx.hideSystem, query: ctx.query, sort: ctx.sort)
+        let display = Self.display(joined, hideSystem: ctx.hideSystem, query: ctx.query,
+                                   sort: ctx.sort, pinned: ctx.pinned)
         let ms = Date().timeIntervalSince(t0) * 1000
 
         DispatchQueue.main.async { [weak self] in
@@ -404,6 +419,15 @@ final class ProcessesStore: ObservableObject {
             self.rawRows = joined
             self.totalCount = joined.count
             self.rows = display
+            // Pins are pids and pids get recycled: a pin whose process has exited
+            // is dropped HERE, where the fresh roster (the live pid set) is known,
+            // so a later process handed the same pid can't inherit a stale pin.
+            // Guarded so the common no-pins case costs nothing.
+            if !self.pinnedPIDs.isEmpty {
+                let live = Set(joined.map(\.pid))
+                let pruned = self.pinnedPIDs.filter { live.contains($0) }
+                if pruned.count != self.pinnedPIDs.count { self.pinnedPIDs = pruned }
+            }
             self.isRefreshing = false
             if self.tickCount % 30 == 0 {   // don't spam the log every few seconds
                 self.log.info("update: \(joined.count) processes, \(String(format: "%.0f", ms))ms (\(self.mode == .top ? "top" : "ps"))")
@@ -453,7 +477,8 @@ final class ProcessesStore: ObservableObject {
     private static func display(_ all: [ProcRow],
                                 hideSystem: Bool,
                                 query: String,
-                                sort: [KeyPathComparator<ProcRow>]) -> [ProcRow] {
+                                sort: [KeyPathComparator<ProcRow>],
+                                pinned: [pid_t]) -> [ProcRow] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
         var out = all.filter { row in
             // The search box wins over the system filter: if you explicitly search
@@ -466,7 +491,40 @@ final class ProcessesStore: ObservableObject {
                 || (row.executablePath?.lowercased().contains(q) ?? false)
         }
         out.sort(using: sort)
-        return out
+
+        // Pinned rows float above the sort, in pin order (first pinned = highest).
+        // This wraps AROUND the filter+sort: the filter has already run, so a
+        // pinned row that doesn't match the query is simply absent; the sort
+        // stays untouched for everything not pinned.
+        guard !pinned.isEmpty else { return out }
+        var rank: [pid_t: Int] = [:]
+        rank.reserveCapacity(pinned.count)
+        for (i, pid) in pinned.enumerated() { rank[pid] = i }
+        var top: [ProcRow] = []
+        var rest: [ProcRow] = []
+        rest.reserveCapacity(out.count)
+        for row in out {
+            if rank[row.pid] != nil { top.append(row) } else { rest.append(row) }
+        }
+        top.sort { (rank[$0.pid] ?? .max) < (rank[$1.pid] ?? .max) }
+        return top + rest
+    }
+
+    // MARK: - Pins (session-only, display concern)
+
+    func isPinned(pid: pid_t) -> Bool {
+        pinnedPIDs.contains(pid)
+    }
+
+    /// Pin or unpin. Recomputes from the cached rows immediately — the reorder
+    /// must not wait for the next sweep.
+    func togglePin(pid: pid_t) {
+        if let idx = pinnedPIDs.firstIndex(of: pid) {
+            pinnedPIDs.remove(at: idx)
+        } else {
+            pinnedPIDs.append(pid)
+        }
+        scheduleRecompute()
     }
 
     /// Debounced recompute from the cached rows — no syscalls, no `ps`. Typing in
@@ -476,9 +534,11 @@ final class ProcessesStore: ObservableObject {
         let hideSystem = prefs.hideSystemProcesses
         let query = self.query
         let sort = self.sortOrder
+        let pinned = self.pinnedPIDs
         let all = rawRows
         let item = DispatchWorkItem { [weak self] in
-            let display = Self.display(all, hideSystem: hideSystem, query: query, sort: sort)
+            let display = Self.display(all, hideSystem: hideSystem, query: query,
+                                       sort: sort, pinned: pinned)
             DispatchQueue.main.async { self?.rows = display }
         }
         recomputeWork = item
