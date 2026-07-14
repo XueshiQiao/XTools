@@ -42,8 +42,22 @@ struct NagaView: View {
                         .font(.caption).foregroundStyle(.secondary)
                         .frame(width: 42, alignment: .leading)
                     Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.tertiary)
-                    ShortcutRecorder(shortcut: shortcutBinding(m.index))
-                        .frame(width: 140, height: 24)
+                    ShortcutRecorder(
+                        shortcut: m.target,
+                        isRecording: store.recordingButton == m.index,
+                        onToggle: { store.toggleRecording(button: m.index) }
+                    )
+                    .frame(width: 140)
+                    Button {
+                        store.setShortcut(nil, forButton: m.index)
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.tertiary)
+                    .help(L("naga.recorder.clear"))
+                    .opacity(m.target == nil ? 0 : 1)
+                    .disabled(m.target == nil)
                     Spacer()
                     Toggle("", isOn: enabledBinding(m.index)).labelsHidden()
                 }
@@ -84,13 +98,6 @@ struct NagaView: View {
                 .frame(maxHeight: 150)
             }
         }
-    }
-
-    private func shortcutBinding(_ index: Int) -> Binding<Shortcut?> {
-        Binding(
-            get: { store.mappings.first { $0.index == index }?.target },
-            set: { store.setShortcut($0, forButton: index) }
-        )
     }
 
     private func enabledBinding(_ index: Int) -> Binding<Bool> {

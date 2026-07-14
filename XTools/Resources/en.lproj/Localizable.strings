@@ -63,6 +63,7 @@
 "naga.mappings" = "Button mappings";
 "naga.recorder.recording" = "Press keys…";
 "naga.recorder.empty" = "Not set";
+"naga.recorder.clear" = "Clear shortcut";
 
 /* ───────────── Now Playing ───────────── */
 "tool.nowplaying.title" = "Now Playing";

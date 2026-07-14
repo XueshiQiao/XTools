@@ -63,6 +63,7 @@
 "naga.mappings" = "按键映射";
 "naga.recorder.recording" = "按下快捷键…";
 "naga.recorder.empty" = "未设置";
+"naga.recorder.clear" = "清除快捷键";
 
 /* ───────────── 正在播放 ───────────── */
 "tool.nowplaying.title" = "正在播放";
