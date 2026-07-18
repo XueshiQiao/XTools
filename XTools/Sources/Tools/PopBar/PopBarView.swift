@@ -14,6 +14,8 @@ struct PopBarView: View {
     @State private var editingAction: PopBarActionConfig?
     @State private var previewFallback = PopBarPreferences.previewFallbackToSearch
     @State private var previewEngine = PopBarPreferences.previewSearchEngine
+    /// Set when registering the OCR hotkey failed (combo taken) so the field shows a hint.
+    @State private var ocrHotKeyError = false
 
     private let trustPoll = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
 
@@ -27,6 +29,7 @@ struct PopBarView: View {
         Form {
             statusSection
             if !store.isTrusted { permissionSection }
+            ocrSection
             actionsSection
             if actions.actions.contains(where: { $0.kind == .webPreview }) {
                 webPreviewSection
@@ -101,6 +104,62 @@ struct PopBarView: View {
             }
         } header: {
             Text(L("popbar.perm.header"))
+        }
+    }
+
+    // MARK: - Screenshot OCR
+
+    private var ocrSection: some View {
+        Section {
+            Toggle(isOn: Binding(get: { store.screenOCREnabled },
+                                 set: { ocrHotKeyError = !store.setScreenOCREnabled($0) })) {
+                featureLabel("viewfinder", .indigo,
+                             L("popbar.ocr.enable.title"), L("popbar.ocr.enable.subtitle"))
+            }
+
+            if store.screenOCREnabled {
+                LabeledContent {
+                    HotKeyRecorderField(combo: store.screenOCRHotKey) { combo in
+                        ocrHotKeyError = !store.setScreenOCRHotKey(combo)
+                    }
+                } label: {
+                    iconLabel("command", .indigo, L("popbar.ocr.hotkey.label"))
+                }
+                if ocrHotKeyError {
+                    Text(L("popbar.ocr.hotkey.occupied"))
+                        .font(.caption).foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Toggle(isOn: Binding(get: { store.screenOCRAutoCopy },
+                                     set: { store.setScreenOCRAutoCopy($0) })) {
+                    iconLabel("doc.on.clipboard", .indigo, L("popbar.ocr.autocopy.label"))
+                }
+
+                if !store.isScreenRecordingAuthorized {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "lock.shield").font(.system(size: 18)).foregroundStyle(.orange)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(L("popbar.ocr.perm.title")).fontWeight(.medium)
+                                Text(L("popbar.ocr.perm.body"))
+                                    .font(.caption).foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        HStack {
+                            Button(L("popbar.ocr.perm.grant")) { store.requestScreenRecording() }
+                            Button(L("popbar.ocr.perm.open")) { store.openScreenRecordingSettings() }
+                                .buttonStyle(.borderless)
+                        }
+                    }
+                }
+            }
+        } header: {
+            Text(L("popbar.ocr.header"))
+        } footer: {
+            Text(L("popbar.ocr.footer"))
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

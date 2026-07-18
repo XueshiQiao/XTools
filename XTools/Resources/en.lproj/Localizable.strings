@@ -569,6 +569,23 @@
 "popbar.webpreview.openbrowser" = "Open in browser";
 "popbar.webpreview.window.title" = "Web Preview";
 
+/* MARK: - PopBar · Screenshot OCR */
+"popbar.ocr.header" = "Screenshot Text (OCR)";
+"popbar.ocr.footer" = "Press the shortcut, drag a box over anything on screen, and its text is recognized and shown in the capsule — great for images, video frames, or apps where text can't be selected.";
+"popbar.ocr.enable.title" = "Screenshot Text";
+"popbar.ocr.enable.subtitle" = "Grab text from any screen region via OCR";
+"popbar.ocr.hotkey.label" = "Shortcut";
+"popbar.ocr.hotkey.recording" = "Press keys… (Esc to cancel)";
+"popbar.ocr.hotkey.occupied" = "That shortcut is already in use — try another.";
+"popbar.ocr.autocopy.label" = "Also copy recognized text to clipboard";
+"popbar.ocr.perm.title" = "Screen Recording permission needed";
+"popbar.ocr.perm.body" = "macOS requires Screen Recording access to read pixels from the screen. Recognized text stays on your Mac; screenshots are never saved.";
+"popbar.ocr.perm.grant" = "Grant Access";
+"popbar.ocr.perm.open" = "Open Settings";
+"popbar.ocr.noText" = "No text found";
+"popbar.ocr.captureFailed" = "Couldn't capture the screen";
+"popbar.ocr.overlay.hint" = "Drag to select an area to recognize · Esc to cancel";
+
 /* MARK: - Process Insight */
 "tool.processes.title" = "Process Insight";
 "processes.col.name" = "Process";

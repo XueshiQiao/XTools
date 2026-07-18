@@ -31,6 +31,7 @@ final class PopBarTool: XToolModule {
 
     func activate() {
         controller.startIfEnabled()
+        controller.startOCRIfEnabled()   // screenshot-OCR hotkey is independent of the selection monitor
         // Dev/screenshot affordance: pop a sample capsule shortly after launch.
         if ProcessInfo.processInfo.environment["XTOOLS_POPBAR_PREVIEW"] == "1" {
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [controller] in

@@ -569,6 +569,23 @@
 "popbar.webpreview.openbrowser" = "在浏览器中打开";
 "popbar.webpreview.window.title" = "网页预览";
 
+/* MARK: - PopBar · Screenshot OCR */
+"popbar.ocr.header" = "截图取词 (OCR)";
+"popbar.ocr.footer" = "按下快捷键，在屏幕上框选任意区域，即可识别其中的文字并弹出胶囊——适合图片、视频画面，或选不中文字的应用。";
+"popbar.ocr.enable.title" = "截图取词";
+"popbar.ocr.enable.subtitle" = "通过 OCR 从任意屏幕区域取字";
+"popbar.ocr.hotkey.label" = "快捷键";
+"popbar.ocr.hotkey.recording" = "按下按键…（Esc 取消）";
+"popbar.ocr.hotkey.occupied" = "该快捷键已被占用，请换一个。";
+"popbar.ocr.autocopy.label" = "同时把识别文本复制到剪贴板";
+"popbar.ocr.perm.title" = "需要「屏幕录制」权限";
+"popbar.ocr.perm.body" = "macOS 需要屏幕录制权限才能读取屏幕像素。识别文本只保留在本机，截图不会被保存。";
+"popbar.ocr.perm.grant" = "去授权";
+"popbar.ocr.perm.open" = "打开设置";
+"popbar.ocr.noText" = "未识别到文本";
+"popbar.ocr.captureFailed" = "截屏失败";
+"popbar.ocr.overlay.hint" = "拖拽框选要识别的区域 · Esc 取消";
+
 /* MARK: - Process Insight */
 "tool.processes.title" = "进程洞察";
 "processes.col.name" = "进程";

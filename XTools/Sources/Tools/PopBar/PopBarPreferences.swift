@@ -29,6 +29,9 @@ enum PopBarPreferences {
     private static let wheelAutoHideOnExitKey = "popbar.wheel.autoHideOnExit"
     private static let previewFallbackToSearchKey = "popbar.preview.fallbackToSearch"
     private static let previewSearchEngineKey = "popbar.preview.searchEngine"
+    private static let screenOCREnabledKey = "popbar.ocr.enabled"
+    private static let screenOCRAutoCopyKey = "popbar.ocr.autoCopy"
+    private static let screenOCRHotKeyKey = "popbar.ocr.hotKey"
 
     /// Allowed range + default for the result Markdown's base font size (issue #14).
     /// The user found the old ~12pt body too small, so the default is a touch larger.
@@ -140,6 +143,39 @@ enum PopBarPreferences {
         let inner = min(wheelInnerRadius, outer - wheelMinThickness)
         return WheelLayout(outerRadius: CGFloat(outer), innerRadius: CGFloat(inner),
                            showIcons: wheelShowIcons, showLabels: wheelShowLabels)
+    }
+
+    // MARK: - Screenshot OCR
+
+    /// Whether the screenshot-OCR hotkey is registered. Opt-in; default OFF.
+    static var screenOCREnabled: Bool {
+        get { bool(screenOCREnabledKey, default: false) }
+        set { UserDefaults.standard.set(newValue, forKey: screenOCREnabledKey) }
+    }
+
+    /// Also copy the recognized text to the clipboard (on top of showing the capsule).
+    /// Opt-out; default ON.
+    static var screenOCRAutoCopy: Bool {
+        get { bool(screenOCRAutoCopyKey, default: true) }
+        set { UserDefaults.standard.set(newValue, forKey: screenOCRAutoCopyKey) }
+    }
+
+    /// The global hotkey that starts a screenshot-OCR capture. Stored as JSON; a
+    /// missing/corrupt value falls back to ⌘⇧S (`KeyCombo.defaultScreenOCR`).
+    static var screenOCRHotKey: KeyCombo {
+        get {
+            guard let raw = UserDefaults.standard.string(forKey: screenOCRHotKeyKey),
+                  let data = raw.data(using: .utf8),
+                  let combo = try? JSONDecoder().decode(KeyCombo.self, from: data)
+            else { return .defaultScreenOCR }
+            return combo
+        }
+        set {
+            if let data = try? JSONEncoder().encode(newValue),
+               let raw = String(data: data, encoding: .utf8) {
+                UserDefaults.standard.set(raw, forKey: screenOCRHotKeyKey)
+            }
+        }
     }
 }
 

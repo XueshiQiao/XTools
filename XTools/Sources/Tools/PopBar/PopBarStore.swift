@@ -17,6 +17,12 @@ final class PopBarStore: ObservableObject {
     @Published var wheelAutoHideOnExit: Bool
     @Published private(set) var isTrusted: Bool
 
+    // Screenshot OCR
+    @Published var screenOCREnabled: Bool
+    @Published var screenOCRAutoCopy: Bool
+    @Published var screenOCRHotKey: KeyCombo
+    @Published private(set) var isScreenRecordingAuthorized: Bool
+
     private let controller: PopBarController
 
     init(controller: PopBarController) {
@@ -31,6 +37,10 @@ final class PopBarStore: ObservableObject {
         self.wheelShowLabels = PopBarPreferences.wheelShowLabels
         self.wheelAutoHideOnExit = PopBarPreferences.wheelAutoHideOnExit
         self.isTrusted = AccessibilityAuthorizer.isTrusted
+        self.screenOCREnabled = PopBarPreferences.screenOCREnabled
+        self.screenOCRAutoCopy = PopBarPreferences.screenOCRAutoCopy
+        self.screenOCRHotKey = PopBarPreferences.screenOCRHotKey
+        self.isScreenRecordingAuthorized = ScreenRecordingAuthorizer.isAuthorized
     }
 
     /// Turn the popup on/off. Turning on without permission persists the choice
@@ -76,6 +86,10 @@ final class PopBarStore: ObservableObject {
         if trusted && isEnabled && !controller.isRunning {
             controller.start()
         }
+        // The Screen Recording grant can also change in System Settings while we run;
+        // reflect it so the OCR permission row auto-hides once it's granted.
+        let screenRec = ScreenRecordingAuthorizer.isAuthorized
+        if screenRec != isScreenRecordingAuthorized { isScreenRecordingAuthorized = screenRec }
     }
 
     /// Switch the popup's presentation style. Persisted in PopBar's own prefs and
@@ -129,4 +143,38 @@ final class PopBarStore: ObservableObject {
     func showPreview() { controller.showPreview() }
     /// Hide the live tuning preview when the user leaves the PopBar settings page.
     func dismissPreview() { controller.dismissPreview() }
+
+    // MARK: - Screenshot OCR
+
+    /// Enable/disable screenshot OCR. Persists the choice and registers/unregisters the
+    /// global hotkey. Returns false if enabling failed because the combo is already
+    /// taken system-wide (the settings UI surfaces that).
+    @discardableResult
+    func setScreenOCREnabled(_ on: Bool) -> Bool {
+        screenOCREnabled = on
+        PopBarPreferences.screenOCREnabled = on
+        if on {
+            return controller.startScreenOCR()
+        } else {
+            controller.stopScreenOCR()
+            return true
+        }
+    }
+
+    func setScreenOCRAutoCopy(_ on: Bool) {
+        screenOCRAutoCopy = on
+        PopBarPreferences.screenOCRAutoCopy = on
+    }
+
+    /// Record a new OCR hotkey. Returns false if it couldn't be registered (taken); on
+    /// success the published combo is updated so the recorder field reflects it.
+    @discardableResult
+    func setScreenOCRHotKey(_ combo: KeyCombo) -> Bool {
+        let ok = controller.setScreenOCRHotKey(combo)
+        if ok { screenOCRHotKey = combo }
+        return ok
+    }
+
+    func requestScreenRecording() { _ = ScreenRecordingAuthorizer.request() }
+    func openScreenRecordingSettings() { ScreenRecordingAuthorizer.openSettings() }
 }

@@ -20,6 +20,10 @@ final class PopBarController {
     private let windows: PopBarWindowManager
     private let llm: LLMService
     private let actionStore: ActionStore
+    /// The screenshot-OCR front-step (hotkey → drag-select → OCR → capsule). Reuses
+    /// this controller's window manager + actions; its lifecycle is independent of the
+    /// selection monitor (see `startOCRIfEnabled`).
+    private let ocr: ScreenOCRController
 
     /// Screen point the transient capsule's CURRENT selection is anchored to (the
     /// selection's raw mouse-up location), used to suppress flicker from a
@@ -39,6 +43,7 @@ final class PopBarController {
         self.llm = llm
         self.actionStore = actionStore
         self.windows = PopBarWindowManager(llm: llm)
+        self.ocr = ScreenOCRController(windows: windows, actionStore: actionStore)
         resolver = SelectionResolver(strategies: [
             AccessibilityStrategy(),   // fast, side-effect-free; preferred
             CopyOnSelectStrategy(),    // terminals (OTTY) that copy-on-select; reads the clipboard directly
@@ -79,8 +84,28 @@ final class PopBarController {
         resolveTask?.cancel()
         monitor.stop()
         windows.closeAll()
+        ocr.stop()
         Self.log.info("stopped")
     }
+
+    // MARK: - Screenshot OCR (independent front-step)
+
+    /// Register the screenshot-OCR hotkey if the user opted in. Independent of the
+    /// selection monitor — it needs Screen Recording (not Accessibility), so it starts
+    /// even when the selection popup is off.
+    func startOCRIfEnabled() { ocr.startIfEnabled() }
+
+    /// Register the OCR hotkey now. Returns false if the combo is already taken.
+    @discardableResult
+    func startScreenOCR() -> Bool { ocr.start() }
+
+    /// Unregister the OCR hotkey.
+    func stopScreenOCR() { ocr.stop() }
+
+    /// Persist + re-register the OCR hotkey. Returns false if the new combo is taken
+    /// (the previous one is kept registered so the user is never left without one).
+    @discardableResult
+    func setScreenOCRHotKey(_ combo: KeyCombo) -> Bool { ocr.setHotKey(combo) }
 
     // MARK: - Trigger → resolve → show
 
