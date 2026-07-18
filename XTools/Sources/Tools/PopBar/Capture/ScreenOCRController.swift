@@ -20,6 +20,9 @@ final class ScreenOCRController {
     /// Held for the duration of one capture so the overlay controller (which owns the
     /// per-screen overlay windows) isn't deallocated before its completion fires.
     private var regionSelector: RegionSelectionController?
+    /// Bumped per capture so a slow OCR completion from an earlier capture can't
+    /// overwrite the clipboard/capsule after a newer capture has superseded it.
+    private var captureGeneration = 0
 
     init(windows: PopBarWindowManager, actionStore: ActionStore) {
         self.windows = windows
@@ -101,6 +104,8 @@ final class ScreenOCRController {
             return
         }
         capturing = true
+        captureGeneration &+= 1
+        let generation = captureGeneration
         let selector = RegionSelectionController()
         regionSelector = selector
         selector.begin { [weak self] selection in
@@ -122,6 +127,12 @@ final class ScreenOCRController {
 
             TextRecognizer.recognize(image) { [weak self] text in
                 guard let self else { return }
+                // Discard a stale completion: a newer capture superseded this one while
+                // Vision was running, so it must not overwrite the clipboard/capsule.
+                guard generation == self.captureGeneration else {
+                    Self.log.info("discarding stale OCR result (gen \(generation) ≠ \(self.captureGeneration))")
+                    return
+                }
                 let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty else {
                     Self.log.info("OCR found no text in the region")

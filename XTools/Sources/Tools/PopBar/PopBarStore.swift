@@ -22,6 +22,9 @@ final class PopBarStore: ObservableObject {
     @Published var screenOCRAutoCopy: Bool
     @Published var screenOCRHotKey: KeyCombo
     @Published private(set) var isScreenRecordingAuthorized: Bool
+    /// Whether the OCR hotkey is actually registered right now — can be false even when
+    /// `screenOCREnabled` is true (e.g. the stored combo was taken at launch).
+    @Published private(set) var screenOCRRegistered: Bool
 
     private let controller: PopBarController
 
@@ -41,6 +44,7 @@ final class PopBarStore: ObservableObject {
         self.screenOCRAutoCopy = PopBarPreferences.screenOCRAutoCopy
         self.screenOCRHotKey = PopBarPreferences.screenOCRHotKey
         self.isScreenRecordingAuthorized = ScreenRecordingAuthorizer.isAuthorized
+        self.screenOCRRegistered = controller.screenOCRIsRegistered
     }
 
     /// Turn the popup on/off. Turning on without permission persists the choice
@@ -90,6 +94,8 @@ final class PopBarStore: ObservableObject {
         // reflect it so the OCR permission row auto-hides once it's granted.
         let screenRec = ScreenRecordingAuthorizer.isAuthorized
         if screenRec != isScreenRecordingAuthorized { isScreenRecordingAuthorized = screenRec }
+        let reg = controller.screenOCRIsRegistered
+        if reg != screenOCRRegistered { screenOCRRegistered = reg }
     }
 
     /// Switch the popup's presentation style. Persisted in PopBar's own prefs and
@@ -153,12 +159,15 @@ final class PopBarStore: ObservableObject {
     func setScreenOCREnabled(_ on: Bool) -> Bool {
         screenOCREnabled = on
         PopBarPreferences.screenOCREnabled = on
+        let ok: Bool
         if on {
-            return controller.startScreenOCR()
+            ok = controller.startScreenOCR()
         } else {
             controller.stopScreenOCR()
-            return true
+            ok = true
         }
+        screenOCRRegistered = controller.screenOCRIsRegistered
+        return ok
     }
 
     func setScreenOCRAutoCopy(_ on: Bool) {
@@ -172,6 +181,7 @@ final class PopBarStore: ObservableObject {
     func setScreenOCRHotKey(_ combo: KeyCombo) -> Bool {
         let ok = controller.setScreenOCRHotKey(combo)
         if ok { screenOCRHotKey = combo }
+        screenOCRRegistered = controller.screenOCRIsRegistered
         return ok
     }
 

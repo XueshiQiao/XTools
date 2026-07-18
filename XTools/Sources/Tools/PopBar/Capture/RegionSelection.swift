@@ -29,6 +29,9 @@ final class RegionSelectionController {
     private var completion: ((RegionSelection?) -> Void)?
     /// Guards against a double callback: only the first finish/cancel wins.
     private var hasFinished = false
+    /// The app that was frontmost before we activated XTools to capture Esc; focus is
+    /// returned to it once the overlay is dismissed (success or cancel).
+    private var previousApp: NSRunningApplication?
 
     /// Shows overlays on all screens. Calls `completion` exactly ONCE, on the main
     /// thread: a RegionSelection, or nil if the user cancelled (Esc / right-click /
@@ -45,6 +48,8 @@ final class RegionSelectionController {
         self.hasFinished = false
 
         let mouse = NSEvent.mouseLocation
+        // Remember who was frontmost so we can hand focus back after the overlay closes.
+        previousApp = NSWorkspace.shared.frontmostApplication
         // Activate so a borderless overlay can become key and receive Esc via keyDown.
         NSApp.activate(ignoringOtherApps: true)
 
@@ -89,6 +94,7 @@ final class RegionSelectionController {
         let globalRect = CGRect(origin: globalOrigin, size: winRect.size)
 
         teardown()
+        restorePreviousApp()
         let done = completion
         completion = nil
         Self.log.info("region selected \(Int(globalRect.width))x\(Int(globalRect.height)) pt on \(screen.localizedName)")
@@ -99,6 +105,7 @@ final class RegionSelectionController {
         guard !hasFinished else { return }
         hasFinished = true
         teardown()
+        restorePreviousApp()
         let done = completion
         completion = nil
         Self.log.info("region selection cancelled")
@@ -112,6 +119,15 @@ final class RegionSelectionController {
             window.contentView = nil
         }
         overlays.removeAll()
+    }
+
+    /// Hand keyboard focus back to whatever app was frontmost before we activated
+    /// XTools. On success the capsule is a non-activating panel, so restoring the prior
+    /// app doesn't hide it; on cancel the user simply stays where they were.
+    private func restorePreviousApp() {
+        guard let app = previousApp, app.bundleIdentifier != Bundle.main.bundleIdentifier else { return }
+        app.activate(options: [])
+        previousApp = nil
     }
 }
 

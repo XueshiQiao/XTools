@@ -34,6 +34,11 @@ struct HotKeyRecorderField: View {
         }
         .buttonStyle(.plain)
         .onDisappear { stopRecording() }
+        // Cancel recording if the window loses key focus (app switch, a sheet opening,
+        // etc.) so the key monitor never keeps swallowing keystrokes in the background.
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in
+            if isRecording { stopRecording() }
+        }
     }
 
     // MARK: - Recording lifecycle

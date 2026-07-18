@@ -125,7 +125,7 @@ struct PopBarView: View {
                 } label: {
                     iconLabel("command", .indigo, L("popbar.ocr.hotkey.label"))
                 }
-                if ocrHotKeyError {
+                if ocrHotKeyError || (store.screenOCREnabled && !store.screenOCRRegistered) {
                     Text(L("popbar.ocr.hotkey.occupied"))
                         .font(.caption).foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true)

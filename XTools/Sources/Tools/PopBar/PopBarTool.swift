@@ -40,7 +40,10 @@ final class PopBarTool: XToolModule {
         }
     }
 
-    func shutdown() { controller.stop() }
+    func shutdown() {
+        controller.stop()
+        controller.stopScreenOCR()   // OCR isn't torn down by stop() (independent lifecycle)
+    }
 
     func makeRootView() -> AnyView { AnyView(PopBarView(store: store, llm: llm, actions: actionStore)) }
 }

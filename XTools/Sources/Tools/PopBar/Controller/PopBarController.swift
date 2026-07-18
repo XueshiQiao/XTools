@@ -84,7 +84,9 @@ final class PopBarController {
         resolveTask?.cancel()
         monitor.stop()
         windows.closeAll()
-        ocr.stop()
+        // OCR is deliberately NOT stopped here: its lifecycle is independent of the
+        // selection monitor, so disabling the selection popup must not kill the OCR
+        // hotkey. Full OCR teardown happens via `stopScreenOCR()` on tool shutdown.
         Self.log.info("stopped")
     }
 
@@ -106,6 +108,10 @@ final class PopBarController {
     /// (the previous one is kept registered so the user is never left without one).
     @discardableResult
     func setScreenOCRHotKey(_ combo: KeyCombo) -> Bool { ocr.setHotKey(combo) }
+
+    /// Whether the OCR global hotkey is currently registered (may be false even when
+    /// `screenOCREnabled` is true, if the combo was taken at launch).
+    var screenOCRIsRegistered: Bool { ocr.isEnabled }
 
     // MARK: - Trigger → resolve → show
 

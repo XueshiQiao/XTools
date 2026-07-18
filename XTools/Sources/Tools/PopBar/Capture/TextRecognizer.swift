@@ -49,13 +49,15 @@ enum TextRecognizer {
     private static func orderedText(from observations: [VNRecognizedTextObservation]) -> String {
         let topDown = observations.sorted { $0.boundingBox.maxY > $1.boundingBox.maxY }
 
-        // Group runs that sit on roughly the same line, then sort each left→right.
-        var ordered: [VNRecognizedTextObservation] = []
+        // Group runs that sit on roughly the same visual line.
+        var lines: [[VNRecognizedTextObservation]] = []
         var line: [VNRecognizedTextObservation] = []
         var lineTop: CGFloat = 0
 
         func flush() {
-            ordered.append(contentsOf: line.sorted { $0.boundingBox.minX < $1.boundingBox.minX })
+            guard !line.isEmpty else { return }
+            // Left→right within the line.
+            lines.append(line.sorted { $0.boundingBox.minX < $1.boundingBox.minX })
             line.removeAll(keepingCapacity: true)
         }
 
@@ -70,8 +72,11 @@ enum TextRecognizer {
         }
         flush()
 
-        return ordered
-            .compactMap { $0.topCandidates(1).first?.string }
+        // Join fragments WITHIN a line with a space; separate lines with newlines — so
+        // multiple observations on one visual line don't each become their own line.
+        return lines
+            .map { row in row.compactMap { $0.topCandidates(1).first?.string }.joined(separator: " ") }
+            .filter { !$0.isEmpty }
             .joined(separator: "\n")
     }
 }
