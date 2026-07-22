@@ -13,6 +13,11 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  # Serialize release (tag) builds so an older run can never overwrite a newer
+  # appcast on main; PR/manual validation runs still parallelize per-ref.
+  group: ${{ startsWith(github.ref, 'refs/tags/v') && 'release' || format('ci-{0}', github.ref) }}
+
 jobs:
   build:
     runs-on: macos-26
@@ -271,11 +276,37 @@ jobs:
           echo "--- Appcast ---"
           cat appcast.xml
 
+          # Commit the appcast on top of CURRENT origin/main, never on the tag's
+          # detached HEAD: the tag can legally sit off main (e.g. tagged before a
+          # pull --rebase rewrote the release commit), and main gains an appcast
+          # commit per release — committing on the tag commit then makes
+          # `push HEAD:main` a non-fast-forward rejection. A temp worktree keeps
+          # the build tree (tag contents + appcast.xml for the Release step) intact.
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add appcast.xml
-          git commit -m "Update appcast for ${TAG_NAME}"
-          git push origin HEAD:main
+          WT="$RUNNER_TEMP/appcast-wt"
+          for attempt in 1 2 3; do
+            # Explicit refspec: the CI checkout is a shallow/single-ref clone, so a
+            # plain `git fetch origin main` would not create refs/remotes/origin/main.
+            git fetch origin +refs/heads/main:refs/remotes/origin/main
+            git worktree remove --force "$WT" 2>/dev/null || true
+            git worktree add --detach "$WT" origin/main
+            cp appcast.xml "$WT/appcast.xml"
+            git -C "$WT" add appcast.xml
+            if git -C "$WT" diff --cached --quiet; then
+              echo "appcast.xml already up to date on main; nothing to push."
+              break
+            fi
+            git -C "$WT" commit -m "Update appcast for ${TAG_NAME}"
+            if git -C "$WT" push origin HEAD:main; then
+              break
+            fi
+            if [ "$attempt" = 3 ]; then
+              echo "::error::appcast push to main failed after 3 attempts"; exit 1
+            fi
+            echo "Push rejected (main moved during the build); retrying…"
+          done
+          git worktree remove --force "$WT" 2>/dev/null || true
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4

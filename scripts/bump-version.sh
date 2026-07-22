@@ -30,6 +30,20 @@ if [ -n "$other_dirty" ]; then
   exit 1
 fi
 
+# Sync with origin/main BEFORE committing and tagging. CI pushes an
+# "Update appcast" commit to main after every release, so local main is
+# usually behind when cutting the next one. Tagging first and rebasing
+# afterwards strands the tag on a pre-rebase commit that isn't on main,
+# and the release pipeline's appcast push then fails (non-fast-forward).
+if git fetch origin main 2>/dev/null; then
+  if ! git merge-base --is-ancestor origin/main HEAD; then
+    echo "Local branch is behind origin/main — rebasing before tagging…"
+    git rebase --autostash origin/main
+  fi
+else
+  echo "⚠️  could not fetch origin/main — skipping up-to-date check" >&2
+fi
+
 # `|| true`: don't let a no-match abort under `set -o pipefail` before the guard.
 cur_build=$(grep -E '^[[:space:]]*CURRENT_PROJECT_VERSION:' "$PROJECT_YML" | sed -E 's/[^0-9]*([0-9]+).*/\1/' || true)
 [ -n "$cur_build" ] || { echo "error: could not read CURRENT_PROJECT_VERSION from $PROJECT_YML" >&2; exit 1; }
