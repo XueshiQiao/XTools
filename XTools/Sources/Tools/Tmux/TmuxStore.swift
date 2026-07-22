@@ -22,8 +22,14 @@ final class TmuxStore: ObservableObject {
     /// Currently selected tree row (for keyboard/context actions).
     @Published var selection: TmuxTarget?
 
+    /// True while a window drag is in progress — pauses auto-refresh so the
+    /// list doesn't thrash under the cursor mid-drag.
+    @Published var isDraggingWindow = false
+
     private let work = DispatchQueue(label: "me.xueshi.xtools.tmux", qos: .userInitiated)
     private var didSeedExpansion = false
+    /// Bumped on each begin/end so a late safety-timeout can't clear a newer drag.
+    private var dragGeneration: UInt64 = 0
 
     // MARK: - Derived
 
@@ -79,6 +85,8 @@ final class TmuxStore: ObservableObject {
     // MARK: - Refresh
 
     func refresh() {
+        // Don't rebuild the tree while the user is mid-drag — drop targets vanish.
+        if isDraggingWindow { return }
         isScanning = true
         work.async { [weak self] in
             do {
@@ -165,6 +173,25 @@ final class TmuxStore: ObservableObject {
         expandedWindows.removeAll()
     }
 
+    // MARK: - Drag lifecycle
+
+    func beginWindowDrag() {
+        isDraggingWindow = true
+        dragGeneration &+= 1
+        let gen = dragGeneration
+        // Cancelled drags don't call endWindowDrag — release the refresh pause
+        // after a generous timeout so a stuck flag can't freeze the tree forever.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 20) { [weak self] in
+            guard let self, self.dragGeneration == gen else { return }
+            self.isDraggingWindow = false
+        }
+    }
+
+    func endWindowDrag() {
+        dragGeneration &+= 1
+        isDraggingWindow = false
+    }
+
     // MARK: - Actions
 
     func jump(_ target: TmuxTarget) {
@@ -185,26 +212,71 @@ final class TmuxStore: ObservableObject {
     }
 
     func moveWindow(_ window: TmuxWindowNode, to session: TmuxSessionNode) {
+        moveWindow(id: window.id, name: window.name, to: .endOfSession(name: session.name),
+                   expandSessionID: session.id)
+    }
+
+    /// Move by stable window id (used by drag-and-drop, which only carries the id).
+    func moveWindow(id windowID: String, name: String? = nil,
+                    to placement: TmuxCLI.WindowPlacement,
+                    expandSessionID: String? = nil) {
+        // No-op: dropping a window onto itself.
+        if case .beforeWindow(let dest) = placement, dest == windowID { return }
+        if case .afterWindow(let dest) = placement, dest == windowID { return }
+
+        let displayName = name ?? window(id: windowID)?.name ?? windowID
+        let expandID = expandSessionID ?? sessionID(for: placement)
+
         work.async { [weak self] in
             do {
-                try TmuxCLI.moveWindow(windowID: window.id, toSessionName: session.name)
+                try TmuxCLI.moveWindow(windowID: windowID, to: placement)
                 DispatchQueue.main.async {
-                    self?.actionMessage = String(
+                    guard let self else { return }
+                    self.actionMessage = String(
                         format: L("tmux.msg.moved"),
-                        window.name,
-                        session.name
+                        displayName,
+                        self.placementDescription(placement)
                     )
-                    // Keep the destination open so the user sees the moved window.
-                    self?.expandedSessions.insert(session.id)
-                    self?.refresh()
+                    if let expandID {
+                        self.expandedSessions.insert(expandID)
+                    }
+                    self.endWindowDrag()
+                    self.refresh()
                 }
             } catch {
                 DispatchQueue.main.async {
                     self?.actionMessage = (error as? LocalizedError)?.errorDescription
                         ?? error.localizedDescription
+                    self?.endWindowDrag()
                     self?.refresh()
                 }
             }
+        }
+    }
+
+    private func sessionID(for placement: TmuxCLI.WindowPlacement) -> String? {
+        switch placement {
+        case .endOfSession(let name):
+            return sessions.first(where: { $0.name == name })?.id
+        case .beforeWindow(let id), .afterWindow(let id):
+            return window(id: id)?.sessionID
+        }
+    }
+
+    private func placementDescription(_ placement: TmuxCLI.WindowPlacement) -> String {
+        switch placement {
+        case .endOfSession(let name):
+            return name
+        case .beforeWindow(let id):
+            if let w = window(id: id) {
+                return "\(w.sessionName):\(w.index) (\(w.name))"
+            }
+            return id
+        case .afterWindow(let id):
+            if let w = window(id: id) {
+                return "\(w.sessionName):\(w.index)+ (\(w.name))"
+            }
+            return id
         }
     }
 }

@@ -254,13 +254,35 @@ enum TmuxCLI {
         log.info("jump client=\(client) → \(target.tmuxFlag)")
     }
 
-    /// Move a window (`@id`) into another session. Lands at the next free index
-    /// of the destination (`session:`). `-d` avoids selecting it there so the
-    /// user's current focus is not stolen mid-organize.
+    /// Where a dragged window should land. Backed by `move-window -b/-a/-t`.
+    enum WindowPlacement: Equatable {
+        /// Append at the next free index of `sessionName` (`session:`).
+        case endOfSession(name: String)
+        /// Insert immediately before the window with this `@id` (`move-window -b`).
+        case beforeWindow(id: String)
+        /// Insert immediately after the window with this `@id` (`move-window -a`).
+        case afterWindow(id: String)
+    }
+
+    /// Move a window (`@id`) to a placement. `-d` avoids selecting it so the
+    /// user's current focus is not stolen mid-organize. Same-session reorder
+    /// and cross-session moves both use this path.
+    static func moveWindow(windowID: String, to placement: WindowPlacement) throws {
+        var args = ["move-window", "-d", "-s", windowID]
+        switch placement {
+        case .endOfSession(let name):
+            args += ["-t", "\(name):"]
+        case .beforeWindow(let destID):
+            args += ["-b", "-t", destID]
+        case .afterWindow(let destID):
+            args += ["-a", "-t", destID]
+        }
+        _ = try run(args)
+        log.info("move-window \(windowID) → \(placement)")
+    }
+
+    /// Convenience: append to the end of a session (context-menu path).
     static func moveWindow(windowID: String, toSessionName: String) throws {
-        // Destination `name:` means "this session, next free index".
-        let dest = "\(toSessionName):"
-        _ = try run(["move-window", "-d", "-s", windowID, "-t", dest])
-        log.info("move-window \(windowID) → \(dest)")
+        try moveWindow(windowID: windowID, to: .endOfSession(name: toSessionName))
     }
 }
