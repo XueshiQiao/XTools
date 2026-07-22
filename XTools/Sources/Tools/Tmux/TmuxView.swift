@@ -140,31 +140,39 @@ struct TmuxView: View {
     }
 
     private func paneRow(_ pane: TmuxPaneNode) -> some View {
-        HStack(spacing: 8) {
+        // Two lines for panes: title row carries the icon; description sits under
+        // the text column (aligned past the icon) so command/path stay readable.
+        HStack(alignment: .top, spacing: 8) {
             Image(systemName: "rectangle.split.3x1")
                 .foregroundStyle(.purple)
-                .frame(width: 16)
-            Text(pane.displayName)
-                .fontWeight(.medium)
-                .lineLimit(1)
-                .truncationMode(.middle)
-            Text(pane.id)
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundStyle(.tertiary)
-                .lineLimit(1)
-            if pane.active {
-                badge(L("tmux.badge.active"), .purple)
+                .frame(width: 16, height: 16)
+                .padding(.top, 2)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(pane.displayName)
+                        .fontWeight(.medium)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Text(pane.id)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                    if pane.active {
+                        badge(L("tmux.badge.active"), .purple)
+                    }
+                    Spacer(minLength: 4)
+                    jumpButton(target: .pane(id: pane.id), help: L("tmux.action.jump.pane"))
+                }
+                if !pane.subtitle.isEmpty {
+                    Text(pane.subtitle)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                }
             }
-            if !pane.subtitle.isEmpty {
-                Text(pane.subtitle)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            Spacer(minLength: 4)
-            jumpButton(target: .pane(id: pane.id), help: L("tmux.action.jump.pane"))
         }
+        .padding(.vertical, 1)
         .contentShape(Rectangle())
         .contextMenu {
             Button(L("tmux.action.jump.pane")) {
