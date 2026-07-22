@@ -11,6 +11,20 @@ final class TmuxPaletteController: NSObject, ObservableObject, NSWindowDelegate 
     private static let log = FileLog("Tmux.Palette")
     private static let defaultSize = NSSize(width: 440, height: 600)
 
+    // MARK: Background style
+    //
+    // Why PopBar-style `behindWindow` blur felt terrible here but fine on the
+    // capsule: PopBar is ~260×64. This palette is ~440×600 and *scrolls*.
+    // `NSVisualEffectView.blendingMode = .behindWindow` re-samples the live
+    // desktop under the whole window every composite frame — fine for a tiny
+    // HUD, catastrophic under a scrolling list or while dragging the window.
+    // Full-screen "translucent" UIs usually don't do that (they use Metal, a
+    // static wallpaper capture, or blur only *within* the window).
+    //
+    // Recipe we use now: clear borderless panel + SwiftUI `Material` fill.
+    // Material is an in-window frosted plate — translucency look without live
+    // desktop sampling on every scroll.
+
     private let store: TmuxStore
     private var hotKey: GlobalHotKey?
     private var panel: NSPanel?
@@ -162,6 +176,27 @@ final class TmuxPaletteController: NSObject, ObservableObject, NSWindowDelegate 
     }
 
     // MARK: - Panel
+    //
+    // Why rounded corners kept "disappearing" when we fixed lag
+    // ---------------------------------------------------------
+    // macOS has two different notions of "round":
+    //
+    // 1) **Window silhouette** (what you see against the desktop)
+    // 2) **View layer cornerRadius** (clips content *inside* the window)
+    //
+    // An **opaque** window must fill every pixel of its rectangular frame
+    // (`isOpaque = true`). If you only set `layer.cornerRadius` on the content
+    // view, the clipped corners still sit on top of the same opaque window
+    // background → silhouette stays a rectangle → "round corners vanished".
+    //
+    // True rounded silhouette with transparent corner pixels requires
+    // `isOpaque = false` (or live glass). That is the path that lagged for us.
+    //
+    // Best practice on modern macOS (Big Sur+): use a **normal titled window**.
+    // The window server draws the system rounded shape while the surface stays
+    // fully opaque — same recipe as System Settings / most floating tools.
+    // Hide the traffic lights if you want a chrome-light look; keep the style
+    // mask that participates in the system shape.
 
     private func ensurePanel() -> NSPanel {
         if let panel { return panel }
@@ -171,13 +206,10 @@ final class TmuxPaletteController: NSObject, ObservableObject, NSWindowDelegate 
             onClose: { [weak self] in self?.hide(restoreFocus: true) }
         )
         let hosting = NSHostingController(rootView: root)
-        hosting.view.wantsLayer = true
 
-        // Borderless floating glass panel — same recipe as PopBar (no traffic
-        // lights, no title bar, clear + material fill in the SwiftUI root).
         let panel = NSPanel(
             contentRect: Self.centeredFrame(),
-            styleMask: [.borderless, .fullSizeContentView, .resizable],
+            styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -187,14 +219,24 @@ final class TmuxPaletteController: NSObject, ObservableObject, NSWindowDelegate 
         panel.isFloatingPanel = true
         panel.level = .floating
         panel.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
-        panel.isOpaque = false
-        panel.backgroundColor = .clear
+
+        // Opaque solid — no desktop sampling (the lag root cause).
+        panel.isOpaque = true
+        panel.backgroundColor = .windowBackgroundColor
         panel.hasShadow = true
-        panel.titleVisibility = .hidden
+
+        // Keep the system title bar (rounded silhouette + drag chrome). Show a
+        // real title; leave traffic lights visible so the bar is a normal window.
+        panel.title = L("tool.tmux.title")
+        panel.titleVisibility = .visible
         panel.titlebarAppearsTransparent = true
         panel.isMovableByWindowBackground = true
+
+        // No manual layer.cornerRadius — that only fakes inner clip and fights
+        // the opaque fill (looks square). System shape owns the silhouette.
         panel.minSize = NSSize(width: 280, height: 280)
         panel.delegate = self
+        Self.log.info("palette panel created (opaque + system rounded titled shape)")
 
         if let saved = TmuxPreferences.windowFrame {
             panel.setFrame(saved, display: false)
@@ -239,24 +281,20 @@ final class TmuxPaletteController: NSObject, ObservableObject, NSWindowDelegate 
     }
 }
 
-// MARK: - Palette root (tree only + liquid glass + Esc)
+// MARK: - Palette root (tree only + Esc)
 
-/// Shell-free host: only the tree, on a PopBar-style visual-effect glass plate.
+/// Shell-free host. Same opaque aurora wash as the main window (`auroraBackground`)
+/// — soft gradient on a solid base, no live desktop sampling.
+/// Corners are rounded on the hosting view layer in `ensurePanel()`.
 private struct TmuxPaletteRootView: View {
     @ObservedObject var store: TmuxStore
     let onClose: () -> Void
 
-    private let cornerRadius: CGFloat = 16
-
     var body: some View {
         TmuxPaletteTreeView(store: store)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .frame(minWidth: 280, minHeight: 280)
-            .background(VisualEffectBlur(cornerRadius: cornerRadius))
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5)
-            )
+            .auroraBackground()
             .onExitCommand(perform: onClose)
             .background(EscKeyMonitor(onEsc: onClose))
     }

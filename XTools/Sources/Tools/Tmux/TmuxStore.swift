@@ -170,13 +170,23 @@ final class TmuxStore: ObservableObject {
     }
 
     func toggleSessionExpanded(_ id: String) {
-        if expandedSessions.contains(id) { expandedSessions.remove(id) }
-        else { expandedSessions.insert(id) }
+        // Disable implicit insertion animations — expanding a session with many
+        // windows must not run a spring layout on every new row (felt like lag).
+        var t = Transaction()
+        t.disablesAnimations = true
+        withTransaction(t) {
+            if expandedSessions.contains(id) { expandedSessions.remove(id) }
+            else { expandedSessions.insert(id) }
+        }
     }
 
     func toggleWindowExpanded(_ id: String) {
-        if expandedWindows.contains(id) { expandedWindows.remove(id) }
-        else { expandedWindows.insert(id) }
+        var t = Transaction()
+        t.disablesAnimations = true
+        withTransaction(t) {
+            if expandedWindows.contains(id) { expandedWindows.remove(id) }
+            else { expandedWindows.insert(id) }
+        }
     }
 
     func expandAll() {

@@ -1,20 +1,10 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Shell-free tree for the hotkey palette: no chrome, no status, no section
-/// headers — only sessions → windows → panes on a liquid-glass panel.
+/// Shell-free tree for the hotkey palette: sessions → windows → panes only.
 ///
-/// Interaction:
-/// - Single-click a collapsible row → expand / collapse
-/// - Double-click any row → jump (session / window / pane)
-/// - Jump arrows still work
-/// - Window drag-and-drop still works
-///
-/// Drag performance notes:
-/// - Window rows must NOT attach delayed single-tap gestures on the same view as
-///   `onDrag` (SwiftUI waits to disambiguate tap vs drag → sticky drag start).
-/// - Rows take plain values + closures, not `@ObservedObject store`, so drag-state
-///   / refresh churn does not re-render the whole tree.
+/// Background note: lag is entirely about the *window fill* (live glass / material
+/// sampling). Drag gesture placement is unrelated — whole-row `onDrag` is fine.
 struct TmuxPaletteTreeView: View {
 
     @ObservedObject var store: TmuxStore
@@ -23,21 +13,23 @@ struct TmuxPaletteTreeView: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 0) {
                 if store.sessions.isEmpty {
                     Text(store.isScanning ? L("launch.scanning") : L("tmux.empty"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(16)
+                        .padding(12)
                 } else {
                     ForEach(store.sessions) { session in
                         sessionBlock(session)
                     }
                 }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 8)
+            .animation(nil, value: store.expandedSessions)
+            .animation(nil, value: store.expandedWindows)
         }
         .scrollContentBackground(.hidden)
         .onAppear { store.refresh() }
@@ -70,7 +62,7 @@ struct TmuxPaletteTreeView: View {
         if expanded {
             ForEach(session.windows) { window in
                 windowBlock(window)
-                    .padding(.leading, 14)
+                    .padding(.leading, 12)
             }
         }
     }
@@ -110,45 +102,31 @@ struct TmuxPaletteTreeView: View {
                     pane: pane,
                     onJump: { store.jump(.pane(id: pane.id)) }
                 )
-                .padding(.leading, 14)
+                .padding(.leading, 12)
             }
         }
     }
 }
 
-// MARK: - Expand / jump gesture (session only — NOT on drag sources)
+// MARK: - Jump button (roomy hit box, compact visual)
 
-/// Single-click (after a short delay) vs double-click without firing both.
-/// Never put this on a view that also has `onDrag`.
-private struct SingleDoubleTapModifier: ViewModifier {
-    let onSingle: () -> Void
-    let onDouble: () -> Void
+private struct PaletteJumpButton: View {
+    let help: String
+    let action: () -> Void
 
-    @State private var pending: DispatchWorkItem?
-
-    func body(content: Content) -> some View {
-        content
-            .onTapGesture(count: 2) {
-                pending?.cancel()
-                pending = nil
-                onDouble()
-            }
-            .onTapGesture(count: 1) {
-                pending?.cancel()
-                let work = DispatchWorkItem { onSingle() }
-                pending = work
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.22, execute: work)
-            }
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "arrow.right.circle")
+                .font(.system(size: 15, weight: .medium))
+                .frame(width: 34, height: 26)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.borderless)
+        .help(help)
     }
 }
 
-private extension View {
-    func singleDoubleTap(single: @escaping () -> Void, double: @escaping () -> Void) -> some View {
-        modifier(SingleDoubleTapModifier(onSingle: single, onDouble: double))
-    }
-}
-
-// MARK: - Session row (drop target, not a drag source)
+// MARK: - Session row
 
 private struct PaletteSessionRow: View {
     let session: TmuxSessionNode
@@ -160,19 +138,23 @@ private struct PaletteSessionRow: View {
     @State private var isTargeted = false
 
     var body: some View {
-        HStack(alignment: .lastTextBaseline, spacing: 8) {
-            Image(systemName: expanded ? "chevron.down" : "chevron.right")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .frame(width: 12, alignment: .center)
-
-            Image(systemName: "square.stack.3d.up.fill")
-                .foregroundStyle(.teal)
-                .frame(width: 16, alignment: .center)
-
-            Text(session.name)
-                .fontWeight(.semibold)
-                .lineLimit(1)
+        HStack(alignment: .center, spacing: 6) {
+            Button(action: onToggle) {
+                HStack(spacing: 6) {
+                    Image(systemName: expanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 12)
+                    Image(systemName: "square.stack.3d.up.fill")
+                        .foregroundStyle(.teal)
+                        .frame(width: 16)
+                    Text(session.name)
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
 
             Text(session.id)
                 .font(.system(size: 11, design: .monospaced))
@@ -189,24 +171,15 @@ private struct PaletteSessionRow: View {
 
             Spacer(minLength: 4)
 
-            Button(action: onJump) {
-                Image(systemName: "arrow.right.circle")
-                    .font(.system(size: 14, weight: .medium))
-            }
-            .buttonStyle(.borderless)
-            .help(L("tmux.action.jump.session"))
-            .contentShape(Rectangle())
-            .frame(minWidth: 28, minHeight: 22)
+            PaletteJumpButton(help: L("tmux.action.jump.session"), action: onJump)
         }
-        .padding(.vertical, 5)
-        .padding(.horizontal, 8)
+        .padding(.vertical, 2)
+        .padding(.horizontal, 6)
         .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(isTargeted ? Color.accentColor.opacity(0.18) : Color.clear)
         )
         .contentShape(Rectangle())
-        // Session is not dragged — single/double tap is fine here.
-        .singleDoubleTap(single: onToggle, double: onJump)
         .onDrop(of: [UTType.plainText, UTType.utf8PlainText, UTType.text],
                 isTargeted: $isTargeted) { providers in
             acceptWindowDrop(providers, onFailure: onDropFailed, onOK: onDropWindow)
@@ -218,7 +191,7 @@ private struct PaletteSessionRow: View {
     }
 }
 
-// MARK: - Window row (drag source — no delayed single-tap on this view)
+// MARK: - Window row (whole-row drag)
 
 private struct PaletteWindowRow: View {
     let window: TmuxWindowNode
@@ -233,28 +206,24 @@ private struct PaletteWindowRow: View {
     @State private var isTargeted = false
 
     var body: some View {
-        HStack(alignment: .lastTextBaseline, spacing: 8) {
-            // Expand hit target (chevron + icon). Kept as a real Button so it
-            // never shares a gesture arena with `onDrag` on the parent.
+        HStack(alignment: .center, spacing: 6) {
             Button(action: onToggle) {
                 HStack(spacing: 6) {
                     Image(systemName: expanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(.secondary)
-                        .frame(width: 12, alignment: .center)
+                        .frame(width: 12)
                     Image(systemName: "macwindow")
                         .foregroundStyle(.blue)
-                        .frame(width: 16, alignment: .center)
+                        .frame(width: 16)
+                    Text("\(window.index): \(window.name)")
+                        .fontWeight(.medium)
+                        .lineLimit(1)
                 }
-                .padding(.vertical, 4)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .help(expanded ? L("tmux.collapse") : L("tmux.expand"))
-
-            Text("\(window.index): \(window.name)")
-                .fontWeight(.medium)
-                .lineLimit(1)
 
             Text(window.id)
                 .font(.system(size: 11, design: .monospaced))
@@ -271,26 +240,16 @@ private struct PaletteWindowRow: View {
 
             Spacer(minLength: 4)
 
-            Button(action: onJump) {
-                Image(systemName: "arrow.right.circle")
-                    .font(.system(size: 14, weight: .medium))
-            }
-            .buttonStyle(.borderless)
-            .help(L("tmux.action.jump.window"))
-            .contentShape(Rectangle())
-            .frame(minWidth: 28, minHeight: 22)
+            PaletteJumpButton(help: L("tmux.action.jump.window"), action: onJump)
         }
-        .padding(.vertical, 5)
-        .padding(.horizontal, 8)
+        .padding(.vertical, 2)
+        .padding(.horizontal, 6)
         .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
                 .fill(isTargeted ? Color.accentColor.opacity(0.18) : Color.clear)
         )
         .contentShape(Rectangle())
-        // Double-click jump only. Do NOT put a delayed single-tap (or a competing
-        // DragGesture) on this view — both force SwiftUI to disambiguate against
-        // `onDrag` and make the drag feel sticky/janky.
-        .onTapGesture(count: 2, perform: onJump)
+        // Whole-row drag (not a separate grip). Lag was background-only.
         .onDrag {
             onBeginDrag()
             let token = TmuxWindowDragToken.encode(windowID: window.id, name: window.name)
@@ -323,11 +282,11 @@ private struct PalettePaneRow: View {
     let onJump: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(alignment: .lastTextBaseline, spacing: 8) {
+        VStack(alignment: .leading, spacing: 1) {
+            HStack(alignment: .center, spacing: 6) {
                 Image(systemName: "rectangle.split.3x1")
                     .foregroundStyle(.purple)
-                    .frame(width: 16, alignment: .center)
+                    .frame(width: 16)
 
                 Text(pane.displayName)
                     .fontWeight(.medium)
@@ -345,14 +304,7 @@ private struct PalettePaneRow: View {
 
                 Spacer(minLength: 4)
 
-                Button(action: onJump) {
-                    Image(systemName: "arrow.right.circle")
-                        .font(.system(size: 14, weight: .medium))
-                }
-                .buttonStyle(.borderless)
-                .help(L("tmux.action.jump.pane"))
-                .contentShape(Rectangle())
-                .frame(minWidth: 28, minHeight: 22)
+                PaletteJumpButton(help: L("tmux.action.jump.pane"), action: onJump)
             }
 
             if !pane.subtitle.isEmpty {
@@ -361,25 +313,24 @@ private struct PalettePaneRow: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
-                    .padding(.leading, 24)
+                    .padding(.leading, 22)
             }
         }
-        .padding(.vertical, 4)
-        .padding(.horizontal, 8)
+        .padding(.vertical, 2)
+        .padding(.horizontal, 6)
         .contentShape(Rectangle())
-        .onTapGesture(count: 2, perform: onJump)
         .contextMenu {
             Button(L("tmux.action.jump.pane"), action: onJump)
         }
     }
 }
 
-// MARK: - Shared bits
+// MARK: - Shared
 
 private func paletteBadge(_ text: String, _ color: Color) -> some View {
     Text(text)
         .font(.system(size: 10, weight: .semibold))
-        .padding(.horizontal, 6)
+        .padding(.horizontal, 5)
         .padding(.vertical, 1)
         .background(Capsule().fill(color.opacity(0.15)))
         .foregroundStyle(color)
