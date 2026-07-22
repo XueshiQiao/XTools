@@ -707,8 +707,16 @@
 "tmux.status.noClient" = "No terminal is attached — jump needs an attached client. Move still works.";
 "tmux.empty" = "No tmux sessions found. Is tmux running?";
 "tmux.footer" = "Drag a window onto another window (insert before it) or onto a session (append at end). Right-click still works. Arrow / double-click jumps.";
+"tmux.footer.palette" = "Jump closes this window. Drag windows to reorganize — Esc or the hotkey again dismisses.";
 "tmux.drop.session.help" = "Drop a window here to append it at the end of this session";
 "tmux.drop.window.help" = "Drag to move · drop another window here to insert before this one";
+"tmux.hotkey.header" = "Global Palette";
+"tmux.hotkey.toggle" = "Hotkey palette";
+"tmux.hotkey.toggle.sub" = "Open this tree from anywhere — even with the main window closed.";
+"tmux.hotkey.label" = "Shortcut";
+"tmux.hotkey.hint" = "Press %@ anywhere to show or hide the Tmux tree.";
+"tmux.hotkey.occupied" = "That shortcut is already in use. Pick another.";
+"tmux.hotkey.footer" = "Default is ⌃⌥⌘T. Works while XTools is running in the menu bar.";
 "tmux.tree.header" = "Sessions";
 "tmux.badge.attached" = "attached";
 "tmux.badge.active" = "active";

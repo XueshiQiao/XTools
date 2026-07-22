@@ -1,25 +1,42 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+/// Where the tree is hosted.
+enum TmuxPresentation {
+    /// Sidebar tab inside the main XTools window (includes hotkey settings).
+    case embedded
+    /// Floating palette opened by the global hotkey (shell-free).
+    case palette
+}
+
 /// Tmux Manager page: a live tree of sessions → windows → panes, with refresh,
 /// click-to-jump, context-menu move, and drag-and-drop window placement.
 ///
-/// Deliberately self-contained (only needs a `TmuxStore`) so a future hotkey can
-/// open this view alone in its own window — no shell chrome required.
+/// Works embedded in the main window or alone inside the hotkey palette panel —
+/// only a `TmuxStore` (and optionally the palette controller for settings) is required.
 struct TmuxView: View {
 
     @ObservedObject private var store: TmuxStore
+    @ObservedObject private var palette: TmuxPaletteController
+    private let presentation: TmuxPresentation
 
     private let autoRefresh = Timer.publish(every: 4, on: .main, in: .common).autoconnect()
 
-    init(store: TmuxStore) {
+    init(store: TmuxStore,
+         palette: TmuxPaletteController,
+         presentation: TmuxPresentation = .embedded) {
         _store = ObservedObject(wrappedValue: store)
+        _palette = ObservedObject(wrappedValue: palette)
+        self.presentation = presentation
     }
 
     var body: some View {
         List {
             if let message = store.actionMessage {
                 Section { messageBanner(message) }
+            }
+            if presentation == .embedded {
+                hotkeySection
             }
             statusSection
             treeSection
@@ -47,6 +64,52 @@ struct TmuxView: View {
         .onAppear { store.refresh() }
         .onReceive(autoRefresh) { _ in
             if !store.isDraggingWindow { store.refresh() }
+        }
+    }
+
+    // MARK: - Hotkey settings (embedded only)
+
+    private var hotkeySection: some View {
+        Section {
+            Toggle(isOn: Binding(
+                get: { palette.hotkeyEnabled },
+                set: { palette.hotkeyOccupied = !palette.setHotkeyEnabled($0) }
+            )) {
+                featureLabel(
+                    "keyboard",
+                    .teal,
+                    L("tmux.hotkey.toggle"),
+                    L("tmux.hotkey.toggle.sub")
+                )
+            }
+            .disabled(false)
+
+            if palette.hotkeyEnabled {
+                LabeledContent {
+                    HotKeyRecorderField(combo: palette.hotKeyCombo) { combo in
+                        palette.hotkeyOccupied = !palette.setHotKey(combo)
+                    }
+                } label: {
+                    iconLabel("command", .indigo, L("tmux.hotkey.label"))
+                }
+
+                if palette.hotkeyOccupied || (palette.hotkeyEnabled && !palette.isRegistered) {
+                    Text(L("tmux.hotkey.occupied"))
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text(String(format: L("tmux.hotkey.hint"), palette.hotKeyCombo.display))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        } header: {
+            Text(L("tmux.hotkey.header"))
+        } footer: {
+            Text(L("tmux.hotkey.footer"))
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -79,8 +142,13 @@ struct TmuxView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         } footer: {
-            Text(L("tmux.footer"))
-                .fixedSize(horizontal: false, vertical: true)
+            if presentation == .palette {
+                Text(L("tmux.footer.palette"))
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text(L("tmux.footer"))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
@@ -140,36 +208,34 @@ struct TmuxView: View {
     }
 
     private func paneRow(_ pane: TmuxPaneNode) -> some View {
-        // Two lines for panes: title row carries the icon; description sits under
-        // the text column (aligned past the icon) so command/path stay readable.
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "rectangle.split.3x1")
-                .foregroundStyle(.purple)
-                .frame(width: 16, height: 16)
-                .padding(.top, 2)
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(pane.displayName)
-                        .fontWeight(.medium)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                    Text(pane.id)
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(1)
-                    if pane.active {
-                        badge(L("tmux.badge.active"), .purple)
-                    }
-                    Spacer(minLength: 4)
-                    jumpButton(target: .pane(id: pane.id), help: L("tmux.action.jump.pane"))
+        // Two lines for panes: title row carries the icon (bottom-aligned with
+        // text); description sits under the text column with no icon.
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .lastTextBaseline, spacing: 8) {
+                Image(systemName: "rectangle.split.3x1")
+                    .foregroundStyle(.purple)
+                    .frame(width: 16, alignment: .center)
+                Text(pane.displayName)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Text(pane.id)
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                if pane.active {
+                    badge(L("tmux.badge.active"), .purple)
                 }
-                if !pane.subtitle.isEmpty {
-                    Text(pane.subtitle)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .truncationMode(.middle)
-                }
+                Spacer(minLength: 4)
+                jumpButton(target: .pane(id: pane.id), help: L("tmux.action.jump.pane"))
+            }
+            if !pane.subtitle.isEmpty {
+                Text(pane.subtitle)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .padding(.leading, 24)
             }
         }
         .padding(.vertical, 1)
@@ -230,7 +296,8 @@ struct TmuxView: View {
 // MARK: - Drag payload
 
 /// Plain-text drag token so we don't need a custom UTType in Info.plist.
-private enum TmuxWindowDragToken {
+/// Shared with the palette tree (`TmuxPaletteTreeView`).
+enum TmuxWindowDragToken {
     static let prefix = "xtools.tmux.window:"
 
     static func encode(windowID: String, name: String) -> String {
@@ -275,10 +342,10 @@ private struct SessionDropLabel: View {
     @State private var isTargeted = false
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(alignment: .lastTextBaseline, spacing: 8) {
             Image(systemName: "square.stack.3d.up.fill")
                 .foregroundStyle(.teal)
-                .frame(width: 16)
+                .frame(width: 16, alignment: .center)
             Text(session.name)
                 .fontWeight(.semibold)
                 .lineLimit(1)
@@ -357,10 +424,10 @@ private struct WindowDragDropLabel: View {
     @State private var isTargeted = false
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(alignment: .lastTextBaseline, spacing: 8) {
             Image(systemName: "macwindow")
                 .foregroundStyle(.blue)
-                .frame(width: 16)
+                .frame(width: 16, alignment: .center)
             Text("\(window.index): \(window.name)")
                 .fontWeight(.medium)
                 .lineLimit(1)

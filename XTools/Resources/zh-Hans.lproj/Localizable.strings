@@ -707,8 +707,16 @@
 "tmux.status.noClient" = "当前没有终端 attach —— 跳转需要已 attach 的 client。移动 window 仍可用。";
 "tmux.empty" = "未发现 tmux session。tmux 是否已运行？";
 "tmux.footer" = "拖 window 到另一个 window 上（插到它前面），或拖到 session 上（追加到末尾）。右键菜单仍可用。箭头/双击可跳转。";
+"tmux.footer.palette" = "跳转成功后会关闭此窗口。拖拽可整理 window —— Esc 或再按快捷键关闭。";
 "tmux.drop.session.help" = "把 window 拖到这里，会追加到该 session 末尾";
 "tmux.drop.window.help" = "拖动可移动 · 把其他 window 拖到这里会插到它前面";
+"tmux.hotkey.header" = "全局唤起";
+"tmux.hotkey.toggle" = "快捷键面板";
+"tmux.hotkey.toggle.sub" = "在任意 App 中打开这棵树 —— 主窗口关掉也能用。";
+"tmux.hotkey.label" = "快捷键";
+"tmux.hotkey.hint" = "任意位置按 %@ 显示或隐藏 Tmux 树。";
+"tmux.hotkey.occupied" = "该快捷键已被占用，请换一个。";
+"tmux.hotkey.footer" = "默认 ⌃⌥⌘T。XTools 在菜单栏运行时即可使用。";
 "tmux.tree.header" = "Sessions";
 "tmux.badge.attached" = "attached";
 "tmux.badge.active" = "active";

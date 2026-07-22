@@ -24,7 +24,13 @@ final class TmuxStore: ObservableObject {
 
     /// True while a window drag is in progress — pauses auto-refresh so the
     /// list doesn't thrash under the cursor mid-drag.
-    @Published var isDraggingWindow = false
+    /// NOT `@Published`: flipping it must not re-render every row mid-drag
+    /// (that was a major source of jank).
+    private(set) var isDraggingWindow = false
+
+    /// Fired on the main thread after a successful jump. The palette controller
+    /// uses this to dismiss itself so focus returns to the terminal.
+    var onJumpSucceeded: (() -> Void)?
 
     private let work = DispatchQueue(label: "me.xueshi.xtools.tmux", qos: .userInitiated)
     private var didSeedExpansion = false
@@ -163,6 +169,16 @@ final class TmuxStore: ObservableObject {
         )
     }
 
+    func toggleSessionExpanded(_ id: String) {
+        if expandedSessions.contains(id) { expandedSessions.remove(id) }
+        else { expandedSessions.insert(id) }
+    }
+
+    func toggleWindowExpanded(_ id: String) {
+        if expandedWindows.contains(id) { expandedWindows.remove(id) }
+        else { expandedWindows.insert(id) }
+    }
+
     func expandAll() {
         expandedSessions = Set(sessions.map(\.id))
         expandedWindows = Set(sessions.flatMap { $0.windows.map(\.id) })
@@ -199,8 +215,11 @@ final class TmuxStore: ObservableObject {
             do {
                 try TmuxCLI.jump(to: target, preferredClient: self?.clients.first)
                 DispatchQueue.main.async {
-                    self?.actionMessage = L("tmux.msg.jumped")
-                    self?.refresh()
+                    guard let self else { return }
+                    self.actionMessage = L("tmux.msg.jumped")
+                    // Notify before refresh so the palette can dismiss immediately.
+                    self.onJumpSucceeded?()
+                    self.refresh()
                 }
             } catch {
                 DispatchQueue.main.async {
