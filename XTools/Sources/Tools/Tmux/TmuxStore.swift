@@ -124,20 +124,13 @@ final class TmuxStore: ObservableObject {
         }
     }
 
-    /// First successful load: expand attached sessions and their active windows.
+    /// First successful load: expand every session so windows are visible; leave
+    /// windows collapsed (panes stay hidden until the user opens a window).
     private func seedExpansionIfNeeded() {
         guard !didSeedExpansion else { return }
         didSeedExpansion = true
-        for s in sessions where s.attached {
-            expandedSessions.insert(s.id)
-            for w in s.windows where w.active {
-                expandedWindows.insert(w.id)
-            }
-        }
-        // If nothing attached, expand the first session so the page isn't a wall of closed rows.
-        if expandedSessions.isEmpty, let first = sessions.first {
-            expandedSessions.insert(first.id)
-        }
+        expandedSessions = Set(sessions.map(\.id))
+        // expandedWindows intentionally left empty — panes stay collapsed by default.
     }
 
     private func pruneExpansion() {

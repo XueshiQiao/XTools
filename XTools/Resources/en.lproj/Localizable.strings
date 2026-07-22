@@ -706,7 +706,7 @@
 "tmux.status.count" = "%1$ld sessions · %2$ld windows · %3$ld panes · %4$ld client(s)";
 "tmux.status.noClient" = "No terminal is attached — jump needs an attached client. Move still works.";
 "tmux.empty" = "No tmux sessions found. Is tmux running?";
-"tmux.footer" = "Drag a window onto another window (insert before it) or onto a session (append at end). Right-click still works. Arrow / double-click jumps.";
+"tmux.footer" = "Drag a window onto another window (insert before it) or onto a session (append at end). Right-click still works. Use the arrow to jump.";
 "tmux.footer.palette" = "Jump closes this window. Drag windows to reorganize — Esc or the hotkey again dismisses.";
 "tmux.drop.session.help" = "Drop a window here to append it at the end of this session";
 "tmux.drop.window.help" = "Drag this window · drop onto a session (append) or window (insert before)";

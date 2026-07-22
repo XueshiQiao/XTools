@@ -706,7 +706,7 @@
 "tmux.status.count" = "%1$ld 个 session · %2$ld 个 window · %3$ld 个 pane · %4$ld 个 client";
 "tmux.status.noClient" = "当前没有终端 attach —— 跳转需要已 attach 的 client。移动 window 仍可用。";
 "tmux.empty" = "未发现 tmux session。tmux 是否已运行？";
-"tmux.footer" = "拖 window 到另一个 window 上（插到它前面），或拖到 session 上（追加到末尾）。右键菜单仍可用。箭头/双击可跳转。";
+"tmux.footer" = "拖 window 到另一个 window 上（插到它前面），或拖到 session 上（追加到末尾）。右键菜单仍可用。点箭头跳转。";
 "tmux.footer.palette" = "跳转成功后会关闭此窗口。拖拽可整理 window —— Esc 或再按快捷键关闭。";
 "tmux.drop.session.help" = "把 window 拖到这里，会追加到该 session 末尾";
 "tmux.drop.window.help" = "拖动此 window · 放到 session（末尾）或 window（插到它前面）";

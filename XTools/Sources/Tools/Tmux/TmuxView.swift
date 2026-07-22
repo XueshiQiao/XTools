@@ -67,49 +67,27 @@ struct TmuxView: View {
         }
     }
 
-    // MARK: - Hotkey settings (embedded only)
+    // MARK: - Hotkey (embedded only)
+    // Always on — no toggle, no multi-line copy. Just the recorder (+ conflict hint).
 
     private var hotkeySection: some View {
         Section {
-            Toggle(isOn: Binding(
-                get: { palette.hotkeyEnabled },
-                set: { palette.hotkeyOccupied = !palette.setHotkeyEnabled($0) }
-            )) {
-                featureLabel(
-                    "keyboard",
-                    .teal,
-                    L("tmux.hotkey.toggle"),
-                    L("tmux.hotkey.toggle.sub")
-                )
+            LabeledContent {
+                HotKeyRecorderField(combo: palette.hotKeyCombo) { combo in
+                    palette.hotkeyOccupied = !palette.setHotKey(combo)
+                }
+            } label: {
+                iconLabel("command", .indigo, L("tmux.hotkey.label"))
             }
-            .disabled(false)
 
-            if palette.hotkeyEnabled {
-                LabeledContent {
-                    HotKeyRecorderField(combo: palette.hotKeyCombo) { combo in
-                        palette.hotkeyOccupied = !palette.setHotKey(combo)
-                    }
-                } label: {
-                    iconLabel("command", .indigo, L("tmux.hotkey.label"))
-                }
-
-                if palette.hotkeyOccupied || (palette.hotkeyEnabled && !palette.isRegistered) {
-                    Text(L("tmux.hotkey.occupied"))
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                        .fixedSize(horizontal: false, vertical: true)
-                } else {
-                    Text(String(format: L("tmux.hotkey.hint"), palette.hotKeyCombo.display))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+            if palette.hotkeyOccupied || !palette.isRegistered {
+                Text(L("tmux.hotkey.occupied"))
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         } header: {
             Text(L("tmux.hotkey.header"))
-        } footer: {
-            Text(L("tmux.hotkey.footer"))
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

@@ -9,7 +9,9 @@ import Combine
 final class TmuxPaletteController: NSObject, ObservableObject, NSWindowDelegate {
 
     private static let log = FileLog("Tmux.Palette")
-    private static let defaultSize = NSSize(width: 440, height: 600)
+    /// Default ~2/3 of the previous 600pt height — denser first open; still
+    /// resizable back up (e.g. to ~600+) when the tree is fully expanded.
+    private static let defaultSize = NSSize(width: 440, height: 400)
 
     // MARK: Background style
     //
@@ -51,13 +53,11 @@ final class TmuxPaletteController: NSObject, ObservableObject, NSWindowDelegate 
 
     // MARK: - Lifecycle
 
-    /// Register the hotkey if the user has it enabled (called from `TmuxTool.activate`).
+    /// Always register the palette hotkey (called from `TmuxTool.activate`).
+    /// There is no user-facing off switch — the feature is always on.
     func startIfEnabled() {
-        guard TmuxPreferences.hotkeyEnabled else {
-            Self.log.info("palette hotkey disabled — not registering")
-            isRegistered = false
-            return
-        }
+        TmuxPreferences.hotkeyEnabled = true
+        hotkeyEnabled = true
         _ = registerHotKey()
     }
 
@@ -90,11 +90,6 @@ final class TmuxPaletteController: NSObject, ObservableObject, NSWindowDelegate 
     /// Persist + re-register a new combo. On failure keeps the previous registration.
     @discardableResult
     func setHotKey(_ combo: KeyCombo) -> Bool {
-        guard TmuxPreferences.hotkeyEnabled || hotkeyEnabled else {
-            hotKeyCombo = combo
-            TmuxPreferences.hotKey = combo
-            return true
-        }
         let previous = hotKeyCombo
         invalidateHotKey()
         hotKeyCombo = combo
@@ -234,7 +229,9 @@ final class TmuxPaletteController: NSObject, ObservableObject, NSWindowDelegate 
 
         // No manual layer.cornerRadius — that only fakes inner clip and fights
         // the opaque fill (looks square). System shape owns the silhouette.
-        panel.minSize = NSSize(width: 280, height: 280)
+        panel.minSize = NSSize(width: 280, height: 240)
+        // Allow growing back to the previous default (and beyond) when expanded.
+        panel.maxSize = NSSize(width: 10_000, height: 10_000)
         panel.delegate = self
         Self.log.info("palette panel created (opaque + system rounded titled shape)")
 
