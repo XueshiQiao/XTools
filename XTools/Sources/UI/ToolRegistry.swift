@@ -21,6 +21,7 @@ enum ToolRegistry {
             ProcessesTool(llm: llm),
             MemoryTool(),
             NagaTool(),
+            TmuxTool(),
             // Add future tools here.
         ]
     }

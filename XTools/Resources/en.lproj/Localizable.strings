@@ -696,3 +696,31 @@
 "processes.action.confirm.forceQuit.root" = "This process belongs to %@. macOS will ask for an administrator password, then the process is killed immediately.";
 "processes.action.confirm.quit.root" = "This process belongs to %@. macOS will ask for an administrator password to send it the quit signal.";
 "processes.action.confirm.cancel" = "Cancel";
+
+/* ───────────── Tmux Manager ───────────── */
+"tool.tmux.title" = "Tmux";
+"tmux.search.prompt" = "Search sessions, windows, panes…";
+"tmux.search.empty" = "No matches.";
+"tmux.status.title" = "tmux server";
+"tmux.status.none" = "No sessions";
+"tmux.status.count" = "%1$ld sessions · %2$ld windows · %3$ld panes · %4$ld client(s)";
+"tmux.status.noClient" = "No terminal is attached — jump needs an attached client. Move still works.";
+"tmux.empty" = "No tmux sessions found. Is tmux running?";
+"tmux.footer" = "Double-click a pane or use the arrow to jump. Right-click a window to move it to another session.";
+"tmux.tree.header" = "Sessions";
+"tmux.badge.attached" = "attached";
+"tmux.badge.active" = "active";
+"tmux.meta.windows" = "%ld windows";
+"tmux.meta.panes" = "%ld panes";
+"tmux.expand" = "Expand all";
+"tmux.collapse" = "Collapse all";
+"tmux.action.jump.session" = "Jump to session";
+"tmux.action.jump.window" = "Jump to window";
+"tmux.action.jump.pane" = "Jump to pane";
+"tmux.action.moveTo" = "Move window to session";
+"tmux.action.move.noDest" = "No other session to move into";
+"tmux.msg.jumped" = "Switched the attached terminal.";
+"tmux.msg.moved" = "Moved “%1$@” → %2$@.";
+"tmux.error.notFound" = "tmux not found. Install it (e.g. brew install tmux) or ensure it is on PATH.";
+"tmux.error.commandFailed" = "tmux command failed.";
+"tmux.error.noClient" = "No tmux client is attached — open a terminal and attach first.";
