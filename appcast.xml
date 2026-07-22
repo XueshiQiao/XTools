@@ -5,11 +5,31 @@
     <link>https://github.com/XueshiQiao/XTools</link>
     <language>en</language>
     <item>
-      <title>Version 26.07.10</title>
+      <title>Version 26.07.11</title>
       <description><![CDATA[<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
 <body>
+
+<h3>What's New in 26.07.11</h3>
+<ul>
+  <li><b>New — Screenshot Text (OCR):</b> Press ⌘⇧S, drag a box over anything on screen — an image, a video frame, text you can't select — and its text is recognized on your Mac, copied to the clipboard, and popped into the action capsule.</li>
+  <li><b>New tool — Process Insight:</b> See what's running with live CPU/memory metrics and code-signing facts, plus a one-tap AI explanation of what any process actually is.</li>
+  <li><b>New tool — Now Playing:</b> See at a glance which apps are currently playing audio.</li>
+  <li><b>New tool — Naga side buttons:</b> Remap the side buttons of a Razer Naga to keyboard shortcuts.</li>
+  <li><b>Dashboard additions:</b> A Now Playing card, battery charge &amp; health rings, and a combined Memory + Swap card.</li>
+  <li><b>Menu bar &amp; polish:</b> Left-click opens the window directly, right-click shows the menu — plus assorted fixes.</li>
+</ul>
+
+<h3>26.07.11 更新内容</h3>
+<ul>
+  <li><b>新功能 · 截图取词 (OCR)：</b>按 ⌘⇧S，在屏幕上框选任意区域——图片、视频画面、选不中的文字——即可在本机识别其中文字，自动复制到剪贴板并弹出动作胶囊。</li>
+  <li><b>新工具 · 进程洞察：</b>查看正在运行的进程，含实时 CPU / 内存指标与代码签名信息，还能一键让 AI 解释「这个进程到底是什么」。</li>
+  <li><b>新工具 · Now Playing：</b>一眼看清当前哪些 app 正在播放音频。</li>
+  <li><b>新工具 · Naga 侧键：</b>把 Razer Naga 的侧键重映射为键盘快捷键。</li>
+  <li><b>仪表盘新增：</b>Now Playing 卡片、电池充电与健康环、内存 + Swap 合并卡片。</li>
+  <li><b>菜单栏与打磨：</b>左键直接打开窗口，右键显示菜单，另含若干修复。</li>
+</ul>
 
 <h3>What's New in 26.07.10</h3>
 <ul>
@@ -101,11 +121,11 @@
 
 </body>
 </html>]]></description>
-      <pubDate>Sat, 04 Jul 2026 11:59:21 +0000</pubDate>
-      <sparkle:version>10</sparkle:version>
-      <sparkle:shortVersionString>26.07.10</sparkle:shortVersionString>
+      <pubDate>Wed, 22 Jul 2026 02:56:11 +0000</pubDate>
+      <sparkle:version>11</sparkle:version>
+      <sparkle:shortVersionString>26.07.11</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://github.com/XueshiQiao/XTools/releases/download/v26.07.10/XTools.dmg" length="8037851" type="application/octet-stream" sparkle:edSignature="NGdQb1InWJPSmyY2eZs8H7VAPI3AYIz7kGfaGjgEOfuKHLW7KWF9WT6Q03izY9CDCgnjE5r6Amakp+iZNka4Bw==" />
+      <enclosure url="https://github.com/XueshiQiao/XTools/releases/download/v26.07.11/XTools.dmg" length="9204899" type="application/octet-stream" sparkle:edSignature="XEWixAnwf8PbzRzvLKLbrkZAfLBpJO/PPnawe1cyi+YOmovXUON8sMoQRN4LfLejVwjGfvkUN0VXPXqUSKE0BA==" />
     </item>
   </channel>
 </rss>
