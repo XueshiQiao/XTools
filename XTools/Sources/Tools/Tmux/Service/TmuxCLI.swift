@@ -131,6 +131,14 @@ enum TmuxCLI {
 
     /// Run a tmux subcommand against an explicit socket. Injects `-S` and a
     /// sanitized environment so GUI TMPDIR cannot redirect the client.
+    ///
+    /// Output goes to TEMP FILES, not pipes. In Sparkle-relaunched instances the
+    /// tmux client's server-mediated stdout intermittently never reached our
+    /// pipe (exit 0, 0 bytes — every poll, for the process's whole lifetime)
+    /// while direct stderr writes survived; the tmux server verifiably sent the
+    /// data ("file 1 sent 21, left 0" in its SIGUSR2 log). Files replace the
+    /// pipe endpoint entirely, and the diagnostics below record the full scene
+    /// if any variant of the loss ever shows up again.
     @discardableResult
     static func run(_ arguments: [String], socket: String) throws -> String {
         guard let bin = resolveBinary() else { throw Error.tmuxNotFound }
@@ -138,6 +146,11 @@ enum TmuxCLI {
         proc.executableURL = URL(fileURLWithPath: bin)
         // Force absolute socket — do not rely on TMPDIR / TMUX_TMPDIR.
         proc.arguments = ["-S", socket] + arguments
+        // Do not inherit whatever QoS band the app was launched in (a Sparkle
+        // relaunch starts the app in the background band).
+        proc.qualityOfService = .userInitiated
+        // Explicit stdin: never let the client inherit the app's stdin.
+        proc.standardInput = FileHandle.nullDevice
 
         var env = ProcessInfo.processInfo.environment
         // Prevent the client from building a different socket dir from GUI TMPDIR.
@@ -147,30 +160,62 @@ enum TmuxCLI {
         env.removeValue(forKey: "TMUX")
         proc.environment = env
 
-        let out = Pipe()
-        let err = Pipe()
-        proc.standardOutput = out
-        proc.standardError = err
+        let fm = FileManager.default
+        let tmpDir = URL(fileURLWithPath: NSTemporaryDirectory())
+        let token = UUID().uuidString
+        let outURL = tmpDir.appendingPathComponent("xtools-tmux-\(token).out")
+        let errURL = tmpDir.appendingPathComponent("xtools-tmux-\(token).err")
+        fm.createFile(atPath: outURL.path, contents: nil)
+        fm.createFile(atPath: errURL.path, contents: nil)
+        defer {
+            try? fm.removeItem(at: outURL)
+            try? fm.removeItem(at: errURL)
+        }
+        guard let outFH = try? FileHandle(forWritingTo: outURL),
+              let errFH = try? FileHandle(forWritingTo: errURL) else {
+            log.error("cannot open temp output files for tmux run")
+            throw Error.tmuxNotFound
+        }
+        proc.standardOutput = outFH
+        proc.standardError = errFH
         do {
             try proc.run()
         } catch {
+            outFH.closeFile(); errFH.closeFile()
             log.error("failed to launch \(bin): \(error)")
             throw Error.tmuxNotFound
         }
-        // list-sessions / list-panes output is tiny (KBs). Read AFTER exit so we
-        // never race concurrent FileHandle reads (which intermittently returned
-        // empty stdout → "0 sessions" while Terminal still saw a full tree).
         proc.waitUntilExit()
-        let stdoutData = out.fileHandleForReading.readDataToEndOfFile()
-        let stderrData = err.fileHandleForReading.readDataToEndOfFile()
+        outFH.closeFile()
+        errFH.closeFile()
+        let stdoutData = (try? Data(contentsOf: outURL)) ?? Data()
+        let stderrData = (try? Data(contentsOf: errURL)) ?? Data()
         let stdout = String(data: stdoutData, encoding: .utf8) ?? ""
         let stderr = String(data: stderrData, encoding: .utf8) ?? ""
         if proc.terminationStatus != 0 {
             log.warn("tmux -S \(socket) \(arguments.joined(separator: " ")) → \(proc.terminationStatus): \(stderr)")
             throw Error.nonZeroExit(status: proc.terminationStatus, stderr: stderr)
         }
+        // Black-box recorder: a live socket answering list-sessions with exit 0
+        // and ZERO bytes is the lost-output signature. It can also be a
+        // legitimately session-less server (exit-empty off), so throttle to one
+        // line per minute instead of flagging every 4-second poll.
+        if stdoutData.isEmpty, arguments.first == "list-sessions" {
+            emptyOKLock.lock()
+            let shouldLog = Date().timeIntervalSince(lastEmptyOKLog) > 60
+            if shouldLog { lastEmptyOKLog = Date() }
+            emptyOKLock.unlock()
+            if shouldLog {
+                log.error("EMPTY-OK: tmux -S \(socket) \(arguments.joined(separator: " ")) exit=0 "
+                    + "reason=\(proc.terminationReason.rawValue) errBytes=\(stderrData.count) "
+                    + "socketExists=\(fm.fileExists(atPath: socket)) pid=\(ProcessInfo.processInfo.processIdentifier)")
+            }
+        }
         return stdout
     }
+
+    private static let emptyOKLock = NSLock()
+    private static var lastEmptyOKLog = Date.distantPast
 
     /// Convenience: try discovered sockets until one answers.
     @discardableResult
