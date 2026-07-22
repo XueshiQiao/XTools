@@ -733,4 +733,5 @@
 "tmux.msg.moved" = "Moved “%1$@” → %2$@.";
 "tmux.error.notFound" = "tmux not found. Install it (e.g. brew install tmux) or ensure it is on PATH.";
 "tmux.error.commandFailed" = "tmux command failed.";
+"tmux.error.noServer" = "No tmux server found. Open a terminal and start tmux first.";
 "tmux.error.noClient" = "No tmux client is attached — open a terminal and attach first.";

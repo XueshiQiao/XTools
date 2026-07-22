@@ -36,6 +36,9 @@ final class TmuxStore: ObservableObject {
     private var didSeedExpansion = false
     /// Bumped on each begin/end so a late safety-timeout can't clear a newer drag.
     private var dragGeneration: UInt64 = 0
+    /// Monotonic refresh id — drop stale async results so an empty race can't
+    /// overwrite a good snapshot (was flickering 2 ↔ 0 sessions).
+    private var refreshGeneration: UInt64 = 0
 
     // MARK: - Derived
 
@@ -94,11 +97,20 @@ final class TmuxStore: ObservableObject {
         // Don't rebuild the tree while the user is mid-drag — drop targets vanish.
         if isDraggingWindow { return }
         isScanning = true
+        refreshGeneration &+= 1
+        let gen = refreshGeneration
         work.async { [weak self] in
             do {
                 let snap = try TmuxCLI.fetchSnapshot()
                 DispatchQueue.main.async {
-                    guard let self else { return }
+                    guard let self, self.refreshGeneration == gen else { return }
+                    // Never let a transient empty read wipe a non-empty tree unless
+                    // we also got a hard error (handled below).
+                    if snap.sessions.isEmpty, !self.sessions.isEmpty {
+                        FileLog("Tmux").warn("ignoring empty snapshot (kept \(self.sessions.count) sessions)")
+                        self.isScanning = false
+                        return
+                    }
                     self.sessions = snap.sessions
                     self.clients = snap.clients
                     self.tmuxPath = snap.tmuxPath
@@ -109,16 +121,15 @@ final class TmuxStore: ObservableObject {
                 }
             } catch {
                 DispatchQueue.main.async {
-                    guard let self else { return }
+                    guard let self, self.refreshGeneration == gen else { return }
                     self.isScanning = false
                     let message = (error as? LocalizedError)?.errorDescription
                         ?? error.localizedDescription
                     self.lastError = message
-                    // Server gone / list failed: clear the tree so we don't show
-                    // stale sessions that no longer exist (actions would target ghosts).
-                    self.sessions = []
-                    self.clients = []
-                    self.actionMessage = message
+                    // Only clear the tree on hard failure if we had nothing useful.
+                    if self.sessions.isEmpty {
+                        self.actionMessage = message
+                    }
                 }
             }
         }

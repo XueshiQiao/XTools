@@ -15,7 +15,7 @@ struct TmuxPaletteTreeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 if store.sessions.isEmpty {
-                    Text(store.isScanning ? L("launch.scanning") : L("tmux.empty"))
+                    Text(emptyMessage)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -36,6 +36,12 @@ struct TmuxPaletteTreeView: View {
         .onReceive(autoRefresh) { _ in
             if !store.isDraggingWindow { store.refresh() }
         }
+    }
+
+    private var emptyMessage: String {
+        if store.isScanning { return L("launch.scanning") }
+        if let err = store.lastError, !err.isEmpty { return err }
+        return L("tmux.empty")
     }
 
     // MARK: - Session

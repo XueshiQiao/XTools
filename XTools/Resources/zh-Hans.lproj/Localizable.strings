@@ -733,4 +733,5 @@
 "tmux.msg.moved" = "已将「%1$@」移到 %2$@。";
 "tmux.error.notFound" = "找不到 tmux。请安装（如 brew install tmux）或确保它在 PATH 中。";
 "tmux.error.commandFailed" = "tmux 命令失败。";
+"tmux.error.noServer" = "找不到 tmux server。请先在终端里启动 tmux。";
 "tmux.error.noClient" = "没有已 attach 的 tmux client —— 请先在终端里 attach。";
