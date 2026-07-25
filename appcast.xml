@@ -5,11 +5,23 @@
     <link>https://github.com/XueshiQiao/XTools</link>
     <language>en</language>
     <item>
-      <title>Version 26.07.13</title>
+      <title>Version 26.07.14</title>
       <description><![CDATA[<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
 <body>
+
+<h3>What's New in 26.07.14</h3>
+<ul>
+  <li><b>Tmux fixed for good:</b> Sessions, windows and panes now always show up — including when the app starts from the Dock, from login, or right after an automatic update. Previously the list could come up empty unless the app was launched from a terminal.</li>
+  <li><b>Snappier, lighter refresh:</b> The tree updates within 1–2 seconds while you're looking at it and refreshes instantly when you summon the palette or switch back to the app. When idle or hidden it now costs almost nothing — one lightweight check instead of four, and no redraw when nothing changed.</li>
+</ul>
+
+<h3>26.07.14 更新内容</h3>
+<ul>
+  <li><b>Tmux 彻底修复：</b>从 Dock、开机自启或自动更新后启动,session / window / pane 列表都能正常显示。此前只有从终端启动 app 时列表才正常,其他方式启动会是空的。</li>
+  <li><b>刷新更快也更省：</b>盯着看时 1–2 秒内更新,呼出快捷面板或切回 app 时立即刷新;空闲或隐藏时几乎零开销——四次查询合并为一次,内容没变化就不重绘。</li>
+</ul>
 
 <h3>What's New in 26.07.13</h3>
 <ul>
@@ -142,11 +154,11 @@
 
 </body>
 </html>]]></description>
-      <pubDate>Wed, 22 Jul 2026 14:02:28 +0000</pubDate>
-      <sparkle:version>13</sparkle:version>
-      <sparkle:shortVersionString>26.07.13</sparkle:shortVersionString>
+      <pubDate>Sat, 25 Jul 2026 10:26:41 +0000</pubDate>
+      <sparkle:version>14</sparkle:version>
+      <sparkle:shortVersionString>26.07.14</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://github.com/XueshiQiao/XTools/releases/download/v26.07.13/XTools.dmg" length="9570558" type="application/octet-stream" sparkle:edSignature="DKaP4EOtcEVuz1g0V/1ASMkI31kmhZHNGpqpZwrNOj2Nt0ABucYruO8w+ZL9Qd9WDv8LV9TILbX8RrcmvhjoDA==" />
+      <enclosure url="https://github.com/XueshiQiao/XTools/releases/download/v26.07.14/XTools.dmg" length="9602011" type="application/octet-stream" sparkle:edSignature="TRmUBmqk/4EBzlNQayYfSB8iMln9AqFTutUerDEkq+c7UjMATbzbOMqwb5rAfC6FotpenH61hUw3EhbNCHvTDQ==" />
     </item>
   </channel>
 </rss>
