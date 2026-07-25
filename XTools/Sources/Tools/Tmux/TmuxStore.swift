@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import SwiftUI
+import AppKit
 
 /// UI model for the Tmux tool. Owns the tree snapshot, search filter, expansion
 /// state, and the jump / move-window actions. Fully self-contained so a future
@@ -32,6 +33,8 @@ final class TmuxStore: ObservableObject {
     /// uses this to dismiss itself so focus returns to the terminal.
     var onJumpSucceeded: (() -> Void)?
 
+    private static let log = FileLog("Tmux")
+
     private let work = DispatchQueue(label: "me.xueshi.xtools.tmux", qos: .userInitiated)
     private var didSeedExpansion = false
     /// Bumped on each begin/end so a late safety-timeout can't clear a newer drag.
@@ -39,6 +42,153 @@ final class TmuxStore: ObservableObject {
     /// Monotonic refresh id — drop stale async results so an empty race can't
     /// overwrite a good snapshot (was flickering 2 ↔ 0 sessions).
     private var refreshGeneration: UInt64 = 0
+
+    // MARK: - Auto-refresh scheduling
+    //
+    // Poll only while something is actually showing the data, and never touch
+    // the UI when nothing changed:
+    //   palette open              → 1s
+    //   main tab visible, app front → 2s
+    //   main tab visible, app back  → 8s
+    //   nothing visible           → stopped
+    // An idle tick costs one child process and one tree comparison; equal
+    // results publish nothing, so SwiftUI is not invalidated.
+
+    private var mainViewVisible = false
+    private var paletteVisible = false
+    private var appIsActive = NSApp.isActive
+    private var pollTimer: Timer?
+    private var currentInterval: TimeInterval?
+    /// True while a fetch is on the work queue — timer ticks skip instead of piling up.
+    private var inFlight = false
+    private var observers: [NSObjectProtocol] = []
+
+    /// Poll counters, folded into one debug line per minute (quiet but auditable).
+    private var statPolls = 0
+    private var statUnchanged = 0
+    private var lastStatsLog = Date()
+
+    /// Watches /tmp/tmux-<uid> so a tmux server starting or dying shows up
+    /// right away instead of on the next tick.
+    private var socketWatcher: DispatchSourceFileSystemObject?
+    private var watcherDebounce: DispatchWorkItem?
+
+    init() {
+        let nc = NotificationCenter.default
+        for name in [NSApplication.didBecomeActiveNotification,
+                     NSApplication.didResignActiveNotification] {
+            observers.append(nc.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                self?.appActivationChanged()
+            })
+        }
+    }
+
+    deinit {
+        observers.forEach { NotificationCenter.default.removeObserver($0) }
+        pollTimer?.invalidate()
+        socketWatcher?.cancel()
+    }
+
+    func setMainViewVisible(_ visible: Bool) {
+        guard mainViewVisible != visible else { return }
+        mainViewVisible = visible
+        reschedulePolling()
+    }
+
+    func setPaletteVisible(_ visible: Bool) {
+        guard paletteVisible != visible else { return }
+        paletteVisible = visible
+        reschedulePolling()
+        if visible { refresh(userInitiated: true) }
+    }
+
+    private func appActivationChanged() {
+        appIsActive = NSApp.isActive
+        reschedulePolling()
+        // Coming back to the foreground: show fresh data immediately.
+        if appIsActive, mainViewVisible || paletteVisible { refresh() }
+    }
+
+    private var desiredInterval: TimeInterval? {
+        if paletteVisible { return 1 }
+        if mainViewVisible { return appIsActive ? 2 : 8 }
+        return nil
+    }
+
+    private func reschedulePolling() {
+        let want = desiredInterval
+        guard want != currentInterval else { return }
+        currentInterval = want
+        pollTimer?.invalidate()
+        pollTimer = nil
+        guard let want else {
+            disarmSocketWatcher()
+            Self.log.debug("poll stopped (nothing visible)")
+            return
+        }
+        armSocketWatcher()
+        let timer = Timer(timeInterval: want, repeats: true) { [weak self] _ in
+            self?.pollTick()
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        pollTimer = timer
+        Self.log.debug("poll cadence → \(Int(want))s (palette=\(self.paletteVisible) main=\(self.mainViewVisible) appActive=\(self.appIsActive))")
+    }
+
+    private func pollTick() {
+        // The socket dir may not have existed at arm time (server never started).
+        if socketWatcher == nil { armSocketWatcher() }
+        maybeLogStats()
+        guard !isDraggingWindow, !inFlight else { return }
+        refresh()
+    }
+
+    private func maybeLogStats() {
+        let now = Date()
+        guard now.timeIntervalSince(lastStatsLog) >= 60 else { return }
+        lastStatsLog = now
+        let interval = currentInterval.map { "\(Int($0))s" } ?? "off"
+        // FileLog messages are @autoclosure evaluated later on the log queue —
+        // capture the counters by value BEFORE resetting them, or it prints 0.
+        let polls = statPolls
+        let unchanged = statUnchanged
+        Self.log.debug("poll stats: \(polls) poll(s), \(unchanged) unchanged, interval=\(interval)")
+        statPolls = 0
+        statUnchanged = 0
+    }
+
+    private func armSocketWatcher() {
+        guard socketWatcher == nil, currentInterval != nil else { return }
+        let path = "/tmp/tmux-\(getuid())"
+        let fd = open(path, O_EVTONLY)
+        guard fd >= 0 else { return } // dir absent (no server yet); retried each tick
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fd, eventMask: [.write, .delete, .rename], queue: .main)
+        source.setEventHandler { [weak self] in
+            guard let self else { return }
+            if let flags = self.socketWatcher?.data,
+               !flags.intersection([.delete, .rename]).isEmpty {
+                self.disarmSocketWatcher() // dir replaced — re-armed on next tick
+            }
+            // Debounce bursts; a socket appeared/vanished → look right away.
+            self.watcherDebounce?.cancel()
+            let work = DispatchWorkItem { [weak self] in
+                guard let self, self.currentInterval != nil, !self.isDraggingWindow else { return }
+                self.refresh()
+            }
+            self.watcherDebounce = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: work)
+        }
+        source.setCancelHandler { close(fd) }
+        source.resume()
+        socketWatcher = source
+        Self.log.debug("socket dir watcher armed (\(path))")
+    }
+
+    private func disarmSocketWatcher() {
+        socketWatcher?.cancel()
+        socketWatcher = nil
+    }
 
     // MARK: - Derived
 
@@ -93,41 +243,64 @@ final class TmuxStore: ObservableObject {
 
     // MARK: - Refresh
 
-    func refresh() {
+    /// `userInitiated` drives the spinner: background ticks never touch
+    /// `isScanning` (a @Published write every tick would invalidate the whole
+    /// tree view even when nothing changed).
+    func refresh(userInitiated: Bool = false) {
         // Don't rebuild the tree while the user is mid-drag — drop targets vanish.
         if isDraggingWindow { return }
-        isScanning = true
+        if userInitiated { isScanning = true }
         refreshGeneration &+= 1
         let gen = refreshGeneration
+        inFlight = true
         work.async { [weak self] in
             do {
                 let snap = try TmuxCLI.fetchSnapshot()
                 DispatchQueue.main.async {
-                    guard let self, self.refreshGeneration == gen else { return }
+                    guard let self else { return }
+                    self.inFlight = false
+                    guard self.refreshGeneration == gen else { return }
+                    self.statPolls += 1
                     // Never let a transient empty read wipe a non-empty tree unless
                     // we also got a hard error (handled below).
                     if snap.sessions.isEmpty, !self.sessions.isEmpty {
-                        FileLog("Tmux").warn("ignoring empty snapshot (kept \(self.sessions.count) sessions)")
-                        self.isScanning = false
+                        Self.log.warn("ignoring empty snapshot (kept \(self.sessions.count) sessions)")
+                        if self.isScanning { self.isScanning = false }
+                        return
+                    }
+                    // Unchanged → publish nothing. This is what makes an idle
+                    // tick cost one process and one comparison, not a UI pass.
+                    if snap.sessions == self.sessions,
+                       snap.clients == self.clients,
+                       snap.tmuxPath == self.tmuxPath,
+                       self.lastError == nil {
+                        self.statUnchanged += 1
+                        if self.isScanning { self.isScanning = false }
                         return
                     }
                     self.sessions = snap.sessions
                     self.clients = snap.clients
                     self.tmuxPath = snap.tmuxPath
                     self.lastError = nil
-                    self.isScanning = false
+                    if self.isScanning { self.isScanning = false }
                     self.seedExpansionIfNeeded()
                     self.pruneExpansion()
+                    Self.log.debug("snapshot: \(snap.sessions.count) sessions, \(snap.clients.count) client(s) via \(snap.tmuxPath)")
                 }
             } catch {
                 DispatchQueue.main.async {
-                    guard let self, self.refreshGeneration == gen else { return }
-                    self.isScanning = false
+                    guard let self else { return }
+                    self.inFlight = false
+                    guard self.refreshGeneration == gen else { return }
+                    if self.isScanning { self.isScanning = false }
                     let message = (error as? LocalizedError)?.errorDescription
                         ?? error.localizedDescription
-                    self.lastError = message
+                    if self.lastError != message {
+                        self.lastError = message
+                        Self.log.debug("refresh failed: \(message)")
+                    }
                     // Only clear the tree on hard failure if we had nothing useful.
-                    if self.sessions.isEmpty {
+                    if self.sessions.isEmpty, self.actionMessage != message {
                         self.actionMessage = message
                     }
                 }

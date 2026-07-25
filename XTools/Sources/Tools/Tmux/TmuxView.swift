@@ -20,8 +20,6 @@ struct TmuxView: View {
     @ObservedObject private var palette: TmuxPaletteController
     private let presentation: TmuxPresentation
 
-    private let autoRefresh = Timer.publish(every: 4, on: .main, in: .common).autoconnect()
-
     init(store: TmuxStore,
          palette: TmuxPaletteController,
          presentation: TmuxPresentation = .embedded) {
@@ -54,17 +52,18 @@ struct TmuxView: View {
                     Label(L("tmux.expand"), systemImage: "rectangle.expand.vertical")
                 }
                 .help(L("tmux.expand"))
-                Button { store.refresh() } label: {
+                Button { store.refresh(userInitiated: true) } label: {
                     Label(L("launch.refresh"), systemImage: "arrow.clockwise")
                 }
                 .disabled(store.isScanning)
                 .help(L("launch.refresh"))
             }
         }
-        .onAppear { store.refresh() }
-        .onReceive(autoRefresh) { _ in
-            if !store.isDraggingWindow { store.refresh() }
+        .onAppear {
+            store.setMainViewVisible(true)
+            store.refresh(userInitiated: true)
         }
+        .onDisappear { store.setMainViewVisible(false) }
     }
 
     // MARK: - Hotkey (embedded only)

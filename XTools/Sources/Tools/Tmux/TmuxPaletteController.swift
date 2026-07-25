@@ -118,7 +118,8 @@ final class TmuxPaletteController: NSObject, ObservableObject, NSWindowDelegate 
 
     func show() {
         previousApp = NSWorkspace.shared.frontmostApplication
-        store.refresh()
+        // Marks the palette visible → immediate refresh + 1s cadence while open.
+        store.setPaletteVisible(true)
         let panel = ensurePanel()
         if panel.frame.width < 80 || panel.frame.height < 80 {
             panel.setFrame(Self.centeredFrame(), display: false)
@@ -130,6 +131,7 @@ final class TmuxPaletteController: NSObject, ObservableObject, NSWindowDelegate 
     }
 
     func hide(restoreFocus: Bool) {
+        store.setPaletteVisible(false)
         guard let panel, panel.isVisible else {
             if restoreFocus { previousApp?.activate() }
             return
@@ -257,6 +259,7 @@ final class TmuxPaletteController: NSObject, ObservableObject, NSWindowDelegate 
     // MARK: - NSWindowDelegate
 
     func windowWillClose(_ notification: Notification) {
+        store.setPaletteVisible(false)
         if let panel {
             TmuxPreferences.windowFrame = panel.frame
         }

@@ -243,12 +243,17 @@ enum TmuxCLI {
     // MARK: - Snapshot
 
     private static let sep = "\u{1f}"
+    /// Previous socket list — logged only when it changes, so idle polls are silent.
+    private static var lastLoggedSockets: [String]?
 
     static func fetchSnapshot() throws -> TmuxSnapshot {
         guard let bin = resolveBinary() else { throw Error.tmuxNotFound }
 
         let sockets = discoverSockets()
-        log.debug("tmux sockets: \(sockets.joined(separator: ", "))")
+        if sockets != lastLoggedSockets {
+            log.debug("tmux sockets: \(sockets.joined(separator: ", "))")
+            lastLoggedSockets = sockets
+        }
 
         var best: TmuxSnapshot?
         var lastError: Swift.Error?
@@ -256,7 +261,6 @@ enum TmuxCLI {
         for socket in sockets {
             do {
                 let snap = try fetchSnapshot(socket: socket, binary: bin)
-                log.debug("socket \(socket) → \(snap.sessions.count) session(s)")
                 if best == nil || snap.sessions.count > (best?.sessions.count ?? -1) {
                     best = snap
                 }
@@ -268,55 +272,62 @@ enum TmuxCLI {
             }
         }
 
-        if let best {
-            log.debug("snapshot: \(best.sessions.count) sessions, \(best.clients.count) client(s) via \(best.tmuxPath)")
-            return best
-        }
+        if let best { return best }
         throw lastError ?? Error.noServer
     }
 
+    /// One tmux invocation fetches all four lists (a `;` command sequence):
+    /// a single child process per poll instead of four, and every list comes
+    /// from the same server pass, so the tree can never mix two moments in
+    /// time. Each output line carries a leading row tag (S/W/P/C) for demuxing.
     private static func fetchSnapshot(socket: String, binary: String) throws -> TmuxSnapshot {
-        let sessionFmt = [
-            "#{session_id}", "#{session_name}", "#{session_attached}",
-        ].joined(separator: sep)
-        let sessionOut = try run(["list-sessions", "-F", sessionFmt], socket: socket)
+        let sFmt = ["S", "#{session_id}", "#{session_name}", "#{session_attached}"]
+            .joined(separator: sep)
+        let wFmt = ["W", "#{session_id}", "#{session_name}", "#{window_id}",
+                    "#{window_index}", "#{window_name}", "#{window_active}"]
+            .joined(separator: sep)
+        let pFmt = ["P", "#{session_id}", "#{session_name}", "#{window_id}", "#{window_name}",
+                    "#{pane_id}", "#{pane_index}", "#{pane_title}",
+                    "#{pane_current_command}", "#{pane_current_path}", "#{pane_active}"]
+            .joined(separator: sep)
+        let cFmt = ["C", "#{client_activity}", "#{client_name}"].joined(separator: sep)
 
-        let windowFmt = [
-            "#{session_id}", "#{session_name}", "#{window_id}",
-            "#{window_index}", "#{window_name}", "#{window_active}",
-        ].joined(separator: sep)
-        let windowOut = try run(["list-windows", "-a", "-F", windowFmt], socket: socket)
+        let out = try run([
+            "list-sessions", "-F", sFmt, ";",
+            "list-windows", "-a", "-F", wFmt, ";",
+            "list-panes", "-a", "-F", pFmt, ";",
+            "list-clients", "-F", cFmt,
+        ], socket: socket)
 
-        let paneFmt = [
-            "#{session_id}", "#{session_name}", "#{window_id}", "#{window_name}",
-            "#{pane_id}", "#{pane_index}", "#{pane_title}",
-            "#{pane_current_command}", "#{pane_current_path}", "#{pane_active}",
-        ].joined(separator: sep)
-        let paneOut = try run(["list-panes", "-a", "-F", paneFmt], socket: socket)
+        var sessionRows: [[String]] = []
+        var windowRows: [[String]] = []
+        var paneRows: [[String]] = []
+        var clientRows: [(activity: Int, name: String)] = []
 
-        let clientFmt = ["#{client_activity}", "#{client_name}"].joined(separator: sep)
-        let clientOut: String
-        do {
-            clientOut = try run(["list-clients", "-F", clientFmt], socket: socket)
-        } catch {
-            clientOut = ""
+        for line in out.split(separator: "\n", omittingEmptySubsequences: true) {
+            let f = line.split(separator: Character(sep), omittingEmptySubsequences: false).map(String.init)
+            switch f.first ?? "" {
+            case "S" where f.count >= 4: sessionRows.append(f)
+            case "W" where f.count >= 7: windowRows.append(f)
+            case "P" where f.count >= 11: paneRows.append(f)
+            case "C" where f.count >= 3: clientRows.append((Int(f[1]) ?? 0, f[2]))
+            default: break
+            }
         }
 
         var panesByWindow: [String: [TmuxPaneNode]] = [:]
-        for line in paneOut.split(separator: "\n", omittingEmptySubsequences: true) {
-            let f = line.split(separator: Character(sep), omittingEmptySubsequences: false).map(String.init)
-            guard f.count >= 10 else { continue }
+        for f in paneRows {
             let pane = TmuxPaneNode(
-                id: f[4],
-                index: Int(f[5]) ?? 0,
-                title: f[6],
-                currentCommand: f[7],
-                currentPath: f[8],
-                active: f[9] == "1",
-                windowID: f[2],
-                sessionID: f[0],
-                sessionName: f[1],
-                windowName: f[3]
+                id: f[5],
+                index: Int(f[6]) ?? 0,
+                title: f[7],
+                currentCommand: f[8],
+                currentPath: f[9],
+                active: f[10] == "1",
+                windowID: f[3],
+                sessionID: f[1],
+                sessionName: f[2],
+                windowName: f[4]
             )
             panesByWindow[pane.windowID, default: []].append(pane)
         }
@@ -325,17 +336,15 @@ enum TmuxCLI {
         }
 
         var windowsBySession: [String: [TmuxWindowNode]] = [:]
-        for line in windowOut.split(separator: "\n", omittingEmptySubsequences: true) {
-            let f = line.split(separator: Character(sep), omittingEmptySubsequences: false).map(String.init)
-            guard f.count >= 6 else { continue }
-            let winID = f[2]
+        for f in windowRows {
+            let winID = f[3]
             let win = TmuxWindowNode(
                 id: winID,
-                index: Int(f[3]) ?? 0,
-                name: f[4],
-                sessionID: f[0],
-                sessionName: f[1],
-                active: f[5] == "1",
+                index: Int(f[4]) ?? 0,
+                name: f[5],
+                sessionID: f[1],
+                sessionName: f[2],
+                active: f[6] == "1",
                 panes: panesByWindow[winID] ?? []
             )
             windowsBySession[win.sessionID, default: []].append(win)
@@ -345,14 +354,12 @@ enum TmuxCLI {
         }
 
         var sessions: [TmuxSessionNode] = []
-        for line in sessionOut.split(separator: "\n", omittingEmptySubsequences: true) {
-            let f = line.split(separator: Character(sep), omittingEmptySubsequences: false).map(String.init)
-            guard f.count >= 3 else { continue }
-            let sid = f[0]
+        for f in sessionRows {
+            let sid = f[1]
             sessions.append(TmuxSessionNode(
                 id: sid,
-                name: f[1],
-                attached: f[2] != "0",
+                name: f[2],
+                attached: f[3] != "0",
                 windows: windowsBySession[sid] ?? []
             ))
         }
@@ -361,12 +368,6 @@ enum TmuxCLI {
             return a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending
         }
 
-        var clientRows: [(activity: Int, name: String)] = []
-        for line in clientOut.split(separator: "\n", omittingEmptySubsequences: true) {
-            let f = line.split(separator: Character(sep), omittingEmptySubsequences: false).map(String.init)
-            guard f.count >= 2 else { continue }
-            clientRows.append((Int(f[0]) ?? 0, f[1]))
-        }
         clientRows.sort { $0.activity > $1.activity }
         let clients = clientRows.map(\.name)
 
