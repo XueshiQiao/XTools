@@ -130,15 +130,14 @@ enum TmuxCLI {
     // MARK: - Run
 
     /// Run a tmux subcommand against an explicit socket. Injects `-S` and a
-    /// sanitized environment so GUI TMPDIR cannot redirect the client.
+    /// sanitized environment so GUI TMPDIR cannot redirect the client, and a
+    /// UTF-8 LC_CTYPE so the server never mangles control characters in output
+    /// (see the comment at the LC_CTYPE line below — that mangling was the real
+    /// cause of the long "empty session list in GUI launches" hunt; the bytes
+    /// always arrived, with \u{1f} separators flattened to "_").
     ///
-    /// Output goes to TEMP FILES, not pipes. In Sparkle-relaunched instances the
-    /// tmux client's server-mediated stdout intermittently never reached our
-    /// pipe (exit 0, 0 bytes — every poll, for the process's whole lifetime)
-    /// while direct stderr writes survived; the tmux server verifiably sent the
-    /// data ("file 1 sent 21, left 0" in its SIGUSR2 log). Files replace the
-    /// pipe endpoint entirely, and the diagnostics below record the full scene
-    /// if any variant of the loss ever shows up again.
+    /// Output goes to temp files rather than pipes; kept for robustness after
+    /// the same investigation (files also make post-mortems trivially readable).
     @discardableResult
     static func run(_ arguments: [String], socket: String) throws -> String {
         guard let bin = resolveBinary() else { throw Error.tmuxNotFound }
@@ -158,6 +157,15 @@ enum TmuxCLI {
         env["TMPDIR"] = "/tmp"
         // Avoid inheriting an attached-client TMUX=… which can confuse some cmds.
         env.removeValue(forKey: "TMUX")
+        // GUI launches (Dock / Spotlight / login item / Sparkle relaunch) carry no
+        // LANG/LC_*, so the tmux client does not claim UTF-8 support and the server
+        // then passes command output through utf8_sanitize(), flattening control
+        // characters — including our \u{1f} field separator — to "_". The list then
+        // parses to zero sessions. Forcing a UTF-8 LC_CTYPE makes the client claim
+        // UTF-8 regardless of how the app was launched.
+        env["LC_CTYPE"] = "en_US.UTF-8"
+        // LC_ALL would override LC_CTYPE if it ever leaked in — never let it.
+        env.removeValue(forKey: "LC_ALL")
         proc.environment = env
 
         let fm = FileManager.default
