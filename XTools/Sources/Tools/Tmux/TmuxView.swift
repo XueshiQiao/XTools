@@ -59,11 +59,15 @@ struct TmuxView: View {
                 .help(L("launch.refresh"))
             }
         }
-        .onAppear {
-            store.setMainViewVisible(true)
-            store.refresh(userInitiated: true)
-        }
+        .onAppear { store.setMainViewVisible(true) }
         .onDisappear { store.setMainViewVisible(false) }
+        // Closing the main window only orders it out (windowShouldClose returns
+        // false), so this SwiftUI hierarchy stays mounted and onDisappear never
+        // fires. Track the host window's real visibility via occlusion state so
+        // polling stops while the window is hidden or fully covered.
+        .background(WindowVisibilityProbe { visible in
+            store.setMainViewVisible(visible)
+        })
     }
 
     // MARK: - Hotkey (embedded only)
@@ -490,5 +494,55 @@ private struct WindowDragDropLabel: View {
             .padding(.vertical, 1)
             .background(Capsule().fill(color.opacity(0.15)))
             .foregroundStyle(color)
+    }
+}
+
+// MARK: - Window visibility probe
+
+/// Reports whether the hosting window is actually on screen. Needed because the
+/// main window is hidden with `orderOut` (not closed), which never triggers
+/// SwiftUI's `onDisappear`; occlusion state also covers "fully covered" windows.
+private struct WindowVisibilityProbe: NSViewRepresentable {
+    let onChange: (Bool) -> Void
+
+    func makeNSView(context: Context) -> NSView { ProbeView(onChange: onChange) }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    final class ProbeView: NSView {
+        private let onChange: (Bool) -> Void
+        private var observer: NSObjectProtocol?
+
+        init(onChange: @escaping (Bool) -> Void) {
+            self.onChange = onChange
+            super.init(frame: .zero)
+        }
+
+        @available(*, unavailable)
+        required init?(coder: NSCoder) { fatalError("unused") }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if let observer {
+                NotificationCenter.default.removeObserver(observer)
+                self.observer = nil
+            }
+            guard let window else {
+                onChange(false)
+                return
+            }
+            onChange(window.occlusionState.contains(.visible))
+            observer = NotificationCenter.default.addObserver(
+                forName: NSWindow.didChangeOcclusionStateNotification,
+                object: window,
+                queue: .main
+            ) { [weak self, weak window] _ in
+                guard let self, let window else { return }
+                self.onChange(window.occlusionState.contains(.visible))
+            }
+        }
+
+        deinit {
+            if let observer { NotificationCenter.default.removeObserver(observer) }
+        }
     }
 }

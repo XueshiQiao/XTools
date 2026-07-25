@@ -93,6 +93,8 @@ final class TmuxStore: ObservableObject {
         guard mainViewVisible != visible else { return }
         mainViewVisible = visible
         reschedulePolling()
+        // Fresh data the moment the tab/window becomes visible again.
+        if visible { refresh(userInitiated: true) }
     }
 
     func setPaletteVisible(_ visible: Bool) {

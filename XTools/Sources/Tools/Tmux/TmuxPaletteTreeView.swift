@@ -9,8 +9,6 @@ struct TmuxPaletteTreeView: View {
 
     @ObservedObject var store: TmuxStore
 
-    private let autoRefresh = Timer.publish(every: 4, on: .main, in: .common).autoconnect()
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
@@ -32,10 +30,10 @@ struct TmuxPaletteTreeView: View {
             .animation(nil, value: store.expandedWindows)
         }
         .scrollContentBackground(.hidden)
-        .onAppear { store.refresh() }
-        .onReceive(autoRefresh) { _ in
-            if !store.isDraggingWindow { store.refresh() }
-        }
+        // Refresh cadence is owned by TmuxStore: the palette controller marks
+        // the palette visible (1s) on show and invisible on hide. A view-owned
+        // timer here would keep firing forever after the panel is ordered out,
+        // because the panel (and this view) stay alive for reuse.
     }
 
     private var emptyMessage: String {
