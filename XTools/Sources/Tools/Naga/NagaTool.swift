@@ -14,6 +14,7 @@ final class NagaTool: XToolModule {
     var title: String { L("tool.naga.title") }
     let symbol = "square.grid.3x3.fill"
     let color = Color.green
+    let group = ToolGroup.devices
 
     // NOTE: seize (exclusive HID grab) is denied by macOS for keyboard-type
     // devices (kIOReturnNotPrivileged), so interception moves to a CGEventTap.

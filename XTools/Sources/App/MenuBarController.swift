@@ -1,4 +1,5 @@
 import Cocoa
+import Combine
 
 final class MenuBarController: NSObject {
 
@@ -10,6 +11,14 @@ final class MenuBarController: NSObject {
     private let appState: AppState
     private let updateController: UpdateController
     private lazy var mainWindowController = MainWindowController(appState: appState)
+
+    /// The ROG Keyboard tool gets a slice of this menu: switching the keyboard to
+    /// its Windows profile has to happen BEFORE the user flips the keyboard's
+    /// mode switch, and by then the app window is the last thing they want to go
+    /// hunting for.
+    private var rogTool: ROGKeyboardTool? { appState.tool(for: "rog-keyboard") as? ROGKeyboardTool }
+    private weak var rogStatusItem: NSMenuItem?
+    private var rogObserver: AnyCancellable?
 
     init(appState: AppState, updateController: UpdateController) {
         self.appState = appState
@@ -64,6 +73,8 @@ final class MenuBarController: NSObject {
 
         menu.addItem(.separator())
 
+        addROGKeyboardSection(to: menu)
+
         let settingsItem = NSMenuItem(title: NSLocalizedString("Open XTools…", comment: ""), action: #selector(openSettings(_:)), keyEquivalent: ",")
         settingsItem.target = self
         menu.addItem(settingsItem)
@@ -91,6 +102,58 @@ final class MenuBarController: NSObject {
 
         menu.delegate = self
         return menu
+    }
+
+    // MARK: - ROG Keyboard section
+
+    /// Current profile (live, not a snapshot from when the menu was built) plus
+    /// the two switches. Omitted entirely when the tool isn't registered.
+    private func addROGKeyboardSection(to menu: NSMenu) {
+        guard let tool = rogTool else { return }
+
+        let status = NSMenuItem(title: rogStatusTitle(), action: nil, keyEquivalent: "")
+        status.isEnabled = false
+        menu.addItem(status)
+        rogStatusItem = status
+
+        let toWindows = NSMenuItem(title: NSLocalizedString("rog.action.switchToWindows", comment: ""),
+                                   action: #selector(rogSwitchToWindows(_:)), keyEquivalent: "")
+        toWindows.target = self
+        menu.addItem(toWindows)
+
+        let toMac = NSMenuItem(title: NSLocalizedString("rog.action.switchToMac", comment: ""),
+                               action: #selector(rogSwitchToMac(_:)), keyEquivalent: "")
+        toMac.target = self
+        menu.addItem(toMac)
+
+        menu.addItem(.separator())
+
+        // The state arrives asynchronously (it takes a HID round-trip), so the
+        // row rewrites itself when the answer lands instead of showing whatever
+        // was true last time the menu opened.
+        rogObserver = tool.store.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                self.rogStatusItem?.title = self.rogStatusTitle()
+            }
+    }
+
+    private func rogStatusTitle() -> String {
+        guard let store = rogTool?.store else { return "" }
+        guard store.isConnected, let info = store.info else {
+            return NSLocalizedString("rog.menu.disconnected", comment: "")
+        }
+        return String(format: NSLocalizedString("rog.menu.current", comment: ""),
+                      store.profileLabel(info.currentProfile))
+    }
+
+    @objc private func rogSwitchToWindows(_ sender: NSMenuItem) {
+        rogTool?.store.switchToWindows()
+    }
+
+    @objc private func rogSwitchToMac(_ sender: NSMenuItem) {
+        rogTool?.store.switchToMac()
     }
 
     /// Open the main window programmatically (used by the menu and by the
@@ -131,5 +194,13 @@ extension MenuBarController: NSMenuDelegate {
         if let updateItem = menu.item(withTag: 600) {
             updateItem.isEnabled = updateController.canCheckForUpdates
         }
+        // Ask the keyboard where it actually is, rather than trusting a reading
+        // from before the user last flipped its mode switch.
+        rogTool?.store.refresh()
+    }
+
+    func menuDidClose(_ menu: NSMenu) {
+        rogObserver = nil
+        rogStatusItem = nil
     }
 }

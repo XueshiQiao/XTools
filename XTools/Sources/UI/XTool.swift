@@ -10,10 +10,25 @@ import SwiftUI
 ///
 /// Main-thread only by convention (like the rest of the SwiftUI/AppKit layer);
 /// not actor-isolated so it composes with AppKit controllers on macOS 13.
+/// Which sidebar block a tool sits in. Cases are listed in the order the blocks
+/// appear, and each block is separated the way macOS System Settings separates
+/// its groups — by a gap, with no header.
+enum ToolGroup: CaseIterable {
+    /// Tools that inspect or manage this Mac.
+    case system
+    /// Tools that drive a specific piece of hardware plugged into it. These are
+    /// only useful to someone who owns that device, so they read better set apart
+    /// from the ones that apply to every Mac.
+    case devices
+}
+
 protocol XToolModule: AnyObject {
     /// Stable, language-independent id — used for routing, accessibility ids, and
     /// analytics. Never localize this.
     var id: String { get }
+
+    /// Which sidebar block this tool belongs to. Default: `.system`.
+    var group: ToolGroup { get }
 
     /// Localized sidebar label and navigation title.
     var title: String { get }
@@ -47,6 +62,7 @@ extension XToolModule {
     func activate() {}
     func shutdown() {}
     var preferredExtraWidth: CGFloat { 0 }
+    var group: ToolGroup { .system }
 }
 
 /// What the sidebar can select: the dashboard, a tool (by id), or one of the

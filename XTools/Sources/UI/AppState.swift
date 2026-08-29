@@ -71,6 +71,16 @@ final class AppState: ObservableObject {
         tools.first { $0.id == id }
     }
 
+    /// Tools split into their sidebar blocks, registry order preserved inside
+    /// each. Empty groups drop out, so removing the last tool of a group can't
+    /// leave a stray divider behind.
+    var toolGroups: [(group: ToolGroup, tools: [any XToolModule])] {
+        ToolGroup.allCases.compactMap { group in
+            let members = tools.filter { $0.group == group }
+            return members.isEmpty ? nil : (group, members)
+        }
+    }
+
     /// The value following a `--flag` in the process launch arguments (as passed
     /// by `open … --args --flag <value>`), or nil if absent.
     private static func launchArgument(_ flag: String) -> String? {

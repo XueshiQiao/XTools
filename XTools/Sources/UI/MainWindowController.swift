@@ -74,9 +74,11 @@ struct MainView: View {
                 Section {
                     builtinRow(.dashboard, symbol: "square.grid.2x2.fill", color: .blue, title: L("dashboard.title"))
                 }
-                Section {
-                    ForEach(appState.tools, id: \.id) { tool in
-                        toolRow(tool)
+                ForEach(appState.toolGroups, id: \.group) { block in
+                    Section {
+                        ForEach(block.tools, id: \.id) { tool in
+                            toolRow(tool)
+                        }
                     }
                 }
                 Section {

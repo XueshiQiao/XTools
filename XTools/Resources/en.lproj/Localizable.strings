@@ -735,3 +735,62 @@
 "tmux.error.commandFailed" = "tmux command failed.";
 "tmux.error.noServer" = "No tmux server found. Open a terminal and start tmux first.";
 "tmux.error.noClient" = "No tmux client is attached — open a terminal and attach first.";
+
+/* MARK: - ROG Keyboard */
+"tool.rogkeyboard.title" = "ROG Keyboard";
+
+"rog.section.status" = "Keyboard";
+"rog.section.profiles" = "Profiles";
+"rog.section.profiles.footer" = "Pick which on-board profile stands for each computer. Switching to the Windows profile has to happen before you flip the keyboard's mode switch — once it is on 2.4 GHz the Mac can no longer reach it. The menu bar icon has the same two switches.";
+"rog.section.automation" = "Automation";
+"rog.section.automation.footer" = "Only the return trip can be automatic. Coming back to USB, the keyboard reappears on this Mac and the profile is restored for you; leaving for 2.4 GHz gives the Mac no chance to act, so use the switch above (or the menu bar) first.";
+
+"rog.status.connected" = "Connected";
+"rog.status.disconnected" = "Not on this Mac";
+"rog.status.disconnected.hint" = "The keyboard is not reachable over USB right now — it is probably switched to 2.4 GHz or Bluetooth, or the cable is out.";
+"rog.status.currentProfile" = "Active profile";
+"rog.status.link" = "Connection";
+"rog.status.firmware" = "Firmware";
+"rog.status.gone" = "The keyboard left this Mac.";
+"rog.status.alreadyOn" = "Already on the %1$@ (%2$@) — nothing changed.";
+"rog.status.switched" = "Switched to the %1$@ (%2$@).";
+"rog.status.didNotStick" = "The switch did not take: asked for %1$@, the keyboard is on %2$@.";
+
+"rog.profile.mac" = "Mac profile";
+"rog.profile.windows" = "Windows profile";
+"rog.profile.default" = "Default Profile";
+"rog.profile.named" = "Profile %ld";
+
+"rog.action.switchToMac" = "Switch to Mac profile";
+"rog.action.switchToWindows" = "Switch to Windows profile";
+
+"rog.auto.title" = "Restore the Mac profile automatically";
+"rog.auto.subtitle" = "When the keyboard comes back to USB, put it on the Mac profile.";
+"rog.sound.title" = "Play a sound with the notification";
+"rog.notify.denied" = "Notifications are turned off for XTools, so profile switches will happen without a banner. Turn them on in System Settings → Notifications.";
+
+"rog.notify.title" = "ROG Keyboard";
+"rog.notify.switched" = "Switched to the %1$@ (%2$@)";
+"rog.notify.unchanged" = "Already on the %1$@ (%2$@) — nothing changed";
+"rog.notify.autoSwitched" = "Keyboard is back — switched to the %1$@ (%2$@)";
+"rog.notify.autoUnchanged" = "Keyboard is back — already on the %1$@ (%2$@)";
+"rog.notify.failed" = "Switch did not take: asked for %1$@, the keyboard is on %2$@";
+
+"rog.role.mac" = "Mac profile";
+"rog.role.windows" = "Windows profile";
+"rog.role.manual" = "chosen profile";
+
+"rog.link.wired" = "USB cable";
+"rog.link.wireless" = "2.4 GHz";
+"rog.link.bluetooth" = "Bluetooth";
+
+"rog.menu.current" = "ROG Keyboard — %@";
+"rog.menu.disconnected" = "ROG Keyboard — not on this Mac";
+
+"rog.error.notFound" = "Can't find the keyboard's control channel — it is probably switched to 2.4 GHz or Bluetooth.";
+"rog.error.openFailed" = "Could not open the keyboard (IOReturn %@).";
+"rog.error.writeFailed" = "Could not write to the keyboard (IOReturn %@).";
+"rog.error.timedOut" = "The keyboard did not answer command [%@].";
+"rog.error.rejected" = "The keyboard refused command [%@].";
+"rog.error.malformedReply" = "The reply to command [%@] was not in the expected shape.";
+"rog.error.invalidProfile" = "That profile slot (%ld) does not exist on this keyboard.";

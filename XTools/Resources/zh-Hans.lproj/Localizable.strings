@@ -735,3 +735,62 @@
 "tmux.error.commandFailed" = "tmux 命令失败。";
 "tmux.error.noServer" = "找不到 tmux server。请先在终端里启动 tmux。";
 "tmux.error.noClient" = "没有已 attach 的 tmux client —— 请先在终端里 attach。";
+
+/* MARK: - ROG Keyboard */
+"tool.rogkeyboard.title" = "ROG 键盘";
+
+"rog.section.status" = "键盘";
+"rog.section.profiles" = "档位分配";
+"rog.section.profiles.footer" = "指定哪个板载档位代表哪台电脑。切到 Windows 档必须赶在你拨动键盘上的模式开关之前——一旦切到 2.4G，这台 Mac 就联系不上键盘了。菜单栏图标里有同样的两个开关。";
+"rog.section.automation" = "自动化";
+"rog.section.automation.footer" = "只有回程能自动。键盘拨回 USB 时会重新出现在这台 Mac 上，档位随即被还原；而去 2.4G 那一下 Mac 没有任何机会动手，所以要先用上面的按钮（或菜单栏）切好。";
+
+"rog.status.connected" = "已连接";
+"rog.status.disconnected" = "不在这台 Mac 上";
+"rog.status.disconnected.hint" = "现在通过 USB 联系不上这把键盘——它多半被切到了 2.4G 或蓝牙，或者线拔了。";
+"rog.status.currentProfile" = "当前档位";
+"rog.status.link" = "连接方式";
+"rog.status.firmware" = "固件版本";
+"rog.status.gone" = "键盘离开了这台 Mac。";
+"rog.status.alreadyOn" = "本来就是%1$@（%2$@），没有改动。";
+"rog.status.switched" = "已切到%1$@（%2$@）。";
+"rog.status.didNotStick" = "切换没生效：请求「%1$@」，键盘停在「%2$@」。";
+
+"rog.profile.mac" = "Mac 档";
+"rog.profile.windows" = "Windows 档";
+"rog.profile.default" = "默认 配置文件";
+"rog.profile.named" = "配置文件 %ld";
+
+"rog.action.switchToMac" = "切到 Mac 档";
+"rog.action.switchToWindows" = "切到 Windows 档";
+
+"rog.auto.title" = "自动还原 Mac 档";
+"rog.auto.subtitle" = "键盘拨回 USB 时，把它切成 Mac 档。";
+"rog.sound.title" = "通知带提示音";
+"rog.notify.denied" = "XTools 的通知被关掉了，切档时不会有横幅提示。可在「系统设置 → 通知」里打开。";
+
+"rog.notify.title" = "ROG 键盘";
+"rog.notify.switched" = "已切到%1$@（%2$@）";
+"rog.notify.unchanged" = "本来就是%1$@（%2$@），没有改动";
+"rog.notify.autoSwitched" = "键盘回到 Mac —— 已切到%1$@（%2$@）";
+"rog.notify.autoUnchanged" = "键盘回到 Mac —— 本来就是%1$@（%2$@）";
+"rog.notify.failed" = "切换没生效：请求「%1$@」，键盘停在「%2$@」";
+
+"rog.role.mac" = "Mac 档";
+"rog.role.windows" = "Windows 档";
+"rog.role.manual" = "指定档位";
+
+"rog.link.wired" = "USB 有线";
+"rog.link.wireless" = "2.4G 无线";
+"rog.link.bluetooth" = "蓝牙";
+
+"rog.menu.current" = "ROG 键盘 —— 当前 %@";
+"rog.menu.disconnected" = "ROG 键盘 —— 不在这台 Mac 上";
+
+"rog.error.notFound" = "找不到键盘的控制通道——它多半被切到了 2.4G 或蓝牙。";
+"rog.error.openFailed" = "打不开键盘（IOReturn %@）。";
+"rog.error.writeFailed" = "写入键盘失败（IOReturn %@）。";
+"rog.error.timedOut" = "键盘没有回应命令 [%@]。";
+"rog.error.rejected" = "键盘拒绝了命令 [%@]。";
+"rog.error.malformedReply" = "命令 [%@] 的回应格式不对。";
+"rog.error.invalidProfile" = "这把键盘上没有这个配置文件槽位（%ld）。";
