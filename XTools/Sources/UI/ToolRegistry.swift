@@ -10,19 +10,24 @@ enum ToolRegistry {
     /// AppState stays the single owner of both the tools and the services.
     static func makeAllTools(llm: LLMService) -> [any XToolModule] {
         [
+            // .selection
             PopBarTool(llm: llm),
-            LaunchManagerTool(),
-            WakeLocksTool(),
+            // .liveActivity
             NowPlayingTool(),
+            WakeLocksTool(),
+            // .system
             PowerInsightsTool(),
             DNSToolsTool(),
             DefaultAppsTool(),
             PortsTool(),
             ProcessesTool(llm: llm),
             MemoryTool(),
+            // .background
+            LaunchManagerTool(),
+            TmuxTool(),
+            // .devices
             NagaTool(),
             ROGKeyboardTool(),
-            TmuxTool(),
             // Add future tools here.
         ]
     }

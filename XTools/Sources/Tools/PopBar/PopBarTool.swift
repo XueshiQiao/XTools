@@ -17,6 +17,7 @@ final class PopBarTool: XToolModule {
     var title: String { L("tool.popbar.title") }
     let symbol = "text.bubble.fill"
     let color = Color.indigo
+    let group = ToolGroup.selection
 
     /// The app-level shared LLM service, injected by `ToolRegistry`. PopBar no
     /// longer owns the model config — it lives on the AI Models page.

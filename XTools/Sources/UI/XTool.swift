@@ -14,8 +14,17 @@ import SwiftUI
 /// appear, and each block is separated the way macOS System Settings separates
 /// its groups — by a gap, with no header.
 enum ToolGroup: CaseIterable {
-    /// Tools that inspect or manage this Mac.
+    /// Tools you reach for while working in *another* app — they act on whatever
+    /// you have selected, and their real UI is a popup, not this window.
+    case selection
+    /// "What is going on right this second" — something is making noise, something
+    /// is stopping the Mac from sleeping. Short-lived answers you check and leave.
+    case liveActivity
+    /// Tools that inspect or manage this Mac. The default group.
     case system
+    /// Long-lived things that outlive the window that started them: launchd items
+    /// and tmux sessions.
+    case background
     /// Tools that drive a specific piece of hardware plugged into it. These are
     /// only useful to someone who owns that device, so they read better set apart
     /// from the ones that apply to every Mac.

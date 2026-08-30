@@ -12,6 +12,7 @@ final class WakeLocksTool: XToolModule {
     var title: String { L("tool.wake.title") }
     let symbol = "cup.and.saucer.fill"
     let color = Color.orange
+    let group = ToolGroup.liveActivity
 
     private lazy var store = WakeLocksStore()
 

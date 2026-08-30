@@ -12,6 +12,7 @@ final class LaunchManagerTool: XToolModule {
     var title: String { L("tool.launch.title") }
     let symbol = "bolt.horizontal.circle.fill"
     let color = Color.blue
+    let group = ToolGroup.background
 
     private let reaper = GuardianReaper()
     private lazy var store = LaunchManagerStore(reaper: reaper)

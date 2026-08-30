@@ -11,6 +11,7 @@ final class TmuxTool: XToolModule {
     var title: String { L("tool.tmux.title") }
     let symbol = "terminal"
     let color = Color.teal
+    let group = ToolGroup.background
 
     /// Single store shared by the sidebar page and the hotkey palette.
     private lazy var store = TmuxStore()

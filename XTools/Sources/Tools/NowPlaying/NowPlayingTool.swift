@@ -12,6 +12,7 @@ final class NowPlayingTool: XToolModule {
     var title: String { L("tool.nowplaying.title") }
     let symbol = "waveform"
     let color = Color.pink
+    let group = ToolGroup.liveActivity
 
     private lazy var store = NowPlayingStore()
 
