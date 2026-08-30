@@ -4,13 +4,13 @@
 </h1>
 
 <p align="center">
-  <b>One macOS app for the dozen small things you normally open Terminal for —<br/>
-  ghost processes, wake locks, listening ports, tmux sessions — plus an AI popup on any text you select.</b>
+  <b>一个 macOS app，装下十几件平时要开终端才能干的小事——<br/>
+  退不干净的后台进程、不让电脑睡觉的程序、被占用的端口、tmux 会话，外加一个划词就弹出来的 AI 胶囊。</b>
 </p>
 
 <p align="center">
-  <b>🇺🇸 English</b> •
-  <a href="README_CN.md">🇨🇳 中文</a>
+  <b>🇨🇳 中文</b> •
+  <a href="README_EN.md">🇺🇸 English</a>
 </p>
 
 <p align="center">
@@ -22,209 +22,188 @@
 </p>
 
 <p align="center">
-  ⭐ <b>If XTools saves you a trip to Terminal, please <a href="https://github.com/XueshiQiao/XTools">star the repo</a></b> — it helps others find it.
+  ⭐ <b>如果 XTools 帮你省下了开终端的功夫，欢迎给个 <a href="https://github.com/XueshiQiao/XTools">Star</a></b> —— 能帮更多人发现它。
   <br/>
-  ✨ <a href="https://xueshi.dev">More apps I made → xueshi.dev</a>
+  ✨ <a href="https://xueshi.dev">我做的更多应用 → xueshi.dev</a>
 </p>
 
-XTools is a **toolbox**: one native window, one tool per tab. Each tool answers a single
-annoying question about your Mac — *what is still running after I quit that app? what is
-keeping the screen awake? who is sitting on port 3000? what actually is `sysmond`?* — and
-each one lives in its own folder, so the collection can keep growing without the app
-turning into a swamp.
+XTools 是一个**工具箱**：一个原生窗口，一个标签页一个工具。每个工具只回答一件关于这台
+Mac 的烦心事——*我明明退出了那个 app，怎么还有进程在跑？谁在不让屏幕休眠？3000 端口被谁
+占了？`sysmond` 到底是个什么东西？* 每个工具各自独立成一个文件夹，所以工具越加越多，
+app 也不会变成一锅粥。
 
-<img src="screenshots/XTools-dashboard-en.jpg" width="820" alt="XTools Dashboard" />
+<img src="screenshots/XTools-dashboard-zh.jpg" width="820" alt="XTools 概览" />
 
-## Why XTools?
+## 为什么做 XTools？
 
-Every tool in here replaces something you'd otherwise do by hand: `lsof -i -P`,
-`pmset -g assertions`, `launchctl list`, `scutil --dns`, `tmux list-sessions`, or a
-single-purpose 5 MB app per problem. None of those is hard — they're just *annoying*,
-and the answers they print need a second step to be useful.
+这里面每个工具，替代的都是你本来要手敲的东西：`lsof -i -P`、`pmset -g assertions`、
+`launchctl list`、`scutil --dns`、`tmux list-sessions`，或者一个问题装一个 5 MB 的小应用。
+这些事都不难，只是**烦**——而且命令打印出来的答案，还得再动一次手才能真正解决问题。
 
-So XTools does two things a shell command can't:
+所以 XTools 做了两件命令行做不到的事：
 
-- **It shows you the answer and the button in the same place.** The process that's
-  blocking sleep has a *Quit* next to it. The plist pointing at a deleted app has a
-  *Disable* next to it.
-- **It never destroys anything to make a symptom go away.** A LaunchAgent plist is
-  renamed to `.bak`, never deleted. Nothing is killed automatically unless you switched
-  on a rule that says so.
+- **答案和按钮在同一个地方。** 那个不让电脑睡觉的进程，旁边就是「退出」；那个指向已删除
+  app 的 plist，旁边就是「停用」。
+- **绝不为了消掉一个症状去毁掉你的东西。** 停用一个 LaunchAgent 是把 plist 改名成
+  `.bak`，从不删除；除非你自己打开了对应的规则，否则不会自动杀任何进程。
 
-## ✨ The tools
+## ✨ 有哪些工具
 
-Everything is configured in the app — there are no config files to hand-edit.
+所有设置都在 app 里点，不需要手写任何配置文件。
 
-| Tool | What it answers |
+| 工具 | 它回答什么 |
 |---|---|
-| **Dashboard** | Memory, battery, wake locks, audio, ports and disk at a glance |
-| **Pop Bar** | Select text anywhere → a popup of AI actions at the cursor |
-| **Launch Manager** | What's still running after I quit that app? What's in my LaunchAgents? |
-| **Wake Locks** | What is keeping my Mac (or its display) awake? |
-| **Now Playing** | Which apps are actually playing audio right now? |
-| **Power & Battery** | How healthy is my battery, and what are my sleep settings? |
-| **DNS & hosts** | Which resolvers am I using, and what's in `/etc/hosts`? |
-| **Default Apps** | Which app opens `.md`, `.json`, `http://`…? |
-| **Ports & Connections** | Who is on port 3000? What is this Mac connected to? |
-| **Process Insight** | What *is* this process — in plain language? |
-| **Memory** | Is my Mac actually short on RAM, or does it just look busy? |
-| **Naga Keys** | Turn the Razer Naga's side buttons into shortcuts I choose |
-| **ROG Keyboard** | Keep an ASUS ROG Falcata on its Mac profile |
-| **Tmux** | See and jump around my tmux sessions without typing `tmux` |
+| **概览** | 内存、电池、唤醒占用、音频、端口、磁盘，一眼看完 |
+| **划词胶囊** | 在任何地方选中文字 → 光标处弹出一圈 AI 动作 |
+| **正在播放** | 现在到底是哪个 app 在出声？ |
+| **唤醒占用** | 谁在不让我的 Mac（或者屏幕）睡觉？ |
+| **电源与电池** | 电池还健康吗？我的休眠设置是怎样的？ |
+| **DNS 与 hosts** | 我现在用的是哪个 DNS？`/etc/hosts` 里写了什么？ |
+| **默认打开方式** | `.md`、`.json`、`http://` 现在归哪个 app 打开？ |
+| **端口与连接** | 3000 端口被谁占了？这台 Mac 正连着哪些地方？ |
+| **进程洞察** | 这个进程到底是干什么的？用人话说 |
+| **内存压力** | 我的 Mac 是真的内存不够，还是只是看着忙？ |
+| **Launch 管理器** | app 退出后还有什么在跑？我的 LaunchAgents 里都装了些什么？ |
+| **Tmux** | 不用敲 `tmux` 就能看见并跳转我的会话 |
+| **Naga 侧键** | 把雷蛇 Naga 的侧键变成我自己定的快捷键 |
+| **ROG 键盘** | 让 ROG Falcata 一插上 Mac 就回到 Mac 的配置 |
 
-### 💬 Pop Bar — select text, get a popup
+### 💬 划词胶囊 —— 选中文字，动作就弹出来
 
-<img src="screenshots/XTools-popbar-wheel.png" width="260" align="right" alt="Pop Bar wheel" />
+<img src="screenshots/XTools-popbar-wheel.png" width="260" align="right" alt="划词胶囊的圆环样式" />
 
-Select text in **any** app and a small popup appears at the cursor with your own actions
-on it. Three built-in AI actions ship by default — Translate, Polish, Explain — and you
-can add as many as you like: each action is a title, an icon, and a prompt you write
-yourself, with its own model if you want one.
+在**任何** app 里选中一段文字，光标处就会弹出一个小面板，上面是你自己配的动作。默认自带
+三个 AI 动作——翻译、润色、解释——你可以随便加：每个动作就是一个名字、一个图标、一段你自己
+写的 prompt，还可以单独指定用哪个模型。
 
-- **Three looks** — a horizontal **capsule** above the selection, or a **wheel** / **liquid**
-  ring centred on the cursor. The ring pictured is my own set of actions, in my own
-  language — that's the point of it.
-- **Streaming results** rendered as live Markdown, in a panel that grows to fit.
-- **Web Preview** — if the selection carries a link, open it in a built-in mini browser;
-  if it doesn't, search the web for the selected text instead.
-- **Screenshot Text (OCR)** — press a shortcut, drag a box over anything on screen, and
-  its text is recognized and handed to the same actions. Works on images, video frames,
-  and apps that won't let you select text.
-- Bring your own model: **OpenAI**, **DeepSeek**, **Doubao (Ark)**, **Qwen (DashScope)**,
-  or a local **Ollama**. API keys live in your **Keychain**, never in a config file.
+- **三种样式** —— 选区上方的横向**胶囊**，或者以光标为中心的**圆环** / **液态**样式（右图）。
+- **流式输出**，边生成边按 Markdown 渲染，结果面板会自动长高到刚好装下。
+- **网页预览** —— 选中的内容带链接就用内置的迷你浏览器打开；不带链接就直接拿这段文字去搜。
+- **截图取字（OCR）** —— 按一下快捷键，在屏幕上框一块区域，里面的文字会被识别出来，交给同一批
+  动作处理。图片、视频画面、以及那些根本不让你选中文字的 app，都能取。
+- 模型自己接：**OpenAI**、**DeepSeek**、**豆包（Ark）**、**通义千问（DashScope）**，或者本地的
+  **Ollama**。API key 存在 **Keychain** 里，不落配置文件。
 
 <br clear="right"/>
 
-### ⚡ Launch Manager — the app quit, its helpers didn't
+### ⚡ Launch 管理器 —— app 退了，它的小弟没退
 
-<img src="screenshots/XTools-launch-manager-en.jpg" width="820" alt="Launch Manager" />
+<img src="screenshots/XTools-launch-manager-zh.jpg" width="820" alt="Launch 管理器" />
 
-Some apps leave background helpers running long after you quit them (the classic case is
-Baidu Netdisk's `netdisk_service`). Launch Manager finds them by grouping every running
-process under the `.app` bundle it came from, then showing you the bundles whose main app
-isn't running.
+有些 app 退出之后，会留下一堆后台进程继续跑（最经典的就是百度网盘的 `netdisk_service`）。
+Launch 管理器的做法是：把每个正在运行的进程归到它所属的 `.app` 里，然后把那些「主 app 已经
+不在了、小弟还在跑」的 app 挑出来给你看。
 
-- **Residual processes** — repeat offenders are highlighted; Apple system services and
-  known updaters are greyed out and never suggested for cleanup. One click to **Reap**.
-- **Guardian rules** — opt in per app: whenever that app isn't running, XTools reaps its
-  leftovers for you, immediately when you quit it plus a short poll to catch the ones
-  launchd re-spawns. It deliberately leaves the app's LaunchAgent alone, so it keeps
-  working even after the vendor re-adds it.
-- **LaunchAgents & Daemons** — all three launchd directories in one list, including root
-  ones. Spot the entries pointing at apps you deleted, and stop or disable them. Disabling
-  **renames the plist to `.bak`** — nothing is ever deleted.
+- **残留进程** —— 惯犯会高亮；Apple 的系统服务和常见的更新器会置灰，永远不会被建议清理。
+  一键**清理**。
+- **Guardian 规则** —— 按 app 单独开启：只要这个 app 没在运行，XTools 就替你清掉它的残留，
+  你一退出立刻清一次，再加一个短周期的轮询，接住那些被 launchd 重新拉起来的。它**故意不去动**
+  这个 app 的 LaunchAgent——所以哪怕厂商下次启动又把 LaunchAgent 加回来，规则照样有效。
+- **LaunchAgents / Daemons** —— 三个 launchd 目录（含 root 的）合成一张列表。一眼看出哪些
+  还指着你早就删掉的 app，然后停止或停用它们。停用是**把 plist 改名成 `.bak`**，绝不删除。
 
-User-level cleanup needs no privileges. Root daemons are handled on demand behind one
-admin password prompt; XTools does **not** install a background privileged helper.
+用户级的清理不需要任何权限。root 级的守护进程走「用的时候弹一次密码」的路径；XTools **不会**
+在你系统里装一个常驻的提权 helper。
 
-### 🔎 Process Insight — what *is* this thing?
+### 🔎 进程洞察 —— 这玩意儿到底是干嘛的
 
-<img src="screenshots/XTools-process-insight-en.jpg" width="820" alt="Process Insight" />
+<img src="screenshots/XTools-process-insight-zh.jpg" width="820" alt="进程洞察" />
 
-An Activity-Monitor-style list, except the point isn't the list — it's the question the
-list can't answer. Pick a process and a model explains it in plain language, grounded in
-facts XTools gathers locally first: the **code signature** (who really signed it), the
-**LaunchAgent or Daemon that started it**, its real path and arguments. That grounding
-matters, because a process's own name is the one thing malware gets to choose.
+看起来像活动监视器的进程列表，但重点不是这张表，而是这张表回答不了的那个问题。选中一个进程，
+模型会用大白话讲清楚它是什么——而且是基于 XTools 先在本地查到的事实来讲的：**代码签名**
+（到底是谁签的）、**是哪个 LaunchAgent / Daemon 把它拉起来的**、真实路径和启动参数。这一步很
+关键，因为进程自报的名字，恰恰是恶意程序唯一能随便改的东西。
 
-### 🧵 Tmux — your sessions, without typing `tmux`
+### 🧵 Tmux —— 不用敲 `tmux` 也能管会话
 
-<img src="screenshots/XTools-tmux-en.jpg" width="820" alt="Tmux" />
+<img src="screenshots/XTools-tmux-zh.jpg" width="820" alt="Tmux" />
 
-A live tree of sessions → windows → panes. Click the arrow to jump straight to one,
-**drag a window onto another session** to move it there, and search across everything.
-A global shortcut (`⌃⌥⌘T` by default) opens the same tree as a floating palette from
-anywhere, so you never have to find a terminal first.
+会话 → 窗口 → 窗格的实时树状图。点箭头直接跳过去，**把一个窗口拖到另一个会话上**就能搬过去，
+还能全局搜索。默认按 `⌃⌥⌘T` 可以在任何地方把这棵树叫出来变成一个浮动面板，不用先去找终端。
 
-### 🔋 The read-only ones
+### 🔋 只看不动的那几个
 
-These four just tell you the truth about your Mac and get out of the way:
+下面这四个只负责把真实情况告诉你，然后就不打扰你了：
 
-- **Wake Locks** — the processes holding power assertions that keep the display or the
-  whole Mac awake, with the option to quit the culprit.
-- **Now Playing** — which apps currently hold an audio output, and for how long.
-- **Power & Battery** — battery health and cycle count, your active `pmset` sleep
-  settings, and recent sleep/wake events.
-- **Memory** — the memory-pressure signal the kernel actually uses (green / yellow / red)
-  next to Activity Monitor's numbers — Free, Active, Inactive, Wired, Compressed,
-  Purgeable, swap — each with a sentence saying what it means.
+- **唤醒占用** —— 哪些进程持有 power assertion（系统里那种「请别睡」的声明），让屏幕或整台
+  Mac 睡不着，可以直接退掉肇事者。
+- **正在播放** —— 现在哪些 app 占着音频输出，各占了多久。
+- **电源与电池** —— 电池健康度和循环次数、当前生效的 `pmset` 休眠设置、最近的睡眠/唤醒记录。
+- **内存压力** —— 内核真正在用的那个内存压力信号（绿/黄/红），旁边配上活动监视器的那几个
+  数字：可用、活跃、非活跃、联动（Wired）、已压缩、可清除、交换区——每一项都用一句话说明白
+  它是什么意思。
 
-### 🌐 Network & system
+### 🌐 网络与系统
 
-- **Ports & Connections** — every listening port with the process behind it ("who's on
-  :3000"), plus live connections, and a kill button. A native Swift port of
-  [netstat-cat](https://github.com/XueshiQiao/netstat-cat).
-- **DNS & hosts** — the resolvers and search domains actually in use, a one-click DNS
-  cache flush, and an editor for `/etc/hosts` that backs the file up before saving.
-- **Default Apps** — change which app opens a file type or URL scheme, for a curated list
-  of the common ones. All user-level, no `sudo`.
+- **端口与连接** —— 每一个监听端口，以及它背后是哪个进程（「3000 端口被谁占了」），外加实时
+  连接列表和一个结束进程的按钮。是我那个
+  [netstat-cat](https://github.com/XueshiQiao/netstat-cat) 的原生 Swift 版。
+- **DNS 与 hosts** —— 当前真正生效的 DNS 服务器和搜索域，一键清 DNS 缓存，以及一个
+  `/etc/hosts` 编辑器（保存前先备份原文件）。
+- **默认打开方式** —— 改某个文件类型或者 URL scheme 归哪个 app 打开，覆盖了一批常用类型。
+  全部在用户级完成，不需要 `sudo`。
 
-### 🖱️ Devices
+### 🖱️ 外设
 
-- **Naga Keys** — the Razer Naga V2 Pro's numbered side buttons are sent as ordinary
-  keystrokes, so macOS can't remap them. XTools recognizes the ones coming from that
-  device specifically, swallows them, and emits the shortcut you recorded instead.
-- **ROG Keyboard** — an ASUS ROG Falcata talks to two computers at once (USB-C here, a
-  2.4 GHz receiver in a PC) and its profiles don't follow the switch on its body, so the
-  Mac key map wanders off to Windows. This puts the right profile back automatically.
+- **Naga 侧键** —— 雷蛇 Naga V2 Pro 的数字侧键，发出来的其实是普通的键盘按键，所以 macOS
+  自己没法重映射。XTools 会认出「这一下是从那个设备来的」，把它吞掉，然后发出你录制的那个
+  快捷键。
+- **ROG 键盘** —— 华硕 ROG Falcata 同时连着两台电脑（USB-C 接这台 Mac，2.4 GHz 接收器插在
+  PC 上），但它的配置并不跟着机身上那个切换开关走，于是 Mac 的键位会被带去 Windows。这个工具
+  会自动把正确的配置切回来。
 
-> ROG Keyboard is on `main` and ships in the next release; the tools above it are all in
-> the current one.
+> ROG 键盘目前在 `main` 分支上，下个版本发布；上面其他工具在当前版本里都已经有了。
 
-## Install
+## 安装
 
-Download the latest `.dmg` from **[GitHub Releases](https://github.com/XueshiQiao/XTools/releases)**
-and drag XTools into your Applications folder.
+从 **[GitHub Releases](https://github.com/XueshiQiao/XTools/releases)** 下载最新的 `.dmg`，
+打开后把 XTools 拖进「应用程序」文件夹。
 
-The app is signed with an Apple Developer ID certificate and notarized by Apple, so it
-installs without any security warnings. Updates arrive automatically through
-[Sparkle](https://sparkle-project.org).
+应用已使用 Apple 开发者证书签名，并通过了 Apple 公证（Notarization），可以直接安装，不会出现
+安全警告。后续更新通过 [Sparkle](https://sparkle-project.org) 自动完成。
 
-Requires **macOS 13** or later. Apple silicon and Intel.
+需要 **macOS 13** 或更高版本，Apple 芯片和 Intel 都支持。
 
-### Permissions
+### 权限
 
-XTools asks for a permission only when you turn on the feature that needs it — none of
-them are required to launch the app.
+只有当你打开某个需要权限的功能时，XTools 才会去要那个权限——启动 app 本身一个都不需要。
 
-| Permission | Needed by | Why |
+| 权限 | 谁需要 | 用来干什么 |
 |---|---|---|
-| **Accessibility** | Pop Bar, Naga Keys | Read the selected text; see the key presses to remap |
-| **Screen Recording** | Pop Bar → Screenshot Text | Read pixels from the screen to run OCR on them |
-| **Input Monitoring** | Naga Keys | Tell the Naga's key presses apart from your keyboard's |
-| **Admin password** | Launch Manager, DNS | One prompt, on demand, for root daemons and `/etc/hosts` |
+| **辅助功能（Accessibility）** | 划词胶囊、Naga 侧键 | 读取你选中的文字；看到要重映射的按键 |
+| **屏幕录制（Screen Recording）** | 划词胶囊 → 截图取字 | 读取屏幕像素，才能对它做 OCR |
+| **输入监控（Input Monitoring）** | Naga 侧键 | 把 Naga 发的按键和你键盘发的区分开 |
+| **管理员密码** | Launch 管理器、DNS | 用到的时候弹一次，用于 root 守护进程和 `/etc/hosts` |
 
-XTools is **not sandboxed** — enumerating other processes and reading launchd plists is
-the whole job, and the sandbox forbids both.
+XTools **没有开沙盒**——枚举其他进程、读取 launchd 的 plist 正是它的本职工作，而沙盒把这两件
+事都禁掉了。
 
-### Privacy
+### 隐私
 
-- **Pop Bar and Process Insight are the only tools that send anything anywhere**, and only
-  the text you selected or the process you picked, to the model provider you configured.
-  Point them at a local Ollama and nothing leaves the machine at all.
-- API keys are stored in the **macOS Keychain**.
-- OCR runs on-device (Apple's Vision framework). Screenshots are never written to disk.
-- Anonymous usage stats can be switched off in **About**. No analytics backend is
-  configured in the current build, so nothing is being sent today anyway.
+- **只有划词胶囊和进程洞察会往外发东西**，而且只发你选中的那段文字、或者你点的那个进程，
+  发给你自己配置的那个模型服务商。接一个本地 Ollama，就什么都不会离开这台电脑。
+- API key 存在 **macOS Keychain** 里。
+- OCR 完全在本机跑（Apple 的 Vision 框架），截下来的图不会写进磁盘。
+- 匿名使用统计可以在「关于」页里关掉。而且当前版本压根没配置统计服务，所以现在什么都没在发。
 
-## Tech Stack
+## 技术栈
 
-- **Native macOS** — AppKit shell (menu bar, window controller); every page is SwiftUI
-  hosted in an `NSHostingController`. Swift 5.9, macOS 13+.
-- [XcodeGen](https://github.com/yonaskolb/XcodeGen) — `project.yml` is the single source of
-  truth for the Xcode project.
-- [Sparkle](https://sparkle-project.org) for auto-update (EdDSA-signed appcast).
-- English / 简体中文, switchable in-app without a relaunch.
+- **原生 macOS** —— AppKit 做外壳（菜单栏、窗口控制器）；每个页面都是 SwiftUI，通过
+  `NSHostingController` 承载。Swift 5.9，macOS 13+。
+- [XcodeGen](https://github.com/yonaskolb/XcodeGen) —— `project.yml` 是 Xcode 工程配置的
+  唯一来源。
+- [Sparkle](https://sparkle-project.org) 实现自动更新（appcast 用 EdDSA 签名）。
+- 英文 / 简体中文，在 app 内切换，不用重启。
 
-## Build from Source
+## 从源码构建
 
-### Prerequisites
+### 前置要求
 
 - macOS 13+
 - Xcode 16+
-- [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`)
+- [XcodeGen](https://github.com/yonaskolb/XcodeGen)（`brew install xcodegen`）
 
-### Setup
+### 步骤
 
 ```bash
 git clone https://github.com/XueshiQiao/XTools.git
@@ -232,30 +211,30 @@ cd XTools
 brew install xcodegen
 xcodegen generate
 
-scripts/run.sh                    # kill old → build Debug → relaunch
-scripts/run.sh --tab now-playing  # …and open straight to one tool
-# or: open XTools.xcodeproj  then Cmd+R
+scripts/run.sh                    # 杀掉旧的 → 构建 Debug → 重新启动
+scripts/run.sh --tab now-playing  # 顺便直接打开某个工具页
+# 或者：open XTools.xcodeproj，然后 Cmd+R
 ```
 
-The Debug build installs alongside the release one as `XTools-Debug.app`
-(bundle id `me.xueshi.xtools.debug`). Logs: `~/Library/Logs/XTools/XTools.log`.
+Debug 版会作为 `XTools-Debug.app`（bundle id `me.xueshi.xtools.debug`）和正式版并存。
+日志在 `~/Library/Logs/XTools/XTools.log`。
 
-### Adding a tool
+### 加一个新工具
 
-The shell hard-codes nothing — the sidebar, routing and lifecycle are all driven by a
-registry, so a new tool is three steps:
+外壳里没有任何写死的工具——侧边栏、路由、生命周期全部由一个注册表驱动，所以加一个工具只有
+三步：
 
-1. Create `XTools/Sources/Tools/<Name>/`.
-2. Implement `XToolModule` on a `<Name>Tool` class — `id`, `title`, `symbol`, `color`,
-   `makeRootView()`, plus optional `activate()` / `shutdown()` if it needs to run in the
-   background for the life of the app.
-3. Add one line to `ToolRegistry.makeAllTools()`.
+1. 新建 `XTools/Sources/Tools/<Name>/`。
+2. 在 `<Name>Tool` 类上实现 `XToolModule`：`id`、`title`、`symbol`、`color`、
+   `makeRootView()`；如果它需要在 app 存活期间一直跑，再实现可选的 `activate()` /
+   `shutdown()`。
+3. 往 `ToolRegistry.makeAllTools()` 里加一行。
 
-A tool owns its own models, services, store, view and persistence inside that one folder.
-`Core/` and `UI/` hold only shared infrastructure. See [`CLAUDE.md`](CLAUDE.md) for the
-architecture and [`docs/DESIGN.md`](docs/DESIGN.md) for the decisions and scope.
+一个工具自己的 model、service、store、view 和持久化全都待在它那一个文件夹里；`Core/` 和
+`UI/` 只放共享的基础设施。架构见 [`CLAUDE.md`](CLAUDE.md)，设计取舍和范围见
+[`docs/DESIGN.md`](docs/DESIGN.md)。
 
 ---
 
-By [@XueshiQiao](https://x.com/XueshiQiao) · [xueshi.dev](https://xueshi.dev) ·
-sibling app [AnyDrag](https://github.com/XueshiQiao/AnyDrag)
+作者 [@XueshiQiao](https://x.com/XueshiQiao) · [xueshi.dev](https://xueshi.dev) ·
+姊妹应用 [AnyDrag](https://github.com/XueshiQiao/AnyDrag)
