@@ -387,11 +387,24 @@ jobs:
           # workflows would go green while the cask silently stayed behind. So
           # poll until the manifest actually reports THIS tag's version.
           VERSION=$(grep -E '^[[:space:]]*MARKETING_VERSION:' project.yml | head -1 | sed 's/.*: *"\(.*\)"/\1/')
+          if [[ -z "$VERSION" ]]; then
+            echo "::error::could not read MARKETING_VERSION out of project.yml"; exit 1
+          fi
           URL="https://github.com/XueshiQiao/XTools/releases/latest/download/latest.json"
-          for i in $(seq 1 60); do
-            BODY=$(curl -sL "$URL" || true)
-            if printf '%s' "$BODY" | grep -q "\"version\"[[:space:]]*:[[:space:]]*\"${VERSION}\""; then
-              echo "latest.json reports ${VERSION} after ${i} attempt(s)"
+          # Bound the whole poll by wall-clock, not by iteration count: curl gets
+          # its own connect/transfer timeouts so one stalled request cannot eat
+          # the budget and skip the warning below.
+          DEADLINE=$(( $(date +%s) + 180 ))
+          ATTEMPT=0
+          while [[ $(date +%s) -lt $DEADLINE ]]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            # -f makes an HTTP error a curl failure, and the body has to parse as
+            # JSON with an exactly-equal version — a truncated or half-written
+            # response retries instead of counting as success.
+            if BODY=$(curl -fsSL --connect-timeout 10 --max-time 20 "$URL") &&
+               printf '%s' "$BODY" | VERSION="$VERSION" python3 -c \
+                 'import json,os,sys; sys.exit(0 if json.load(sys.stdin).get("version") == os.environ["VERSION"] else 1)' 2>/dev/null; then
+              echo "latest.json reports ${VERSION} (attempt ${ATTEMPT})"
               exit 0
             fi
             sleep 3

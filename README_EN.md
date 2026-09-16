@@ -184,11 +184,11 @@ brew install --cask XueshiQiao/tap/xtools
 
 ```bash
 brew tap XueshiQiao/tap
-brew trust XueshiQiao/tap   # Homebrew 7.0+ only; older versions have no `trust` command
+brew trust XueshiQiao/tap   # Homebrew 6.0+; earlier versions can skip this line
 brew install --cask xtools
 ```
 
-Since Homebrew 7.0 a cask from a third-party tap will not load unless the tap is
+Since Homebrew 6.0 a cask from a third-party tap will not load unless the tap is
 trusted — or the cask is named in full on the command line, which is exactly what
 the one-liner above does. Hence the extra step here.
 </details>
