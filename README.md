@@ -156,6 +156,27 @@ Launch 管理器的做法是：把每个正在运行的进程归到它所属的 
 
 ## 安装
 
+### Homebrew
+
+```bash
+brew install --cask XueshiQiao/tap/xtools
+```
+
+<details>
+<summary>想用两步式写法？</summary>
+
+```bash
+brew tap XueshiQiao/tap
+brew trust XueshiQiao/tap   # Homebrew 7.0 起需要；老版本没有这条命令，跳过即可
+brew install --cask xtools
+```
+
+Homebrew 7.0 开始，第三方 tap 里的 cask 必须先被信任过一次才能加载——除非你把完整名字
+写在命令行里，也就是上面那条一行式命令做的事。所以一行式不需要 `brew trust`，两步式需要。
+</details>
+
+### 手动下载
+
 从 **[GitHub Releases](https://github.com/XueshiQiao/XTools/releases)** 下载最新的 `.dmg`，
 打开后把 XTools 拖进「应用程序」文件夹。
 

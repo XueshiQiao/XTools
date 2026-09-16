@@ -173,6 +173,28 @@ These four just tell you the truth about your Mac and get out of the way:
 
 ## Install
 
+### Homebrew
+
+```bash
+brew install --cask XueshiQiao/tap/xtools
+```
+
+<details>
+<summary>Prefer the two-step form?</summary>
+
+```bash
+brew tap XueshiQiao/tap
+brew trust XueshiQiao/tap   # Homebrew 7.0+ only; older versions have no `trust` command
+brew install --cask xtools
+```
+
+Since Homebrew 7.0 a cask from a third-party tap will not load unless the tap is
+trusted — or the cask is named in full on the command line, which is exactly what
+the one-liner above does. Hence the extra step here.
+</details>
+
+### Manual download
+
 Download the latest `.dmg` from **[GitHub Releases](https://github.com/XueshiQiao/XTools/releases)**
 and drag XTools into your Applications folder.
 

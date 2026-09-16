@@ -25,6 +25,7 @@ jobs:
     env:
       HAS_APPLE_SECRETS: ${{ secrets.MAC_CERTS_P12_BASE64 != '' }}
       HAS_SPARKLE_KEY: ${{ secrets.SPARKLE_EDDSA_KEY != '' }}
+      HAS_HOMEBREW_PAT: ${{ secrets.HOMEBREW_TAP_PAT != '' }}
 
     steps:
       - name: Checkout repository
@@ -308,6 +309,30 @@ jobs:
           done
           git worktree remove --force "$WT" 2>/dev/null || true
 
+      - name: Generate latest.json
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          # Minimal manifest the shared homebrew-tap generator reads — it pulls
+          # version + per-arch DMG URLs from this file, downloads the DMG, and
+          # computes sha256 itself. XTools ships one universal DMG so arm/intel
+          # point at the same URL. Uploaded as a release asset below so the
+          # canonical .../releases/latest/download/latest.json URL resolves.
+          VERSION=$(grep -E '^[[:space:]]*MARKETING_VERSION:' project.yml | head -1 | sed 's/.*: *"\(.*\)"/\1/')
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          DMG_URL="https://github.com/XueshiQiao/XTools/releases/download/${TAG_NAME}/XTools.dmg"
+          PUB_DATE=$(date -u "+%Y-%m-%dT%H:%M:%SZ")
+          cat > latest.json <<JSON
+          {
+            "version": "${VERSION}",
+            "pub_date": "${PUB_DATE}",
+            "platforms": {
+              "darwin-aarch64": { "url": "${DMG_URL}" },
+              "darwin-x86_64":  { "url": "${DMG_URL}" }
+            }
+          }
+          JSON
+          echo "--- latest.json ---"; cat latest.json
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -344,8 +369,52 @@ jobs:
         with:
           files: |
             build/Release/XTools.dmg
+            latest.json
             appcast.xml
           body_path: ${{ env.RELEASE_BODY_READY == 'true' && format('{0}/github_release_body.md', runner.temp) || '' }}
           generate_release_notes: ${{ env.RELEASE_BODY_READY != 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for this release's manifest to go live
+        if: ${{ startsWith(github.ref, 'refs/tags/v') && env.HAS_HOMEBREW_PAT == 'true' && success() }}
+        run: |
+          # The tap generator fetches .../releases/latest/download/latest.json and
+          # trusts whatever comes back. Checking only that the URL returns 200 is
+          # not enough: right after publishing, that URL can still resolve to the
+          # PREVIOUS release's manifest — also a 200, but an older version. We
+          # would dispatch, the tap would regenerate the same old cask, and both
+          # workflows would go green while the cask silently stayed behind. So
+          # poll until the manifest actually reports THIS tag's version.
+          VERSION=$(grep -E '^[[:space:]]*MARKETING_VERSION:' project.yml | head -1 | sed 's/.*: *"\(.*\)"/\1/')
+          URL="https://github.com/XueshiQiao/XTools/releases/latest/download/latest.json"
+          for i in $(seq 1 60); do
+            BODY=$(curl -sL "$URL" || true)
+            if printf '%s' "$BODY" | grep -q "\"version\"[[:space:]]*:[[:space:]]*\"${VERSION}\""; then
+              echo "latest.json reports ${VERSION} after ${i} attempt(s)"
+              exit 0
+            fi
+            sleep 3
+          done
+          # Dispatch anyway — the tap job is cheap and may find a fresh manifest —
+          # but say loudly that the cask may need a manual re-run.
+          echo "::warning::latest.json still does not report ${VERSION} after 180s. Dispatching anyway; if the cask does not move, run: gh workflow run update-casks.yml --repo XueshiQiao/homebrew_tap -f app_token=xtools"
+
+      - name: Trigger Homebrew Tap Update
+        if: ${{ startsWith(github.ref, 'refs/tags/v') && env.HAS_HOMEBREW_PAT == 'true' && success() }}
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
+        with:
+          # Cross-repo dispatch needs a PAT (the default GITHUB_TOKEN can only
+          # dispatch inside this repo). The receiving workflow lives at
+          # XueshiQiao/homebrew_tap/.github/workflows/update-casks.yml; it reads
+          # client_payload.app_token and regenerates Casks/<token>.rb from this
+          # release's latest.json.
+          token: ${{ secrets.HOMEBREW_TAP_PAT }}
+          repository: XueshiQiao/homebrew_tap
+          event-type: update_cask
+          client-payload: '{"app_token": "xtools"}'
+
+      - name: Warn if HOMEBREW_TAP_PAT missing
+        if: ${{ startsWith(github.ref, 'refs/tags/v') && env.HAS_HOMEBREW_PAT != 'true' }}
+        run: |
+          echo "::warning::HOMEBREW_TAP_PAT secret is not set on this repo — the Homebrew cask was NOT auto-updated for this release. Add the secret (PAT with 'repo' scope on XueshiQiao/homebrew_tap) to enable automatic cask updates, or run the tap workflow manually: gh workflow run update-casks.yml --repo XueshiQiao/homebrew_tap -f app_token=xtools"
