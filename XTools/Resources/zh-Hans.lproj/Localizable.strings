@@ -745,6 +745,14 @@
 "tmux.action.move.noDest" = "没有其他 session 可移入";
 "tmux.msg.jumped" = "已切换 attached 终端。";
 "tmux.msg.moved" = "已将「%1$@」移到 %2$@。";
+"tmux.save.button" = "保存会话";
+"tmux.save.saving" = "保存中…";
+"tmux.save.done" = "已保存";
+"tmux.save.failed" = "保存失败";
+"tmux.save.help" = "保存一份 tmux-resurrect 快照——和按 prefix + %@ 完全一样。";
+"tmux.save.help.saving" = "正在保存 tmux 会话…";
+"tmux.save.help.done" = "快照已写入。";
+"tmux.save.error.noBinding" = "prefix + %@ 上没有绑定任何命令。是不是没装 tmux-resurrect？";
 "tmux.error.notFound" = "找不到 tmux。请安装（如 brew install tmux）或确保它在 PATH 中。";
 "tmux.error.commandFailed" = "tmux 命令失败。";
 "tmux.error.noServer" = "找不到 tmux server。请先在终端里启动 tmux。";

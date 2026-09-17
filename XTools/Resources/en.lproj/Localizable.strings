@@ -745,6 +745,14 @@
 "tmux.action.move.noDest" = "No other session to move into";
 "tmux.msg.jumped" = "Switched the attached terminal.";
 "tmux.msg.moved" = "Moved “%1$@” → %2$@.";
+"tmux.save.button" = "Save session";
+"tmux.save.saving" = "Saving…";
+"tmux.save.done" = "Saved";
+"tmux.save.failed" = "Save failed";
+"tmux.save.help" = "Save a tmux-resurrect snapshot — exactly what prefix + %@ does.";
+"tmux.save.help.saving" = "Saving the tmux session…";
+"tmux.save.help.done" = "Snapshot written.";
+"tmux.save.error.noBinding" = "Nothing is bound to prefix + %@. Is tmux-resurrect installed?";
 "tmux.error.notFound" = "tmux not found. Install it (e.g. brew install tmux) or ensure it is on PATH.";
 "tmux.error.commandFailed" = "tmux command failed.";
 "tmux.error.noServer" = "No tmux server found. Open a terminal and start tmux first.";

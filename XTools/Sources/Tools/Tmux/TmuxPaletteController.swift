@@ -235,6 +235,19 @@ final class TmuxPaletteController: NSObject, ObservableObject, NSWindowDelegate 
         // Allow growing back to the previous default (and beyond) when expanded.
         panel.maxSize = NSSize(width: 10_000, height: 10_000)
         panel.delegate = self
+
+        // Save button rides in the title bar so it costs zero content height.
+        // The accessory must carry an explicit frame: left on Auto Layout an
+        // NSHostingView here collapses to zero and the button never appears.
+        let saveHost = NSHostingView(rootView: TmuxSaveButton(store: store))
+        saveHost.frame = NSRect(origin: .zero, size: TmuxSaveButton.accessorySize)
+        saveHost.autoresizingMask = [.width, .height]
+        let container = NSView(frame: saveHost.frame)
+        container.addSubview(saveHost)
+        let saveAccessory = NSTitlebarAccessoryViewController()
+        saveAccessory.layoutAttribute = .right
+        saveAccessory.view = container
+        panel.addTitlebarAccessoryViewController(saveAccessory)
         Self.log.info("palette panel created (opaque + system rounded titled shape)")
 
         if let saved = TmuxPreferences.windowFrame {

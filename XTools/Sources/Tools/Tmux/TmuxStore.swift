@@ -33,6 +33,23 @@ final class TmuxStore: ObservableObject {
     /// uses this to dismiss itself so focus returns to the terminal.
     var onJumpSucceeded: (() -> Void)?
 
+    // MARK: - Session save (tmux-resurrect)
+
+    /// Drives the save button. `.saved` / `.failed` fall back to `.idle` on a timer.
+    enum SaveState: Equatable {
+        case idle
+        case saving
+        case saved
+        case failed(String)
+    }
+
+    @Published private(set) var saveState: SaveState = .idle
+    /// The key the save is bound to (`C-s` unless `@resurrect-save` overrides it),
+    /// shown in the button's tooltip. Resolved once, lazily.
+    @Published private(set) var saveKey: String = TmuxSessionSaver.defaultSaveKey
+    private var didResolveSaveKey = false
+    private var saveResetWork: DispatchWorkItem?
+
     private static let log = FileLog("Tmux")
 
     private let work = DispatchQueue(label: "me.xueshi.xtools.tmux", qos: .userInitiated)
@@ -101,7 +118,10 @@ final class TmuxStore: ObservableObject {
         guard paletteVisible != visible else { return }
         paletteVisible = visible
         reschedulePolling()
-        if visible { refresh(userInitiated: true) }
+        if visible {
+            refresh(userInitiated: true)
+            resolveSaveKeyIfNeeded()
+        }
     }
 
     private func appActivationChanged() {
@@ -417,6 +437,63 @@ final class TmuxStore: ObservableObject {
                 }
             }
         }
+    }
+
+    // MARK: Session save
+
+    /// One `show-options` call per app run, just to label the tooltip honestly.
+    private func resolveSaveKeyIfNeeded() {
+        guard !didResolveSaveKey else { return }
+        didResolveSaveKey = true
+        let socket = TmuxSessionSaver.defaultSocket()
+        work.async { [weak self] in
+            // Unreachable server → leave the tooltip on the plugin default;
+            // the real error surfaces when the button is actually pressed.
+            guard let keys = try? TmuxSessionSaver.saveKeys(socket: socket) else { return }
+            let key = keys.joined(separator: " / ")
+            DispatchQueue.main.async {
+                guard let self, self.saveKey != key else { return }
+                self.saveKey = key
+            }
+        }
+    }
+
+    /// Runs whatever `prefix + <save key>` is bound to — tmux-resurrect's save.
+    /// Takes ~3s when pane-content capture is on, so it goes to the work queue
+    /// and the button shows progress instead of freezing the palette.
+    func saveSession() {
+        guard saveState != .saving else { return }
+        saveResetWork?.cancel()
+        saveResetWork = nil
+        saveState = .saving
+        let socket = TmuxSessionSaver.defaultSocket()
+        work.async { [weak self] in
+            let result: SaveState
+            do {
+                try TmuxSessionSaver.save(socket: socket)
+                result = .saved
+            } catch {
+                result = .failed((error as? LocalizedError)?.errorDescription
+                    ?? error.localizedDescription)
+            }
+            DispatchQueue.main.async { self?.finishSave(result) }
+        }
+    }
+
+    private func finishSave(_ state: SaveState) {
+        saveState = state
+        var linger: TimeInterval = 2.5
+        if case .failed(let message) = state {
+            Self.log.warn("session save failed: \(message)")
+            actionMessage = message
+            linger = 6 // give the reason time to be read
+        }
+        let reset = DispatchWorkItem { [weak self] in
+            guard let self, self.saveState == state else { return }
+            self.saveState = .idle
+        }
+        saveResetWork = reset
+        DispatchQueue.main.asyncAfter(deadline: .now() + linger, execute: reset)
     }
 
     func moveWindow(_ window: TmuxWindowNode, to session: TmuxSessionNode) {
