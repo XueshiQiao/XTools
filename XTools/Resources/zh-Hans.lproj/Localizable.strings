@@ -466,6 +466,9 @@
 "popbar.display.header" = "显示样式";
 "popbar.actions.footer" = "“复制”是真实功能；翻译、润色、解释目前返回占位文本——接入真实模型只需改一个文件。";
 "popbar.action.copy" = "复制";
+"popbar.action.group.demo" = "常用";
+"popbar.action.group.convert" = "转换";
+"popbar.action.group.all" = "全部";
 "popbar.action.translate" = "翻译";
 "popbar.action.polish" = "润色";
 "popbar.action.explain" = "解释";
@@ -482,6 +485,8 @@
 "popbar.style.footer" = "胶囊在选区上方横向展开；轮盘 / 水玻璃以光标为圆心成环（水玻璃是明亮磨砂玻璃皮肤）。";
 "popbar.wheel.outer" = "外环半径";
 "popbar.wheel.inner" = "内环半径";
+"popbar.wheel.subSeam" = "二级菜单间距";
+"popbar.wheel.subThickness" = "二级菜单环厚";
 "popbar.wheel.showIcons" = "显示图标";
 "popbar.wheel.showLabels" = "显示文字";
 "popbar.wheel.autoHide" = "鼠标移出圆环时自动隐藏";

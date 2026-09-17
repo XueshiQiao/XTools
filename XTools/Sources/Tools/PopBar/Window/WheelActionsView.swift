@@ -28,8 +28,37 @@ struct WheelLayout: Equatable {
     /// Whether each slice shows its text label (user setting).
     var showLabels: Bool = true
 
+    // MARK: - Second ring (submenu)
+
+    /// Transparent gap between the main ring's outer edge and the submenu ring.
+    /// User-adjustable (`popbar.wheel.subSeam`).
+    var submenuSeam: CGFloat = 6
+    /// Band width of the submenu ring. User-adjustable (`popbar.wheel.subThickness`).
+    var submenuThickness: CGFloat = 52
+    /// Corner radius of the submenu arc's four corners. Locked at 14 with the user
+    /// against `docs/popbar-wheel-submenu-mockup.html` (the "一整条 + 圆角" option).
+    var submenuCorner: CGFloat = 14
+    /// Angular width of ONE child. Locked at 40° with the user: narrower than a
+    /// parent slice, so a 3-4 item submenu stays a compact arc rather than sweeping
+    /// half the ring.
+    var submenuStepDegrees: Double = 40
+
+    var submenuInnerRadius: CGFloat { outerRadius + submenuSeam }
+    var submenuOuterRadius: CGFloat { submenuInnerRadius + submenuThickness }
+    /// Radius at which a child's icon/label sits.
+    var submenuMidRadius: CGFloat { (submenuInnerRadius + submenuOuterRadius) / 2 }
+
     /// The square content side the wheel needs.
     var diameter: CGFloat { (outerRadius + pad) * 2 }
+    /// The square side needed once a submenu can unfold.
+    ///
+    /// The window is sized for the EXPANDED state up front rather than resized when
+    /// a submenu opens: an NSWindow resize mid-hover rebuilds the tracking areas,
+    /// which AppKit reports as a spurious `mouseExited` — exactly the signal that
+    /// auto-hide treats as "the pointer left the ring", so the wheel would vanish
+    /// the moment a submenu opened. The extra area costs nothing: it is transparent
+    /// and stays click-through (see `WheelHitRegion`).
+    var expandedDiameter: CGFloat { (submenuOuterRadius + pad) * 2 }
     /// Radius at which a slice's icon/label sits (the band's midline).
     var midRadius: CGFloat { (innerRadius + outerRadius) / 2 }
 }
@@ -110,6 +139,9 @@ struct WheelActionsView: View {
     var skin: WheelSkin = .classic
     /// Hide the ring when the pointer moves outside it (user setting; wheel styles only).
     var autoHideOnExit: Bool = false
+    /// Live bridge to the panel's AppKit hit-test, so the clickable region grows
+    /// with the submenu ring and shrinks back when it closes.
+    var hitRegion: WheelHitRegion?
     /// Called when the pointer leaves the ring and `autoHideOnExit` is on.
     var onExitRing: () -> Void = {}
     let onAction: (PopBarActionConfig) -> Void
@@ -135,18 +167,39 @@ struct WheelActionsView: View {
 
     /// id of the hovered slice (nil = none).
     @State private var hovered: String?
+    /// The submenu currently on screen. RETAINED through the closing animation —
+    /// clearing it outright would make the second ring disappear instantly instead
+    /// of folding back under the main ring.
+    @State private var submenu: OpenSubmenu?
+    /// Whether that submenu is unfolded. Flipping this (not `submenu`) is what the
+    /// open/close animation interpolates.
+    @State private var expanded = false
+    /// Bumped on every open/collapse so an unfold scheduled for the next pass can be
+    /// cancelled if the pointer has moved on by then.
+    @State private var openToken = 0
+    /// When the ring was last told to fold shut. Used to tell "opening from nothing"
+    /// from "opening while the previous one is still visibly folding away".
+    @State private var collapsedAt: Date?
+    /// id of the hovered child on the second ring (nil = none).
     /// Becomes true once the pointer has been within the ring at least once, so we only
     /// auto-hide on EXIT — not immediately when the wheel is clamped near a screen edge
     /// and the cursor starts outside the ring. Reset each time the wheel appears.
     @State private var enteredRing = false
+    @State private var hoveredChild: String?
     /// Last hover location (view-`.local`), used by the `.ended` handler to tell a
     /// genuine outward exit from a spurious one: only a pointer that was actually
     /// at/past the ring's outer edge when the hover ended counts as leaving.
     @State private var lastHover: CGPoint?
 
     var body: some View {
-        let d = layout.diameter
+        let d = canvas
         ZStack {
+            // The submenu ring is drawn UNDER the main ring, so unfolding reads as
+            // the second ring sliding out from beneath the first rather than being
+            // pasted on top of it.
+            submenuVisuals
+                .allowsHitTesting(false)
+
             // Decorative ring — strictly non-interactive. A wedge `Shape` fills the
             // whole square frame (it only DRAWS its sector), so if it hit-tested, the
             // topmost wedge would swallow every hover (the "stuck on 复制" bug). All
@@ -154,87 +207,143 @@ struct WheelActionsView: View {
             ringVisuals
                 .allowsHitTesting(false)
 
-            // The single interactive surface. The ring is ONE control: the slice is
-            // resolved from the pointer's angle+radius (`sliceIndex`), so hover and tap
-            // always agree with what's drawn and the highlight tracks the cursor across
-            // slices. The eoFill annulus `contentShape` keeps the hollow centre +
-            // outside click-through; a tap fires the SAME `onAction` the capsule uses.
-            //
-            // The ring is PAINTED here (a near-invisible fill) rather than `Color.clear`
-            // so the NSWindow has real, non-transparent backing pixels across the band.
-            // Without that, the window server passes a mouse-DOWN straight THROUGH to the
-            // app behind before our `hitTest` ever runs — which is exactly why the Liquid
-            // Glass skin's clicks fell through (its `.glassEffect` is composited server-
-            // side and leaves the app backing clear; hover still worked because tracking
-            // areas aren't subject to click-through). The classic skin only worked by
-            // accident, via its opaque `VisualEffectBlur`/sector fills. Painting the
-            // interactive layer itself makes click capture identical for EVERY skin (UI
-            // differs, the click path is one and the same). Masked to the annulus so the
-            // hollow centre + corners stay click-through.
-            Annulus(innerRadius: layout.innerRadius, outerRadius: layout.outerRadius)
-                .fill(Color.white.opacity(0.02), style: FillStyle(eoFill: true))
-                // Tracked (hit-tested + hover) as a FULL disc out to outerRadius —
-                // deliberately NOT the same hollow shape the fill paints. If the tracked
-                // shape had the same hole, sliding from the ring back toward the centre
-                // would cross a shape boundary and SwiftUI would report the hover as
-                // "ended" — indistinguishable from actually exiting past the outer edge
-                // (this was the bug: centre → ring → centre falsely auto-hid the wheel).
-                // Making the hole part of the SAME tracked region means `.ended` only
-                // ever fires on a genuine outward exit. `innerRadius: 0` makes `Annulus`
-                // act as a plain disc; taps that land in the hole still no-op below
-                // (`sliceIndex` returns nil there), and real clicks never reach here
-                // anyway — AppKit's own ring-only hit-test (`FirstMouseHostingView`)
-                // already excludes the hole so they pass through to the app behind.
-                .contentShape(Annulus(innerRadius: 0, outerRadius: layout.outerRadius), eoFill: true)
-                .onContinuousHover(coordinateSpace: .local) { phase in
-                    switch phase {
-                    case .active(let loc):
-                        hovered = sliceIndex(at: loc).map { actions[$0].id }
-                        // Anywhere within outerRadius (band OR hole) counts as "on the
-                        // wheel". Arm only once the pointer has actually been here, so a
-                        // wheel clamped near a screen edge — where the cursor can start
-                        // outside it — doesn't vanish on appear.
-                        enteredRing = true
-                        lastHover = loc
-                    case .ended:
-                        hovered = nil
-                        // Only auto-hide on a GENUINE outward exit: the pointer's last
-                        // tracked position must be at/past the ring's OUTER edge.
-                        // `onContinuousHover` tracks the whole square frame and ALSO fires
-                        // `.ended` spuriously while the pointer is still well inside the
-                        // wheel — notably when the ring is recycled/rebuilt for a new
-                        // selection with the cursor near its centre (a view/tracking-area
-                        // teardown, not a real exit). Logging the exit distance proved the
-                        // split: false exits sit at dist ≪ outer (often dead centre), real
-                        // exits at dist ≥ outer. Gating on the distance drops the spurious
-                        // ones — the "centre→ring→centre / recycled-ring vanish" bug.
-                        let c = d / 2
-                        let exitDist = lastHover.map { hypot($0.x - c, $0.y - c) } ?? 0
-                        let genuineExit = exitDist >= layout.outerRadius
-                        if autoHideOnExit && enteredRing && genuineExit { onExitRing() }
-                    }
-                }
-                .gesture(SpatialTapGesture(coordinateSpace: .local).onEnded { ev in
-                    if let i = sliceIndex(at: ev.location) { onAction(actions[i]) }
-                })
+            interactiveSurface
         }
         .frame(width: d, height: d)
-        .onAppear { enteredRing = false }   // re-arm the auto-hide for each fresh wheel
+        .onAppear {
+            // Re-arm the auto-hide and start closed for each fresh wheel.
+            enteredRing = false
+            submenu = nil
+            expanded = false
+            openToken &+= 1
+            hitRegion?.outerRadius = 0
+        }
+    }
+
+    /// The single interactive surface. The wheel is ONE control: which slice (or
+    /// which child on the second ring) the pointer is on is resolved from its
+    /// angle + radius in `hit(at:)`, so hover and tap always agree with what's
+    /// drawn, on both rings.
+    ///
+    /// The bands are PAINTED here (a near-invisible fill) rather than `Color.clear`
+    /// so the NSWindow has real, non-transparent backing pixels across them.
+    /// Without that, the window server passes a mouse-DOWN straight THROUGH to the
+    /// app behind before our `hitTest` ever runs — which is exactly why the Liquid
+    /// Glass skin's clicks fell through (its `.glassEffect` is composited server-
+    /// side and leaves the app backing clear; hover still worked because tracking
+    /// areas aren't subject to click-through). The classic skin only worked by
+    /// accident, via its opaque `VisualEffectBlur`/sector fills.
+    private var interactiveSurface: some View {
+        let d = canvas
+        return ZStack {
+            Annulus(innerRadius: layout.innerRadius, outerRadius: layout.outerRadius)
+                .fill(Color.white.opacity(0.02), style: FillStyle(eoFill: true))
+            // Same treatment for the open submenu, painted to the ARC only so the
+            // transparent space around it stays click-through.
+            if let open = submenu, expanded {
+                submenuShape(open).fill(Color.white.opacity(0.02))
+            }
+        }
+        // Tracked (hit-tested + hover) as a FULL disc out to the wheel's widest
+        // reach — deliberately NOT the same hollow shape the fill paints. If the
+        // tracked shape had the same hole, sliding from the ring back toward the
+        // centre would cross a shape boundary and SwiftUI would report the hover as
+        // "ended" — indistinguishable from actually exiting past the outer edge
+        // (this was the bug: centre → ring → centre falsely auto-hid the wheel).
+        // Making the hole part of the SAME tracked region means `.ended` only ever
+        // fires on a genuine outward exit. `innerRadius: 0` makes `Annulus` act as a
+        // plain disc; taps that land in the hole still no-op below (`hit(at:)`
+        // returns `.hole` there), and real clicks never reach here anyway — AppKit's
+        // own ring-only hit-test (`FirstMouseHostingView`) already excludes the hole
+        // so they pass through to the app behind.
+        .contentShape(Annulus(innerRadius: 0, outerRadius: trackedReach), eoFill: true)
+        .onContinuousHover(coordinateSpace: .local) { phase in
+            switch phase {
+            case .active(let loc):
+                // Anywhere within the wheel's reach (band OR hole) counts as "on the
+                // wheel". Arm only once the pointer has actually been here, so a
+                // wheel clamped near a screen edge — where the cursor can start
+                // outside it — doesn't vanish on appear.
+                enteredRing = true
+                lastHover = loc
+                apply(hit(at: loc))
+            case .ended:
+                hovered = nil
+                hoveredChild = nil
+                collapseSubmenu()
+                // Only auto-hide on a GENUINE outward exit: the pointer's last
+                // tracked position must be at/past the wheel's OUTER edge.
+                // `onContinuousHover` tracks the whole square frame and ALSO fires
+                // `.ended` spuriously while the pointer is still well inside the
+                // wheel — notably when the ring is recycled/rebuilt for a new
+                // selection with the cursor near its centre (a view/tracking-area
+                // teardown, not a real exit). Logging the exit distance proved the
+                // split: false exits sit at dist ≪ outer (often dead centre), real
+                // exits at dist ≥ outer. Gating on the distance drops the spurious
+                // ones — the "centre→ring→centre / recycled-ring vanish" bug.
+                let c = d / 2
+                let exitDist = lastHover.map { hypot($0.x - c, $0.y - c) } ?? 0
+                let genuineExit = exitDist >= layout.outerRadius
+                if autoHideOnExit && enteredRing && genuineExit { onExitRing() }
+            }
+        }
+        .gesture(SpatialTapGesture(coordinateSpace: .local).onEnded { ev in
+            switch hit(at: ev.location) {
+            case .child(let i):
+                if let open = submenu, open.children.indices.contains(i) {
+                    onAction(open.children[i])
+                }
+            case .parent(let i):
+                // A group runs nothing — tapping it just leaves its ring open.
+                if !actions[i].hasChildren { onAction(actions[i]) }
+            case .hole, .keep, .outside:
+                break
+            }
+        })
     }
 
     // MARK: - Visuals (skin-specific; geometry shared)
 
     @ViewBuilder
     private var ringVisuals: some View {
+        ZStack {
+            switch skin {
+            case .classic: classicVisuals
+            case .liquid:  liquidVisuals
+            }
+            submenuTicks
+        }
+    }
+
+    /// A short mark at the outer edge of every slice that owns children, so it is
+    /// visible which slices have a second ring to push out to. Nothing else on the
+    /// wheel says so — without it a group looks like a dud action.
+    private var submenuTicks: some View {
+        let d = canvas
+        return ForEach(Array(actions.enumerated()), id: \.element.id) { idx, action in
+            if action.hasChildren {
+                let mid = angles(idx).mid.degrees
+                let hot = expanded && submenu?.parentID == action.id
+                RingSector(startAngle: .degrees(mid - 5.5), endAngle: .degrees(mid + 5.5),
+                           innerRadius: layout.outerRadius - 5, outerRadius: layout.outerRadius - 2)
+                    .fill(hot ? AnyShapeStyle(Color.accentColor)
+                              : AnyShapeStyle(tickColor))
+                    .frame(width: d, height: d)
+            }
+        }
+    }
+
+    private var tickColor: Color {
         switch skin {
-        case .classic: classicVisuals
-        case .liquid:  liquidVisuals
+        case .classic: return Color.primary.opacity(0.45)
+        case .liquid:  return isDark ? Color.white.opacity(0.55)
+                                     : Color(red: 0.10, green: 0.13, blue: 0.20).opacity(0.5)
         }
     }
 
     /// CLASSIC: frosted annulus backdrop + per-wedge accent fill + light icons.
     private var classicVisuals: some View {
-        let d = layout.diameter
+        let d = canvas
         return ZStack {
             VisualEffectBlur(cornerRadius: 0, bordered: false)
                 .frame(width: layout.outerRadius * 2, height: layout.outerRadius * 2)
@@ -284,7 +393,7 @@ struct WheelActionsView: View {
     /// glyphs on the dark ring in dark mode. Matches the locked mockup
     /// `docs/popbar-wheel-liquid.html` (which previewed both variants).
     private var liquidVisuals: some View {
-        let d = layout.diameter
+        let d = canvas
         let o = layout.outerRadius, ir = layout.innerRadius
         return ZStack {
             // NO drop shadow: a blurred ellipse behind a circular ring peeked out
@@ -366,7 +475,7 @@ struct WheelActionsView: View {
     /// glass. Dark mode: near-white glyphs with a soft dark halo — the mockup's dark
     /// variant — so they stay legible on the system's dark Liquid Glass.
     private var liquidIcons: some View {
-        let d = layout.diameter, mid = layout.midRadius
+        let d = canvas, mid = layout.midRadius
         let dark = isDark
         return ForEach(Array(actions.enumerated()), id: \.element.id) { idx, action in
             let a = angles(idx)
@@ -424,7 +533,7 @@ struct WheelActionsView: View {
     /// size change / glow / colour, per the user.
     @ViewBuilder
     private func selectionDot(_ i: Int) -> some View {
-        let d = layout.diameter, o = layout.outerRadius
+        let d = canvas, o = layout.outerRadius
         let a = angles(i), m = a.mid.radians
         Circle()
             .fill(isDark ? Color.white.opacity(0.9) : Color(red: 0.10, green: 0.13, blue: 0.20))
@@ -465,23 +574,161 @@ struct WheelActionsView: View {
 
     // MARK: - Geometry (shared by both skins)
 
-    /// Which slice the point `p` (in the view's local space) falls in, or nil when
-    /// it's in the hollow centre / outside the ring. Drives both hover and tap, so
-    /// they can never disagree with what's drawn.
-    private func sliceIndex(at p: CGPoint) -> Int? {
-        let n = actions.count
-        guard n > 0 else { return nil }
-        let c = layout.diameter / 2
+    /// What the point `p` (in the view's local space) is over. One resolver for
+    /// BOTH rings, so hover, tap and drawing can never disagree.
+    private enum WheelHit {
+        /// The hollow centre.
+        case hole
+        /// A slice of the main ring.
+        case parent(Int)
+        /// A child on the open submenu ring.
+        case child(Int)
+        /// Still on the wheel, but on no slice — change nothing. This is what keeps
+        /// the seam between the two rings, and the empty space past the ends of a
+        /// short submenu arc, from slamming the submenu shut under the pointer.
+        case keep
+        /// Off the wheel entirely.
+        case outside
+    }
+
+    private func hit(at p: CGPoint) -> WheelHit {
+        let c = canvas / 2
         let dx = p.x - c, dy = p.y - c
         let dist = (dx * dx + dy * dy).squareRoot()
-        guard dist >= layout.innerRadius, dist <= layout.outerRadius else { return nil }
-        let step = 360.0 / Double(n)
-        // atan2 here matches the wedge drawing: 0° = +x (right), +clockwise (y-down).
-        // Slices start at the top (−90°), so shift the angle by +90 before bucketing.
-        var rel = atan2(dy, dx) * 180 / .pi + 90
-        rel.formTruncatingRemainder(dividingBy: 360)
-        if rel < 0 { rel += 360 }
-        return min(Int(rel / step), n - 1)
+
+        if dist < layout.innerRadius { return .hole }
+
+        if dist <= layout.outerRadius {
+            let n = actions.count
+            guard n > 0 else { return .keep }
+            let step = 360.0 / Double(n)
+            // atan2 here matches the wedge drawing: 0° = +x (right), +clockwise (y-down).
+            // Slices start at the top (−90°), so shift the angle by +90 before bucketing.
+            var rel = atan2(dy, dx) * 180 / .pi + 90
+            rel.formTruncatingRemainder(dividingBy: 360)
+            if rel < 0 { rel += 360 }
+            return .parent(min(Int(rel / step), n - 1))
+        }
+
+        guard expanded, let open = submenu else { return .outside }
+        // The transparent seam between the two rings: crossing it on the way out to
+        // a child must not read as leaving.
+        if dist <= layout.submenuInnerRadius { return .keep }
+        if dist <= layout.submenuOuterRadius + 6 {
+            // Same frame the plan is built in: degrees where −90 is twelve o'clock.
+            let degrees = atan2(dy, dx) * 180 / .pi
+            if let i = open.plan.index(atDegrees: degrees) { return .child(i) }
+            return .keep
+        }
+        return .outside
+    }
+
+    /// Apply a hover result to the two highlight states + the submenu.
+    private func apply(_ result: WheelHit) {
+        switch result {
+        case .parent(let i):
+            guard actions.indices.contains(i) else { return }
+            let action = actions[i]
+            if hovered != action.id { hovered = action.id }
+            if hoveredChild != nil { hoveredChild = nil }
+            if action.hasChildren {
+                openSubmenu(for: action, at: i)
+            } else {
+                collapseSubmenu()
+            }
+        case .child(let i):
+            guard let open = submenu, open.children.indices.contains(i) else { return }
+            let id = open.children[i].id
+            if hoveredChild != id { hoveredChild = id }
+        case .keep:
+            if hoveredChild != nil { hoveredChild = nil }
+        case .hole, .outside:
+            if hovered != nil { hovered = nil }
+            if hoveredChild != nil { hoveredChild = nil }
+            collapseSubmenu()
+        }
+    }
+
+    private func openSubmenu(for action: PopBarActionConfig, at index: Int) {
+        let target = angles(index).mid.degrees
+        // Tell AppKit the wheel now occupies the wider disc, so a click on a child
+        // lands on us instead of falling through to the app behind.
+        hitRegion?.outerRadius = layout.submenuOuterRadius
+
+        if expanded, let current = submenu {
+            // Already out: travel to the new group the SHORT way round.
+            let next = makeSubmenu(action, mid: current.midDegrees + shortWay(from: current.midDegrees, to: target))
+            if submenu != next { withAnimation(openSpring) { submenu = next } }
+            return
+        }
+
+        // Still visibly folding away at the previous group (the pointer crossed a
+        // plain slice on its way here and the spring has not settled): carry the
+        // ring ACROSS rather than snapping the leftover to the new axis, which would
+        // read as it teleporting mid-fade.
+        if let current = submenu, let at = collapsedAt,
+           Date().timeIntervalSince(at) < 0.35, !current.children.isEmpty {
+            let next = makeSubmenu(action, mid: current.midDegrees + shortWay(from: current.midDegrees, to: target))
+            openToken &+= 1
+            withAnimation(openSpring) {
+                submenu = next
+                expanded = true
+            }
+            return
+        }
+
+        // Folded and settled: put it in place FIRST — invisible, zero width, already
+        // on this slice's axis — and unfold on the NEXT pass. Doing both at once
+        // would make the ring travel from wherever the last group was while it
+        // grew, so it would appear to slide in from across the wheel.
+        let next = makeSubmenu(action, mid: target)
+        if submenu != next { submenu = next }
+        openToken &+= 1
+        let token = openToken
+        DispatchQueue.main.async {
+            // Cancelled if the pointer moved off (collapse bumps the token) or moved
+            // to a different group (which schedules its own).
+            guard openToken == token, let open = submenu, !open.children.isEmpty else { return }
+            withAnimation(openSpring) { expanded = true }
+        }
+    }
+
+    /// Signed turn from `from` to `to`, always the shorter way round (±180° at most).
+    ///
+    /// The result is ADDED to the current axis rather than replacing it, which keeps
+    /// the angle "unwrapped" — it may run past ±180. That is the whole point:
+    /// SwiftUI interpolates the raw number, so handing it a wrapped angle (e.g. 258
+    /// when the ring sits at −6) would make the ring travel 264° the wrong way round
+    /// instead of 96° the short way.
+    ///
+    /// Shortest-turn matches the hand, not just the maths: a straight pointer move
+    /// between two slices is a chord, and a chord always subtends the MINOR arc, so
+    /// the angle it sweeps is the short way round by construction.
+    private func shortWay(from: Double, to: Double) -> Double {
+        var delta = (to - from).truncatingRemainder(dividingBy: 360)
+        if delta > 180 { delta -= 360 }
+        if delta < -180 { delta += 360 }
+        return delta
+    }
+
+    private func makeSubmenu(_ action: PopBarActionConfig, mid: Double) -> OpenSubmenu {
+        OpenSubmenu(parentID: action.id,
+                    midDegrees: mid,
+                    children: action.children,
+                    plan: SubmenuPlan(count: action.children.count,
+                                      midDegrees: mid,
+                                      stepDegrees: layout.submenuStepDegrees))
+    }
+
+    /// Fold the submenu shut. `submenu` is deliberately KEPT: the ring animates back
+    /// under the main ring, and clearing it here would make it vanish instead.
+    private func collapseSubmenu() {
+        openToken &+= 1   // cancel an open that was scheduled for the next pass
+        if expanded {
+            collapsedAt = Date()
+            withAnimation(openSpring) { expanded = false }
+        }
+        hitRegion?.outerRadius = 0
     }
 
     /// Angular span of slice `i`: equal divisions starting at the top (−90°), going
@@ -498,6 +745,151 @@ struct WheelActionsView: View {
     /// at large gap + many slices).
     private func gapDegrees(_ step: Double) -> Double {
         min(layout.gapDegrees, step * 0.8)
+    }
+
+    // MARK: - Submenu ring (second level)
+
+    /// The submenu on screen: which slice opened it, the axis it is centred on, and
+    /// the children to draw. Held by value so the ring can finish folding shut after
+    /// the pointer has already moved somewhere else.
+    struct OpenSubmenu: Equatable {
+        var parentID: String
+        var midDegrees: Double
+        var children: [PopBarActionConfig]
+        var plan: SubmenuPlan
+    }
+
+    private var hasSubmenus: Bool { actions.contains { $0.hasChildren } }
+
+    /// The square the wheel draws into — wide enough for the submenu whenever any
+    /// action owns one (see `WheelLayout.expandedDiameter` for why it is not resized
+    /// on the fly).
+    private var canvas: CGFloat { hasSubmenus ? layout.expandedDiameter : layout.diameter }
+
+    /// How far hover tracking reaches. Always the full disc when submenus exist, so
+    /// pushing out from a slice onto its children never crosses a tracking boundary.
+    private var trackedReach: CGFloat {
+        hasSubmenus ? layout.submenuOuterRadius : layout.outerRadius
+    }
+
+    private var openSpring: Animation { .spring(response: 0.36, dampingFraction: 0.9) }
+
+    /// The arc at its fully-open size. Used ONLY to paint the invisible click
+    /// backing, which deliberately does not animate: the ring must be clickable the
+    /// moment it starts coming out, and at 2% white there is nothing to see.
+    private func submenuShape(_ open: OpenSubmenu) -> RoundedRingSector {
+        RoundedRingSector(startAngle: open.plan.start,
+                          endAngle: open.plan.start + open.plan.span,
+                          innerRadius: layout.submenuInnerRadius,
+                          outerRadius: layout.submenuOuterRadius,
+                          cornerRadius: layout.submenuCorner)
+    }
+
+    /// The second ring.
+    ///
+    /// ALWAYS present, even with nothing open, and that is deliberate: SwiftUI can
+    /// only animate `unfold` up from 0 if the view already existed at 0. Inserting
+    /// it into the hierarchy already-open would pop straight to full size with no
+    /// animation at all.
+    private var submenuVisuals: some View {
+        let open = submenu
+        let plan = open?.plan
+        return SubmenuRing(
+            unfold: expanded ? 1 : 0,
+            span: expanded ? (plan?.span ?? 0) : 0,
+            mid: open?.midDegrees ?? -90,
+            items: open?.children.map {
+                SubmenuItem(id: $0.id, title: $0.title, symbol: $0.iconSymbol)
+            } ?? [],
+            isFullRing: plan?.isFullRing ?? false,
+            canvas: canvas,
+            ringOuterRadius: layout.outerRadius,
+            seam: layout.submenuSeam,
+            thickness: layout.submenuThickness,
+            corner: layout.submenuCorner,
+            showIcons: layout.showIcons,
+            showLabels: layout.showLabels,
+            labelWidth: layout.labelWidth,
+            hoveredIndex: open.flatMap { hoveredChildIndex($0) },
+            highlight: submenuHighlightStyle,
+            dividerColor: Color.primary.opacity(skin == .liquid ? 0.16 : 0.12),
+            glyphColor: { hot in childGlyphColor(hot: hot, dark: isDark) },
+            glyphShadow: skin == .liquid ? (isDark ? .black.opacity(0.55) : .white.opacity(0.6)) : nil,
+            material: { shape in submenuMaterial(shape) }
+        )
+    }
+
+    private var submenuHighlightStyle: SubmenuHighlight {
+        switch skin {
+        case .classic:
+            return .fill(Color.accentColor)
+        case .liquid:
+            return .dot(isDark ? Color.white.opacity(0.9) : Color(red: 0.10, green: 0.13, blue: 0.20))
+        }
+    }
+
+    @ViewBuilder
+    private func submenuMaterial(_ shape: RoundedRingSector) -> some View {
+        let d = canvas
+        switch skin {
+        case .classic:
+            ZStack {
+                VisualEffectBlur(cornerRadius: 0, bordered: false)
+                    .frame(width: d, height: d)
+                    .mask(shape.fill())
+                shape.fill(Color.primary.opacity(0.06))
+                shape.stroke(Color.primary.opacity(0.12), lineWidth: 0.75)
+            }
+        case .liquid:
+            ZStack {
+                submenuLiquidMaterial(shape)
+                if isDark {
+                    // Same reason as the main ring: macOS 26 Liquid Glass samples the
+                    // backdrop, so over dark content it goes near-black and the glyphs
+                    // lose contrast. A controlled scrim pins it to predictable glass.
+                    shape.fill(Color.black.opacity(0.34))
+                }
+            }
+        }
+    }
+
+    /// The real macOS 26 Liquid Glass clipped to the arc where available, the same
+    /// frost fallback the main ring uses otherwise. Gated at COMPILE time as well as
+    /// at runtime: `.glassEffect` only exists in the macOS 26 SDK.
+    @ViewBuilder
+    private func submenuLiquidMaterial(_ shape: RoundedRingSector) -> some View {
+        let d = canvas
+        #if compiler(>=6.2)
+        if #available(macOS 26.0, *) {
+            Color.clear
+                .frame(width: d, height: d)
+                .glassEffect(.regular, in: shape)
+        } else {
+            submenuFrost(shape)
+        }
+        #else
+        submenuFrost(shape)
+        #endif
+    }
+
+    private func submenuFrost(_ shape: RoundedRingSector) -> some View {
+        let d = canvas
+        return LiquidGlassBlur(dark: isDark)
+            .frame(width: d, height: d)
+            .overlay(Color.white.opacity(isDark ? 0.08 : 0.10))
+            .mask(shape.fill())
+    }
+
+    private func childGlyphColor(hot: Bool, dark: Bool) -> Color {
+        switch skin {
+        case .classic: return hot ? .white : .primary
+        case .liquid:  return glyphColor(hot: hot, dark: dark)
+        }
+    }
+
+    private func hoveredChildIndex(_ open: OpenSubmenu) -> Int? {
+        guard let id = hoveredChild else { return nil }
+        return open.children.firstIndex { $0.id == id }
     }
 }
 

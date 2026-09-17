@@ -21,6 +21,11 @@ private final class FirstMouseHostingView<Content: View>: NSHostingView<Content>
     /// the ring (see `hitTest`). SwiftUI's `.contentShape` governs only its own gesture
     /// resolution. nil = capsule mode → the whole opaque view hit-tests as before.
     var ringHitTest: (inner: CGFloat, outer: CGFloat)?
+    /// Live outer reach of the wheel, written by the SwiftUI wheel while a submenu
+    /// ring is unfolded (0 = just the main ring). Kept separate from `ringHitTest`
+    /// because it changes on hover, many times per popup, and must not require the
+    /// panel to re-publish anything.
+    var wheelHitRegion: WheelHitRegion?
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
     override var mouseDownCanMoveWindow: Bool { true }
@@ -32,8 +37,11 @@ private final class FirstMouseHostingView<Content: View>: NSHostingView<Content>
 
         // Past the OUTER edge (the transparent corners): always click-through. This
         // region is genuinely "off the wheel" — a click there should reach the app
-        // behind, and the hover exit there IS the real auto-hide signal.
-        if dist > ring.outer { return nil }
+        // behind, and the hover exit there IS the real auto-hide signal. While a
+        // submenu ring is unfolded the wheel genuinely reaches further, so the edge
+        // moves out with it and snaps back the moment it folds shut.
+        let outer = max(ring.outer, wheelHitRegion?.outerRadius ?? 0)
+        if dist > outer { return nil }
 
         // The hollow CENTRE must stay transparent to EVERYTHING the app behind might
         // want — clicks, scrolls, trackpad gestures — because there's no slice there and
@@ -244,9 +252,12 @@ final class PopBarPanel {
     /// only. Any other phase (or the capsule style) hit-tests the whole rectangular
     /// view, so the result/loading chrome stays fully clickable.
     private func updateWheelHitTest() {
-        hosting.ringHitTest = (model.style.isWheel && isShowingActions)
+        let onWheel = model.style.isWheel && isShowingActions
+        hosting.ringHitTest = onWheel
             ? (inner: model.wheelLayout.innerRadius, outer: model.wheelLayout.outerRadius)
             : nil
+        hosting.wheelHitRegion = onWheel ? model.wheelHitRegion : nil
+        if !onWheel { model.wheelHitRegion.outerRadius = 0 }
     }
 
     /// Push a streaming delta into an already-showing result panel. Caller

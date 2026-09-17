@@ -15,6 +15,8 @@ final class PopBarStore: ObservableObject {
     @Published var wheelShowIcons: Bool
     @Published var wheelShowLabels: Bool
     @Published var wheelAutoHideOnExit: Bool
+    @Published var wheelSubSeam: Double
+    @Published var wheelSubThickness: Double
     @Published private(set) var isTrusted: Bool
 
     // Screenshot OCR
@@ -39,6 +41,8 @@ final class PopBarStore: ObservableObject {
         self.wheelShowIcons = PopBarPreferences.wheelShowIcons
         self.wheelShowLabels = PopBarPreferences.wheelShowLabels
         self.wheelAutoHideOnExit = PopBarPreferences.wheelAutoHideOnExit
+        self.wheelSubSeam = PopBarPreferences.wheelSubSeam
+        self.wheelSubThickness = PopBarPreferences.wheelSubThickness
         self.isTrusted = AccessibilityAuthorizer.isTrusted
         self.screenOCREnabled = PopBarPreferences.screenOCREnabled
         self.screenOCRAutoCopy = PopBarPreferences.screenOCRAutoCopy
@@ -135,6 +139,19 @@ final class PopBarStore: ObservableObject {
         if !on && !wheelShowIcons { setWheelShowIcons(true) }
         wheelShowLabels = on
         PopBarPreferences.wheelShowLabels = on
+        controller.previewWheelLive()
+    }
+    /// Submenu ring (second level) geometry. Same live-preview treatment as the
+    /// main ring's radii: the showing preview re-fits in place while the slider
+    /// moves, so the two rings can be sized against each other by eye.
+    func setWheelSubSeam(_ v: Double) {
+        wheelSubSeam = v
+        PopBarPreferences.wheelSubSeam = v
+        controller.previewWheelLive()
+    }
+    func setWheelSubThickness(_ v: Double) {
+        wheelSubThickness = v
+        PopBarPreferences.wheelSubThickness = v
         controller.previewWheelLive()
     }
     /// Auto-hide the ring when the pointer leaves it (wheel + liquid-glass only).

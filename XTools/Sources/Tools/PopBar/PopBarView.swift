@@ -285,6 +285,14 @@ struct PopBarView: View {
                                value: store.wheelInnerRadius, range: PopBarPreferences.wheelInnerRadiusRange) {
                     store.setWheelInnerRadius($0)
                 }
+                wheelRadiusRow(label: L("popbar.wheel.subSeam"), symbol: "circle.dashed",
+                               value: store.wheelSubSeam, range: PopBarPreferences.wheelSubSeamRange) {
+                    store.setWheelSubSeam($0)
+                }
+                wheelRadiusRow(label: L("popbar.wheel.subThickness"), symbol: "circle.circle.fill",
+                               value: store.wheelSubThickness, range: PopBarPreferences.wheelSubThicknessRange) {
+                    store.setWheelSubThickness($0)
+                }
                 Toggle(isOn: Binding(get: { store.wheelShowIcons }, set: { store.setWheelShowIcons($0) })) {
                     iconLabel("square.grid.2x2", .indigo, L("popbar.wheel.showIcons"))
                 }

@@ -38,6 +38,13 @@ enum ActionRegistry {
         case .revealInFinder:
             return pathPresentation(text: text, forceFinder: true)
 
+        case .group:
+            // A group is not runnable. The wheel never sends one here (tapping a
+            // group just keeps its ring open) and the capsule shows its children
+            // in its place, so this is only reached by a hand-edited file.
+            log.debug("action '\(action.title)' is a group — nothing to run")
+            return .none
+
         case .ai:
             guard !action.prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
                 return .result("⚠️ \(L("popbar.error.noprompt"))")

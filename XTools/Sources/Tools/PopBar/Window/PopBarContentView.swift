@@ -44,6 +44,11 @@ final class PopBarPanelModel: ObservableObject {
     /// Buttons to show (set by the controller from the user's ActionStore).
     var actions: [PopBarActionConfig] = []
 
+    /// Live bridge from the wheel to the panel's AppKit hit-test, so the clickable
+    /// region grows while a submenu ring is unfolded. Owned here because both the
+    /// SwiftUI wheel (writer) and the hosting view (reader) can reach the model.
+    let wheelHitRegion = WheelHitRegion()
+
     /// Which presentation the action row uses (capsule bar vs radial wheel). Seeded
     /// from `PopBarPreferences` on each show; only the `.actions` phase differs —
     /// loading/result chrome is shared. `@Published` so flipping it re-renders.
@@ -94,6 +99,7 @@ struct PopBarContentView: View {
                 WheelActionsView(actions: model.actions, layout: model.wheelLayout,
                                  skin: model.style == .liquidGlass ? .liquid : .classic,
                                  autoHideOnExit: model.autoHideOnExitRing,
+                                 hitRegion: model.wheelHitRegion,
                                  onExitRing: { model.onExitRing?() }) { action in
                     model.onAction?(action)
                 }
@@ -123,8 +129,12 @@ struct PopBarContentView: View {
     // MARK: - Actions row
 
     private var actionsBar: some View {
-        HStack(spacing: 2) {
-            ForEach(Array(model.actions.enumerated()), id: \.element.id) { index, action in
+        // The capsule is a single row with no second level, so a group is shown as
+        // its children, inline, in its place — nothing a user filed into one becomes
+        // unreachable here. (The wheel is the presentation that unfolds them.)
+        let row = PopBarActionConfig.flattenedForCapsule(model.actions)
+        return HStack(spacing: 2) {
+            ForEach(Array(row.enumerated()), id: \.element.id) { index, action in
                 if index > 0 { separator }
                 CapsuleActionButton(action: action) { model.onAction?(action) }
             }

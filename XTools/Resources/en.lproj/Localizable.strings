@@ -466,6 +466,9 @@
 "popbar.display.header" = "Display style";
 "popbar.actions.footer" = "Copy is real. Translate, Polish and Explain return placeholder text for now — wiring a real model in is a one-file change.";
 "popbar.action.copy" = "Copy";
+"popbar.action.group.demo" = "Favorites";
+"popbar.action.group.convert" = "Convert";
+"popbar.action.group.all" = "All";
 "popbar.action.translate" = "Translate";
 "popbar.action.polish" = "Polish";
 "popbar.action.explain" = "Explain";
@@ -482,6 +485,8 @@
 "popbar.style.footer" = "Capsule shows a horizontal bar above the selection; Wheel and Liquid show a ring centered on the cursor (Liquid is a bright frosted-glass skin).";
 "popbar.wheel.outer" = "Outer radius";
 "popbar.wheel.inner" = "Inner radius";
+"popbar.wheel.subSeam" = "Submenu gap";
+"popbar.wheel.subThickness" = "Submenu thickness";
 "popbar.wheel.showIcons" = "Show icons";
 "popbar.wheel.showLabels" = "Show labels";
 "popbar.wheel.autoHide" = "Auto-hide when the pointer leaves the ring";

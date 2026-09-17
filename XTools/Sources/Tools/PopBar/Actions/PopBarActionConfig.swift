@@ -41,6 +41,10 @@ struct PopBarActionConfig: Codable, Identifiable, Equatable {
         case webPreview     // local: open the selection's associated link in the mini-browser
         case quickLook      // local: Quick Look the selected path (folders open in Finder)
         case revealInFinder // local: show the selected path in Finder
+        /// A GROUP: runs nothing itself, it only holds `children`. On the wheel it
+        /// unfolds a second ring; in the capsule (which has no second row) its
+        /// children are shown inline in its place, so nothing becomes unreachable.
+        case group
     }
 
     var schemaVersion: Int
@@ -52,6 +56,18 @@ struct PopBarActionConfig: Codable, Identifiable, Equatable {
     var prompt: String
     /// nil = use the global default model.
     var modelOverride: ModelOverride?
+
+    /// Sub-actions, shown on the wheel's second ring when this one is hovered.
+    /// Empty = an ordinary action.
+    ///
+    /// Exactly ONE level deep, by design and by enforcement: a child's own
+    /// children are dropped on decode. The wheel can draw two rings and no more, so
+    /// a deeper file (hand-edited, or written by some future build) degrades to
+    /// something this UI can actually show instead of silently hiding actions.
+    var children: [PopBarActionConfig] = []
+
+    /// A group: it holds sub-actions instead of doing anything itself.
+    var hasChildren: Bool { !children.isEmpty }
 
     /// The literal `kind` string from disk when THIS build does not recognise it —
     /// i.e. the action was written by a newer XTools. Nil for every kind this
@@ -82,8 +98,9 @@ struct PopBarActionConfig: Codable, Identifiable, Equatable {
         self.unsupportedKindRaw = nil
     }
 
-    /// Runs entirely on-device (no LLM). Drives the "REAL" tag.
-    var isLocal: Bool { kind != .ai && !isUnsupported }
+    /// Runs entirely on-device (no LLM). Drives the "REAL" tag. A group runs
+    /// nothing at all, so it is not "local" either.
+    var isLocal: Bool { kind != .ai && kind != .group && !isUnsupported }
     /// An unsupported action decodes as `.ai`, but it must not be RUN as one —
     /// it has no prompt and was never meant for the model.
     var isAI: Bool { kind == .ai && !isUnsupported }
@@ -92,7 +109,7 @@ struct PopBarActionConfig: Codable, Identifiable, Equatable {
     var isPathAction: Bool { kind == .quickLook || kind == .revealInFinder }
 
     // Forward-compatible decode: tolerate older/newer payloads missing fields.
-    enum CodingKeys: String, CodingKey { case schemaVersion, id, title, iconSymbol, kind, prompt, modelOverride }
+    enum CodingKeys: String, CodingKey { case schemaVersion, id, title, iconSymbol, kind, prompt, modelOverride, children }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         schemaVersion = (try? c.decode(Int.self, forKey: .schemaVersion)) ?? 1
@@ -108,6 +125,15 @@ struct PopBarActionConfig: Codable, Identifiable, Equatable {
         unsupportedKindRaw = (knownKind == nil) ? rawKind : nil
         prompt = (try? c.decode(String.self, forKey: .prompt)) ?? ""
         modelOverride = try? c.decodeIfPresent(ModelOverride.self, forKey: .modelOverride)
+        // Flatten anything deeper than one level (see `children`). Decoding is
+        // deliberately lenient here for the same reason every other field is: a
+        // malformed children array must not throw away the whole action list.
+        let decodedChildren = (try? c.decode([PopBarActionConfig].self, forKey: .children)) ?? []
+        children = decodedChildren.map { child in
+            var flat = child
+            flat.children = []
+            return flat
+        }
     }
 
     /// Hand-written ONLY so `kind` can round-trip a value this build does not
@@ -122,6 +148,17 @@ struct PopBarActionConfig: Codable, Identifiable, Equatable {
         try c.encode(unsupportedKindRaw ?? kind.rawValue, forKey: .kind)
         try c.encode(prompt, forKey: .prompt)
         try c.encodeIfPresent(modelOverride, forKey: .modelOverride)
+        // Only written when there is something to write, so every existing
+        // `popbar-actions.json` round-trips byte-for-byte through this build.
+        if !children.isEmpty { try c.encode(children, forKey: .children) }
+    }
+
+    /// The capsule presentation has a single row and no second level, so a group
+    /// is shown as its children, inline, in its own place. Flattening (rather than
+    /// hiding the group) is what guarantees an action a user filed into a group
+    /// is still reachable in capsule mode.
+    static func flattenedForCapsule(_ actions: [PopBarActionConfig]) -> [PopBarActionConfig] {
+        actions.flatMap { $0.hasChildren ? $0.children : [$0] }
     }
 }
 
@@ -161,6 +198,41 @@ enum DefaultActions {
             PopBarActionConfig(title: L("popbar.action.copy"), iconSymbol: "doc.on.doc",
                                kind: .copy),
         ]
+    }
+
+    /// The seeded demo GROUP: one group holding copies of up to `limit` of the
+    /// user's existing actions, so the wheel's second ring has something real to
+    /// show before the settings UI can build groups by hand.
+    ///
+    /// Copies, never moves: the originals stay exactly where they were (nothing the
+    /// user configured is taken away), and deleting the group costs nothing.
+    static func demoGroup(from existing: [PopBarActionConfig], limit: Int = 4) -> PopBarActionConfig {
+        var group = PopBarActionConfig(title: L("popbar.action.group.demo"),
+                                       iconSymbol: "square.grid.2x2", kind: .group)
+        group.children = existing
+            .filter { !$0.hasChildren && $0.kind != .group }
+            .prefix(limit)
+            .map { original in
+                var copy = original
+                copy.id = UUID().uuidString   // a copy is its own action, not an alias
+                copy.children = []
+                return copy
+            }
+        return group
+    }
+
+    /// One more seeded group holding copies of `source`.
+    /// Same contract as `demoGroup` — copies, never moves.
+    static func group(title: String, symbol: String,
+                      from source: [PopBarActionConfig]) -> PopBarActionConfig {
+        var group = PopBarActionConfig(title: title, iconSymbol: symbol, kind: .group)
+        group.children = source.map { original in
+            var copy = original
+            copy.id = UUID().uuidString
+            copy.children = []
+            return copy
+        }
+        return group
     }
 
     /// The seed / migration "Web Preview" action.

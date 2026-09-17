@@ -27,6 +27,8 @@ enum PopBarPreferences {
     private static let wheelShowIconsKey = "popbar.wheel.showIcons"
     private static let wheelShowLabelsKey = "popbar.wheel.showLabels"
     private static let wheelAutoHideOnExitKey = "popbar.wheel.autoHideOnExit"
+    private static let wheelSubSeamKey = "popbar.wheel.subSeam"
+    private static let wheelSubThicknessKey = "popbar.wheel.subThickness"
     private static let previewFallbackToSearchKey = "popbar.preview.fallbackToSearch"
     private static let previewSearchEngineKey = "popbar.preview.searchEngine"
     private static let screenOCREnabledKey = "popbar.ocr.enabled"
@@ -45,6 +47,12 @@ enum PopBarPreferences {
     static let wheelMinThickness: Double = 26
     static let wheelOuterRadiusDefault: Double = 114
     static let wheelInnerRadiusDefault: Double = 54
+    /// Submenu ring (second level) geometry. Defaults locked with the user against
+    /// `docs/popbar-wheel-submenu-mockup.html`.
+    static let wheelSubSeamRange: ClosedRange<Double> = 0...20
+    static let wheelSubThicknessRange: ClosedRange<Double> = 34...72
+    static let wheelSubSeamDefault: Double = 6
+    static let wheelSubThicknessDefault: Double = 52
 
     /// Whether the popup is active. Opt-in: defaults to off (absent key → false),
     /// so the tool never starts monitoring global input until the user turns it on.
@@ -119,6 +127,17 @@ enum PopBarPreferences {
         set { UserDefaults.standard.set(newValue, forKey: wheelAutoHideOnExitKey) }
     }
 
+    /// Gap between the main ring and the submenu ring.
+    static var wheelSubSeam: Double {
+        get { double(wheelSubSeamKey, default: wheelSubSeamDefault, in: wheelSubSeamRange) }
+        set { UserDefaults.standard.set(min(max(newValue, wheelSubSeamRange.lowerBound), wheelSubSeamRange.upperBound), forKey: wheelSubSeamKey) }
+    }
+    /// Band width of the submenu ring.
+    static var wheelSubThickness: Double {
+        get { double(wheelSubThicknessKey, default: wheelSubThicknessDefault, in: wheelSubThicknessRange) }
+        set { UserDefaults.standard.set(min(max(newValue, wheelSubThicknessRange.lowerBound), wheelSubThicknessRange.upperBound), forKey: wheelSubThicknessKey) }
+    }
+
     // MARK: - Web preview (link fallback)
 
     /// When the tapped "web preview" action finds no link in the selection, search the
@@ -142,7 +161,9 @@ enum PopBarPreferences {
         let outer = wheelOuterRadius
         let inner = min(wheelInnerRadius, outer - wheelMinThickness)
         return WheelLayout(outerRadius: CGFloat(outer), innerRadius: CGFloat(inner),
-                           showIcons: wheelShowIcons, showLabels: wheelShowLabels)
+                           showIcons: wheelShowIcons, showLabels: wheelShowLabels,
+                           submenuSeam: CGFloat(wheelSubSeam),
+                           submenuThickness: CGFloat(wheelSubThickness))
     }
 
     // MARK: - Screenshot OCR

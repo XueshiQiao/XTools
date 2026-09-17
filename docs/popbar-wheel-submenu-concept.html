@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>轮盘二级菜单 · 理解确认</title>
+<style>
+:root{
+  --bg:#f6f6f4; --panel:#ffffff; --ink:#1c1b19; --ink-dim:#6b6862; --line:#e2e0db;
+  --accent:#d97757; --accent-soft:rgba(217,119,87,.16); --accent-line:rgba(217,119,87,.5);
+  --slice:#eceae5; --slice-line:#f6f6f4; --child:#fbe9e2; --child-line:#ffffff;
+  --ok:#3f8f5e; --warn:#b4802a;
+  --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#16151a; --panel:#1f1e24; --ink:#eceaf2; --ink-dim:#9a97a6; --line:#33313b;
+    --accent:#e08a6b; --accent-soft:rgba(224,138,107,.2); --accent-line:rgba(224,138,107,.55);
+    --slice:#2c2a33; --slice-line:#16151a; --child:#4a3229; --child-line:#1f1e24;
+    --ok:#6bbd88; --warn:#d6a44e;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16151a; --panel:#1f1e24; --ink:#eceaf2; --ink-dim:#9a97a6; --line:#33313b;
+  --accent:#e08a6b; --accent-soft:rgba(224,138,107,.2); --accent-line:rgba(224,138,107,.55);
+  --slice:#2c2a33; --slice-line:#16151a; --child:#4a3229; --child-line:#1f1e24;
+  --ok:#6bbd88; --warn:#d6a44e;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font:15px/1.65 -apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;
+  padding:0 16px 80px;
+}
+.wrap{max-width:1000px;margin:0 auto}
+header{padding:44px 0 8px;display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap}
+header h1{font-size:26px;margin:0 0 6px;letter-spacing:-.01em}
+header p{margin:0;color:var(--ink-dim);max-width:640px}
+.spacer{flex:1}
+button.theme{
+  border:1px solid var(--line);background:var(--panel);color:var(--ink-dim);
+  border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer
+}
+section{margin-top:40px}
+h2{font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-dim);
+   margin:0 0 4px;font-weight:600}
+h2 .num{color:var(--accent)}
+.lede{margin:0 0 18px;color:var(--ink-dim);max-width:720px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:22px}
+.row{display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px}
+figure svg{display:block;width:100%;height:auto}
+figcaption{margin-top:12px;font-size:13px;color:var(--ink-dim);line-height:1.55}
+figcaption b{color:var(--ink);font-weight:600}
+.tag{display:inline-block;font-size:11px;font-family:var(--mono);padding:2px 7px;border-radius:5px;
+     background:var(--accent-soft);color:var(--accent);margin-bottom:8px}
+.tag.plain{background:var(--line);color:var(--ink-dim)}
+.controls{display:flex;flex-direction:column;gap:18px;min-width:250px;flex:1}
+.ctl label{display:flex;justify-content:space-between;font-size:13px;color:var(--ink-dim);margin-bottom:6px}
+.ctl label b{color:var(--ink);font-family:var(--mono);font-weight:600}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{flex:1;border:0;background:transparent;color:var(--ink-dim);padding:8px 6px;
+  font-size:12.5px;cursor:pointer;font-family:inherit}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.readout{font-family:var(--mono);font-size:12.5px;line-height:1.9;border-top:1px solid var(--line);padding-top:12px;color:var(--ink-dim)}
+.readout b{color:var(--ink)}
+.readout .verdict{color:var(--accent);font-weight:700}
+.hint{font-size:12.5px;color:var(--ink-dim);margin-top:2px}
+.stage{flex:1 1 380px;min-width:300px;display:flex;justify-content:center}
+.stage svg{width:100%;max-width:440px;height:auto}
+ul.q{margin:10px 0 0;padding-left:20px}
+ul.q li{margin-bottom:6px}
+.pill{font-family:var(--mono);font-size:12px;background:var(--line);padding:1px 6px;border-radius:4px}
+footer{margin-top:52px;padding-top:22px;border-top:1px solid var(--line);color:var(--ink-dim);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>轮盘菜单 · 二级菜单（理解确认图）</h1>
+    <p>这不是最终视觉稿，是我用来跟你核对「我理解得对不对」的示意图。形状、位置、数量规则是重点；配色和质感先不管。</p>
+  </div>
+  <div class="spacer"></div>
+  <button class="theme" onclick="toggleTheme()">切换深浅色</button>
+</header>
+
+<section>
+  <h2><span class="num">01</span> &nbsp;自己拖一下 —— 这就是我理解的规则</h2>
+  <p class="lede">左边拖滑块改「内层有几项」和「子项有几个」，鼠标移到内层任意一片上可以换选中项。外层的形状会自己变。</p>
+  <div class="card row">
+    <div class="controls">
+      <div class="ctl">
+        <label>内层项数 N <b id="lblN">6</b></label>
+        <input type="range" id="N" min="3" max="10" value="6">
+      </div>
+      <div class="ctl">
+        <label>子项个数 M <b id="lblM">3</b></label>
+        <input type="range" id="M" min="1" max="14" value="3">
+      </div>
+      <div class="ctl">
+        <label>每个子项占多宽</label>
+        <div class="seg" id="segMode">
+          <button data-mode="match" aria-pressed="true">和内层一样宽</button>
+          <button data-mode="fixed" aria-pressed="false">固定 36°（更窄）</button>
+        </div>
+        <div class="hint">这是我问你的第 3 个问题。「和内层一样宽」两层格子对得齐。</div>
+      </div>
+      <div class="readout" id="readout"></div>
+    </div>
+    <div class="stage"><svg id="main" viewBox="-200 -200 400 400"></svg></div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">02</span> &nbsp;规则一句话：子项越多，弧越长；长到一圈就收口成整环</h2>
+  <p class="lede">下面三张图内层都是 6 项、都选中同一项 A，只有子项个数不同。</p>
+  <div class="grid3">
+    <figure><span class="tag">M = 2</span><svg id="s1" viewBox="-200 -200 400 400"></svg>
+      <figcaption><b>一小段弧。</b>只占 120°，以 A 的中线为轴左右对称。</figcaption></figure>
+    <figure><span class="tag">M = 4</span><svg id="s2" viewBox="-200 -200 400 400"></svg>
+      <figcaption><b>更长的弧。</b>占 240°，还是对称压在 A 头上。</figcaption></figure>
+    <figure><span class="tag">M = 8 ≥ N</span><svg id="s3" viewBox="-200 -200 400 400"></svg>
+      <figcaption><b>收口成整环。</b>360° 铺满，改成 8 等分；内层原封不动留在里面。</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">03</span> &nbsp;我要你拍板的第 1 件事：子项很少的时候，画弧还是画方块？</h2>
+  <p class="lede">你口述里说的是「半影、矩形或者扇形」。「半影」我读成「半环 / 一段弧」。这里把两种可能并排画出来，M = 3。</p>
+  <div class="grid2">
+    <figure><span class="tag">方案 A（我推荐）</span><svg id="a1" viewBox="-200 -200 400 400"></svg>
+      <figcaption><b>永远是弧段。</b>不管几个子项都长在环上，只是弧的长短不同。两层看起来是同一个东西的延伸，代码里也只有一套几何。</figcaption></figure>
+    <figure><span class="tag plain">方案 B</span><svg id="a2" viewBox="-220 -230 440 460"></svg>
+      <figcaption><b>少的时候改成贴边的矩形小面板。</b>像普通菜单一条条列下来，文字更好读、能放长标题；代价是两套几何、两种视觉语言，而且面板往哪边倒要看选中项在几点钟方向。</figcaption></figure>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">04</span> &nbsp;尺寸和位置（我打算沿用的数）</h2>
+  <p class="lede">内层就是现在 PopBar 轮盘的实际尺寸，没动。外层是我提的默认值，都是可调的。</p>
+  <div class="card row">
+    <div class="stage"><svg id="geo" viewBox="-200 -200 400 400"></svg></div>
+    <div class="controls">
+      <div class="readout" style="border-top:0;padding-top:0">
+        <div><b>内圈空心</b> 半径 54 &nbsp;<span class="pill">现有</span></div>
+        <div><b>内层环</b> 54 → 114（宽 60）&nbsp;<span class="pill">现有</span></div>
+        <div><b>两层之间的缝</b> 6&nbsp;<span class="pill">新</span></div>
+        <div><b>外层环</b> 120 → 172（宽 52）&nbsp;<span class="pill">新</span></div>
+        <div style="margin-top:10px"><b>对称轴</b> = 选中那片的角平分线（虚线）</div>
+        <div><b>整个轮盘从 228 长到 344 直径</b></div>
+      </div>
+      <div class="hint">内层第一片从 12 点钟开始、顺时针排——这跟现在代码里的 <span class="pill">angles(_:)</span> 一致，不是我瞎画的。</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">05</span> &nbsp;图上答不了、还得你说一句的</h2>
+  <div class="card">
+    <ul class="q">
+      <li><b>怎么触发展开？</b>鼠标悬停在内层那一项上就自动展开（和现在轮盘靠悬停选中一致，我推荐），还是必须点一下？</li>
+      <li><b>只做两级对吧？</b>没有三级、四级。</li>
+      <li><b>贴边怎么办？</b>轮盘从 228 涨到 344，靠近屏幕边缘时外层会超出去。先按「整个轮盘往里挪」处理？</li>
+      <li><b>没有子项的那些项</b>保持现在的样子，点了直接执行，不展开任何东西。</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  文件：<span class="pill">docs/popbar-wheel-submenu-concept.html</span> ·
+  对应代码：<span class="pill">XTools/Sources/Tools/PopBar/Window/WheelActionsView.swift</span> ·
+  这一版只是对齐理解，确认后我再出几版高保真设计。
+</footer>
+
+</div>
+
+<script>
+/* ---------- 几何：0° = 12 点钟，顺时针为正（和 WheelActionsView 一致） ---------- */
+const R_HOLE = 54, R_OUT = 114, GAP = 6, R2_IN = 120, R2_OUT = 172;
+const LETTERS = "ABCDEFGHIJ";
+
+function pt(r, deg){
+  const a = (deg - 90) * Math.PI / 180;
+  return [r * Math.cos(a), r * Math.sin(a)];
+}
+function sector(r0, r1, a0, a1){
+  const large = (a1 - a0) > 180 ? 1 : 0;
+  const [ax,ay] = pt(r1, a0), [bx,by] = pt(r1, a1);
+  const [cx,cy] = pt(r0, a1), [dx,dy] = pt(r0, a0);
+  return `M ${ax.toFixed(2)} ${ay.toFixed(2)} A ${r1} ${r1} 0 ${large} 1 ${bx.toFixed(2)} ${by.toFixed(2)}`
+       + ` L ${cx.toFixed(2)} ${cy.toFixed(2)} A ${r0} ${r0} 0 ${large} 0 ${dx.toFixed(2)} ${dy.toFixed(2)} Z`;
+}
+function el(tag, attrs, text){
+  const n = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (text != null) n.textContent = text;
+  return n;
+}
+
+/* 子项的角度规划：这就是「规则」本身 */
+function planChildren(N, M, mode){
+  let step = mode === "fixed" ? 36 : 360 / N;
+  let span = M * step;
+  const full = span >= 359.99;
+  if (full){ step = 360 / M; span = 360; }
+  return { step, span, full };
+}
+
+function drawWheel(svg, opts){
+  const { N, M, sel, mode = "match", style = "arc", geom = false, interactive = false } = opts;
+  svg.textContent = "";
+  const g = el("g", {});
+  svg.appendChild(g);
+  const step = 360 / N;
+
+  /* --- 外层（先画，让内层压在上面显得是从底下长出来的） --- */
+  const bis = sel * step + step / 2;
+  if (M > 0 && style === "arc"){
+    const plan = planChildren(N, M, mode);
+    const start = bis - plan.span / 2;
+    for (let i = 0; i < M; i++){
+      const a0 = start + i * plan.step, a1 = a0 + plan.step;
+      g.appendChild(el("path", {
+        d: sector(R2_IN, R2_OUT, a0, a1),
+        fill: "var(--child)", stroke: "var(--child-line)", "stroke-width": 1.5
+      }));
+      const [lx, ly] = pt((R2_IN + R2_OUT) / 2, (a0 + a1) / 2);
+      g.appendChild(el("text", {
+        x: lx.toFixed(1), y: (ly + 4).toFixed(1), "text-anchor": "middle",
+        fill: "var(--accent)", "font-size": 13, "font-weight": 600,
+        "font-family": "ui-monospace,Menlo,monospace"
+      }, "b" + (i + 1)));
+    }
+    /* 弧段两端的封口线，强调「它只占这一段」 */
+    if (!plan.full){
+      [start, start + plan.span].forEach(a => {
+        const [x0,y0] = pt(R2_IN, a), [x1,y1] = pt(R2_OUT, a);
+        g.appendChild(el("line", {x1:x0.toFixed(1), y1:y0.toFixed(1), x2:x1.toFixed(1), y2:y1.toFixed(1),
+          stroke:"var(--accent-line)", "stroke-width":1.5}));
+      });
+    }
+  }
+  if (M > 0 && style === "panel"){
+    const rowH = 30, w = 116, h = M * rowH + 12;
+    const [px, py] = pt(R_OUT + GAP + h / 2, bis);
+    g.appendChild(el("rect", {x:(px-w/2).toFixed(1), y:(py-h/2).toFixed(1), width:w, height:h,
+      rx:12, fill:"var(--child)", stroke:"var(--accent-line)", "stroke-width":1.5}));
+    for (let i = 0; i < M; i++){
+      const cy = py - h/2 + 6 + rowH*i + rowH/2;
+      g.appendChild(el("text", {x:px.toFixed(1), y:(cy+4.5).toFixed(1), "text-anchor":"middle",
+        fill:"var(--accent)", "font-size":13, "font-weight":600,
+        "font-family":"ui-monospace,Menlo,monospace"}, "b" + (i+1)));
+      if (i) g.appendChild(el("line", {x1:(px-w/2+10).toFixed(1), y1:(cy-rowH/2).toFixed(1),
+        x2:(px+w/2-10).toFixed(1), y2:(cy-rowH/2).toFixed(1), stroke:"var(--accent-line)", "stroke-width":.6}));
+    }
+  }
+
+  /* --- 内层 --- */
+  for (let i = 0; i < N; i++){
+    const a0 = i * step, a1 = a0 + step, on = i === sel;
+    const p = el("path", {
+      d: sector(R_HOLE, R_OUT, a0, a1),
+      fill: on ? "var(--accent-soft)" : "var(--slice)",
+      stroke: "var(--slice-line)", "stroke-width": 1.5,
+      style: interactive ? "cursor:pointer" : ""
+    });
+    if (interactive) p.addEventListener("mouseenter", () => { state.sel = i; render(); });
+    g.appendChild(p);
+    const [lx, ly] = pt((R_HOLE + R_OUT) / 2, a0 + step / 2);
+    g.appendChild(el("text", {
+      x: lx.toFixed(1), y: (ly + 5).toFixed(1), "text-anchor": "middle",
+      fill: on ? "var(--accent)" : "var(--ink-dim)", "font-size": 15,
+      "font-weight": on ? 700 : 500, style: interactive ? "pointer-events:none" : ""
+    }, LETTERS[i]));
+  }
+  /* 空心中央 */
+  g.appendChild(el("circle", {r: R_HOLE - 1, fill: "var(--panel)", stroke: "var(--line)",
+    "stroke-width": 1, "stroke-dasharray": "3 4"}));
+  g.appendChild(el("text", {x:0, y:5, "text-anchor":"middle", fill:"var(--ink-dim)",
+    "font-size":12}, "空心"));
+
+  /* --- 对称轴 --- */
+  const [sx, sy] = pt(R2_OUT + 16, bis);
+  g.appendChild(el("line", {x1:0, y1:0, x2:sx.toFixed(1), y2:sy.toFixed(1),
+    stroke:"var(--accent-line)", "stroke-width":1, "stroke-dasharray":"5 5"}));
+
+  /* --- 尺寸标注 --- */
+  if (geom){
+    const mark = (r, label, dy, dx) => {
+      g.appendChild(el("circle", {r, fill:"none", stroke:"var(--accent-line)",
+        "stroke-width":.8, "stroke-dasharray":"2 4"}));
+      g.appendChild(el("text", {x:(dx||4), y:(-r + dy).toFixed(1), fill:"var(--accent)", "font-size":11,
+        "font-family":"ui-monospace,Menlo,monospace"}, label));
+    };
+    mark(R_HOLE, "54", -5, 5); mark(R_OUT, "114", -5, 5);
+    mark(R2_IN, "120", 15, 46); mark(R2_OUT, "172", -5, 5);
+  }
+}
+
+/* ---------- 状态 ---------- */
+const state = { N: 6, M: 3, sel: 0, mode: "match" };
+const $ = id => document.getElementById(id);
+
+function render(){
+  $("lblN").textContent = state.N;
+  $("lblM").textContent = state.M;
+  if (state.sel >= state.N) state.sel = 0;
+  drawWheel($("main"), {...state, geom: false, interactive: true});
+
+  const plan = planChildren(state.N, state.M, state.mode);
+  const inner = (360 / state.N).toFixed(1);
+  $("readout").innerHTML =
+    `内层每片 <b>${inner}°</b> ×${state.N}<br>` +
+    `子项每片 <b>${plan.step.toFixed(1)}°</b> ×${state.M}<br>` +
+    `外层张开 <b>${plan.span.toFixed(1)}°</b><br>` +
+    `<span class="verdict">${plan.full ? "→ 铺满一圈，收口成整环" : "→ 只画一段弧"}</span>`;
+}
+
+$("N").addEventListener("input", e => { state.N = +e.target.value; render(); });
+$("M").addEventListener("input", e => { state.M = +e.target.value; render(); });
+$("segMode").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  state.mode = b.dataset.mode;
+  [...$("segMode").children].forEach(x => x.setAttribute("aria-pressed", x === b));
+  render();
+});
+
+/* 静态图 */
+drawWheel($("s1"), {N:6, M:2, sel:0});
+drawWheel($("s2"), {N:6, M:4, sel:0});
+drawWheel($("s3"), {N:6, M:8, sel:0});
+drawWheel($("a1"), {N:6, M:3, sel:0, style:"arc"});
+drawWheel($("a2"), {N:6, M:3, sel:0, style:"panel"});
+drawWheel($("geo"), {N:6, M:3, sel:0, geom:true});
+render();
+
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute("data-theme");
+  const dark = cur ? cur === "dark"
+    : matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.setAttribute("data-theme", dark ? "light" : "dark");
+}
+</script>
+</body>
+</html>
