@@ -13,6 +13,12 @@ enum PopBarPresentation {
     case result(String)
     /// The selection's associated link, in the floating mini-browser.
     case webPreview(URL)
+    /// A local file, in the floating Quick Look window.
+    case quickLook(URL)
+    /// A local path, shown in Finder. A folder opens in place; a file is revealed
+    /// and selected inside its parent — two different `NSWorkspace` calls, so the
+    /// flag is carried here rather than re-checked on disk at present time.
+    case revealInFinder(URL, isDirectory: Bool)
 }
 
 /// Optional per-action model override. The API key is resolved per-provider from
@@ -30,9 +36,11 @@ struct ModelOverride: Codable, Equatable {
 struct PopBarActionConfig: Codable, Identifiable, Equatable {
 
     enum Kind: String, Codable {
-        case copy         // local: write the selection to the clipboard
-        case ai           // send `prompt` + the selection to a model
-        case webPreview   // local: open the selection's associated link in the mini-browser
+        case copy           // local: write the selection to the clipboard
+        case ai             // send `prompt` + the selection to a model
+        case webPreview     // local: open the selection's associated link in the mini-browser
+        case quickLook      // local: Quick Look the selected path (folders open in Finder)
+        case revealInFinder // local: show the selected path in Finder
     }
 
     var schemaVersion: Int
@@ -45,6 +53,23 @@ struct PopBarActionConfig: Codable, Identifiable, Equatable {
     /// nil = use the global default model.
     var modelOverride: ModelOverride?
 
+    /// The literal `kind` string from disk when THIS build does not recognise it —
+    /// i.e. the action was written by a newer XTools. Nil for every kind this
+    /// build understands.
+    ///
+    /// It exists so an older build cannot destroy a newer one's actions. The
+    /// released app and a dev build read the SAME `popbar-actions.json` (it is not
+    /// scoped by bundle id), so the older one routinely loads kinds it has never
+    /// heard of. Decoding those as `.ai` is fine — there is nothing else it could
+    /// do — but the *synthesised* encoder would then write `"kind":"ai"` back on
+    /// the very next save, so reordering or editing an unrelated action would
+    /// silently and permanently rewrite the newer ones. Round-tripping the
+    /// original string means a save leaves them exactly as they were found.
+    private var unsupportedKindRaw: String?
+
+    /// Written by a newer XTools than this one, so it cannot be run here.
+    var isUnsupported: Bool { unsupportedKindRaw != nil }
+
     init(id: String = UUID().uuidString, title: String, iconSymbol: String,
          kind: Kind, prompt: String = "", modelOverride: ModelOverride? = nil) {
         self.schemaVersion = 1
@@ -54,12 +79,17 @@ struct PopBarActionConfig: Codable, Identifiable, Equatable {
         self.kind = kind
         self.prompt = prompt
         self.modelOverride = modelOverride
+        self.unsupportedKindRaw = nil
     }
 
-    /// Runs entirely on-device (no LLM) — Copy and Web Preview. Drives the "REAL" tag.
-    var isLocal: Bool { kind == .copy || kind == .webPreview }
-    var isAI: Bool { kind == .ai }
+    /// Runs entirely on-device (no LLM). Drives the "REAL" tag.
+    var isLocal: Bool { kind != .ai && !isUnsupported }
+    /// An unsupported action decodes as `.ai`, but it must not be RUN as one —
+    /// it has no prompt and was never meant for the model.
+    var isAI: Bool { kind == .ai && !isUnsupported }
     var isWebPreview: Bool { kind == .webPreview }
+    /// Acts on a local file/folder named by the selection (`PathResolver`).
+    var isPathAction: Bool { kind == .quickLook || kind == .revealInFinder }
 
     // Forward-compatible decode: tolerate older/newer payloads missing fields.
     enum CodingKeys: String, CodingKey { case schemaVersion, id, title, iconSymbol, kind, prompt, modelOverride }
@@ -69,9 +99,29 @@ struct PopBarActionConfig: Codable, Identifiable, Equatable {
         id = (try? c.decode(String.self, forKey: .id)) ?? UUID().uuidString
         title = (try? c.decode(String.self, forKey: .title)) ?? ""
         iconSymbol = (try? c.decode(String.self, forKey: .iconSymbol)) ?? "sparkles"
-        kind = (try? c.decode(Kind.self, forKey: .kind)) ?? .ai
+        let rawKind = try? c.decode(String.self, forKey: .kind)
+        let knownKind = rawKind.flatMap(Kind.init(rawValue:))
+        kind = knownKind ?? .ai
+        // Only a kind that was PRESENT but unreadable came from a newer build. A
+        // MISSING one is just an old or partial record, and stays a plain AI
+        // action exactly as it always did.
+        unsupportedKindRaw = (knownKind == nil) ? rawKind : nil
         prompt = (try? c.decode(String.self, forKey: .prompt)) ?? ""
         modelOverride = try? c.decodeIfPresent(ModelOverride.self, forKey: .modelOverride)
+    }
+
+    /// Hand-written ONLY so `kind` can round-trip a value this build does not
+    /// recognise (see `unsupportedKindRaw`). Every other field is encoded exactly
+    /// as the synthesised version would.
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(schemaVersion, forKey: .schemaVersion)
+        try c.encode(id, forKey: .id)
+        try c.encode(title, forKey: .title)
+        try c.encode(iconSymbol, forKey: .iconSymbol)
+        try c.encode(unsupportedKindRaw ?? kind.rawValue, forKey: .kind)
+        try c.encode(prompt, forKey: .prompt)
+        try c.encodeIfPresent(modelOverride, forKey: .modelOverride)
     }
 }
 
@@ -106,6 +156,8 @@ enum DefaultActions {
             PopBarActionConfig(title: L("popbar.action.explain"), iconSymbol: "lightbulb",
                                kind: .ai, prompt: explainPrompt),
             webPreviewAction(),
+            quickLookAction(),
+            revealInFinderAction(),
             PopBarActionConfig(title: L("popbar.action.copy"), iconSymbol: "doc.on.doc",
                                kind: .copy),
         ]
@@ -114,5 +166,15 @@ enum DefaultActions {
     /// The seed / migration "Web Preview" action.
     static func webPreviewAction() -> PopBarActionConfig {
         PopBarActionConfig(title: L("popbar.action.webpreview"), iconSymbol: "safari", kind: .webPreview)
+    }
+
+    /// The seed / migration "Preview" action (Quick Look a selected path).
+    static func quickLookAction() -> PopBarActionConfig {
+        PopBarActionConfig(title: L("popbar.action.quicklook"), iconSymbol: "eye", kind: .quickLook)
+    }
+
+    /// The seed / migration "Show in Finder" action.
+    static func revealInFinderAction() -> PopBarActionConfig {
+        PopBarActionConfig(title: L("popbar.action.reveal"), iconSymbol: "folder", kind: .revealInFinder)
     }
 }

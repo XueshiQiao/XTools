@@ -28,6 +28,13 @@ struct ActionEditorView: View {
                         Text(L("popbar.editor.kind.ai")).tag(PopBarActionConfig.Kind.ai)
                         Text(L("popbar.editor.kind.copy")).tag(PopBarActionConfig.Kind.copy)
                         Text(L("popbar.editor.kind.webpreview")).tag(PopBarActionConfig.Kind.webPreview)
+                        Text(L("popbar.editor.kind.quicklook")).tag(PopBarActionConfig.Kind.quickLook)
+                        Text(L("popbar.editor.kind.reveal")).tag(PopBarActionConfig.Kind.revealInFinder)
+                    }
+                    if draft.isPathAction {
+                        Text(L("popbar.editor.kind.pathHint"))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -152,5 +159,6 @@ struct ActionEditorView: View {
         "star.fill", "flag.fill", "tag.fill", "envelope",
         "paperplane.fill", "speaker.wave.2.fill", "mic.fill", "keyboard",
         "function", "number", "percent", "a.magnify",
+        "eye", "folder", "doc.text.magnifyingglass", "photo",
     ]
 }

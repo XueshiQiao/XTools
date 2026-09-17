@@ -186,6 +186,10 @@ final class PopBarSession {
     var onDismissOutcome: (() -> Void)?
     /// Open the resolved link in the shared mini-browser. Wired by the manager.
     var onWebPreview: ((URL) -> Void)?
+    /// Open the resolved local file in the shared Quick Look window. Wired by the
+    /// manager (which owns that window); Finder needs no such hand-off, since it
+    /// isn't a window we own.
+    var onQuickLook: ((URL) -> Void)?
 
     /// Route a presentation to its surface — the single place output types map to UI.
     /// Adding a new `PopBarPresentation` case means adding one branch here.
@@ -202,6 +206,55 @@ final class PopBarSession {
             // content when its web-preview action is used.
             onWebPreview?(url)
             if !isPinned { onDismissOutcome?() }
+        case .quickLook(let url):
+            // Same one-shot feel as the web preview: attention moves to the preview
+            // window, so a transient popup steps aside and a pinned one stays put.
+            onQuickLook?(url)
+            if !isPinned { onDismissOutcome?() }
+        case .revealInFinder(let url, let isDirectory):
+            // Dismiss FIRST, then hand off to Finder: ordering our panel out after
+            // Finder came forward can pull the focus straight back to us.
+            if !isPinned { onDismissOutcome?() }
+            revealInFinder(url, isDirectory: isDirectory)
+        }
+    }
+
+    /// Show a path in Finder — a folder opens in place, a file is revealed and
+    /// selected in its parent — and make sure Finder actually comes to the FRONT.
+    ///
+    /// Neither `open(_:)` nor `activateFileViewerSelecting(_:)` promises to raise
+    /// the app: they only ask Finder to open/scroll to a window. We are an
+    /// `LSUIElement` app that has typically just called `NSApp.activate` for the
+    /// popup, so without the explicit activation below Finder opens the window
+    /// *behind* everything and the action looks like it silently did nothing.
+    private func revealInFinder(_ url: URL, isDirectory: Bool) {
+        // Raising Finder is done by NSWorkspace, NOT by `NSRunningApplication
+        // .activate()`. That call is REFUSED here — it returns false and Finder
+        // opens behind whatever is in front. Measured, not guessed: the identical
+        // call in a stripped-down test app returns true and raises Finder when the
+        // process is `.accessory`, and returns false when it is `.regular` — and
+        // `AppDelegate` promotes XTools to `.regular` at launch so it gets a Dock
+        // icon and a menu bar.
+        //
+        // `open(_:configuration:)` with `activates` goes through the system
+        // instead of asking for the front slot ourselves, so the policy does not
+        // gate it. The folder to show is the item itself, or the file's parent.
+        let folder = isDirectory ? url : url.deletingLastPathComponent()
+        let config = NSWorkspace.OpenConfiguration()
+        config.activates = true
+        NSWorkspace.shared.open(folder, configuration: config) { [weak self] app, error in
+            guard let self else { return }
+            if let error {
+                Self.log.error("reveal: opening the folder failed — \(error.localizedDescription)")
+                return
+            }
+            Self.log.info("reveal: Finder up (\(app?.bundleIdentifier ?? "nil")), isDirectory=\(isDirectory)")
+            // Select the file only once Finder is frontmost, so the selection
+            // lands in the window that was just brought forward.
+            guard !isDirectory else { return }
+            DispatchQueue.main.async {
+                NSWorkspace.shared.activateFileViewerSelecting([url])
+            }
         }
     }
 

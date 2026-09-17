@@ -27,6 +27,9 @@ final class PopBarWindowManager {
     /// The single, shared mini-browser used by every session's web-preview action.
     private let webPreview = WebPreviewController()
 
+    /// The single, shared Quick Look window used by every session's preview action.
+    private let quickLook = QuickLookController()
+
     /// The active, unpinned popup. Always present; recreated after a pin graduates
     /// the previous one.
     private var transient: PopBarSession
@@ -111,6 +114,7 @@ final class PopBarWindowManager {
         }
         pinned.removeAll()
         webPreview.close()
+        quickLook.close()
     }
 
     // MARK: - Pin promotion & close
@@ -139,6 +143,8 @@ final class PopBarWindowManager {
         session.onDismissOutcome = { [weak self] in self?.dismissTransient() }
         // The web-preview action opens the shared mini-browser.
         session.onWebPreview = { [weak self] url in self?.webPreview.open(url) }
+        // The Quick Look action opens the shared preview window.
+        session.onQuickLook = { [weak self] url in self?.quickLook.open(url) }
     }
 
     /// Promote the current transient into the pinned set and create a fresh
@@ -183,6 +189,8 @@ final class PopBarWindowManager {
             self?.closePinned(session)
         }
         session.onWebPreview = { [weak self] url in self?.webPreview.open(url) }
+        // The Quick Look action opens the shared preview window.
+        session.onQuickLook = { [weak self] url in self?.quickLook.open(url) }
     }
 
     /// Close one pinned window: cancel its stream, hide it, and drop our strong

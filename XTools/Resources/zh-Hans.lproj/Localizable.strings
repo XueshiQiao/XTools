@@ -554,6 +554,15 @@
 "popbar.editor.cancel" = "取消";
 "popbar.editor.nokeyWarn" = "%@ 还没设置密钥 —— 请在「AI 模型」页面添加。";
 "popbar.editor.kind.webpreview" = "网页预览";
+"popbar.editor.kind.quicklook" = "预览文件（快速查看）";
+"popbar.editor.kind.reveal" = "在 Finder 中显示";
+"popbar.editor.kind.pathHint" = "当选中的文字是这台 Mac 上真实存在的文件或文件夹路径时生效，例如 ~/Downloads/photo.png。";
+
+/* 本地路径动作（快速查看 + Finder） */
+"popbar.action.quicklook" = "预览";
+"popbar.action.reveal" = "在 Finder 中显示";
+"popbar.error.nopath" = "选中的文字不是这台 Mac 上存在的文件或文件夹。";
+"popbar.error.unsupported" = "这个动作是更新版本的 XTools 创建的，当前版本运行不了。升级后即可使用。";
 
 /* 网页预览动作 + 迷你浏览器 */
 "popbar.action.webpreview" = "网页预览";
@@ -794,3 +803,11 @@
 "rog.error.rejected" = "键盘拒绝了命令 [%@]。";
 "rog.error.malformedReply" = "命令 [%@] 的回应格式不对。";
 "rog.error.invalidProfile" = "这把键盘上没有这个配置文件槽位（%ld）。";
+
+/* MARK: - Device Tree */
+
+
+
+
+
+

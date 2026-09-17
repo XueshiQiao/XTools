@@ -554,6 +554,15 @@
 "popbar.editor.cancel" = "Cancel";
 "popbar.editor.nokeyWarn" = "No API key for %@ — set it on the AI Models page.";
 "popbar.editor.kind.webpreview" = "Web preview";
+"popbar.editor.kind.quicklook" = "Preview a file (Quick Look)";
+"popbar.editor.kind.reveal" = "Show in Finder";
+"popbar.editor.kind.pathHint" = "Acts on the selected text when it is a path to a file or folder that exists on this Mac — for example ~/Downloads/photo.png.";
+
+/* Local path actions (Quick Look + Finder) */
+"popbar.action.quicklook" = "Preview";
+"popbar.action.reveal" = "Show in Finder";
+"popbar.error.nopath" = "The selected text isn't a file or folder that exists on this Mac.";
+"popbar.error.unsupported" = "This action was created by a newer version of XTools and can't run here. Update the app to use it.";
 
 /* Web preview action + mini-browser */
 "popbar.action.webpreview" = "Web Preview";
@@ -794,3 +803,11 @@
 "rog.error.rejected" = "The keyboard refused command [%@].";
 "rog.error.malformedReply" = "The reply to command [%@] was not in the expected shape.";
 "rog.error.invalidProfile" = "That profile slot (%ld) does not exist on this keyboard.";
+
+/* MARK: - Device Tree */
+
+
+
+
+
+
