@@ -107,6 +107,8 @@ struct DefaultAppsView: View {
             }
             .menuStyle(.borderlessButton)
             .fixedSize()
+            // Locked while the system's consent alert for this row is still open.
+            .disabled(store.pending.contains(item.id))
         } else {
             handlerLabel(item.current)
         }

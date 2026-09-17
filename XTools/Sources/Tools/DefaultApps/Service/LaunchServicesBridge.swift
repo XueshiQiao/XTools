@@ -6,19 +6,21 @@ import UniformTypeIdentifiers
 /// Thin wrapper over the LaunchServices "default handler" C APIs, isolating the
 /// `Unmanaged<…>` / CFString casting and the Copy/Create memory rule in one place.
 ///
-/// All of these run in the USER domain (no sudo) — setting a default handler for a
-/// content type or URL scheme only touches the current user's LaunchServices
-/// database. Nil-safe throughout: a type may have no handler, and an OS may not
-/// expose every API.
+/// READ-ONLY. All of these run in the USER domain (no sudo) and only look things
+/// up. Nil-safe throughout: a type may have no handler, and an OS may not expose
+/// every API.
 ///
-/// These functions are deprecated by Apple, but there is no public replacement
-/// for programmatically *setting* the default app on macOS 13 — the modern
-/// `NSWorkspace.setDefaultApplication(at:toOpen:)` only exists on macOS 14+ and
-/// this app deploys to 13. So we keep the LaunchServices calls and accept the
-/// deprecation warnings (they don't affect correctness on the supported OSes).
+/// *Setting* a default is deliberately NOT here — it goes through
+/// `NSWorkspace.setDefaultApplication(at:toOpen…:completionHandler:)`, whose
+/// callback fires only after the user has answered the system's consent alert.
+/// The LaunchServices setter returns before that and is why a changed row used to
+/// look stale (see `DefaultAppsStore.setHandler`).
+///
+/// The readers below stay on LaunchServices because they speak **bundle ids**,
+/// which is what `HandlerApp` and the whole tool are keyed on; the NSWorkspace
+/// equivalents return app URLs, which would just have to be mapped back. They are
+/// deprecated symbols, and the deprecation warnings are accepted knowingly.
 enum LaunchServicesBridge {
-
-    private static let log = FileLog("LaunchServices")
 
     // MARK: - Content types (UTIs)
 
@@ -33,14 +35,6 @@ enum LaunchServicesBridge {
         guard let ref = LSCopyAllRoleHandlersForContentType(uti as CFString, .all) else { return [] }
         let array = ref.takeRetainedValue() as? [String]
         return array ?? []
-    }
-
-    /// Set the default handler for a content type. Returns the OSStatus (0 == ok).
-    @discardableResult
-    static func setDefaultHandler(forContentType uti: String, bundleID: String) -> OSStatus {
-        let status = LSSetDefaultRoleHandlerForContentType(uti as CFString, .all, bundleID as CFString)
-        if status != noErr { log.warn("setDefault contentType \(uti) → \(bundleID) failed: \(status)") }
-        return status
     }
 
     // MARK: - URL schemes
@@ -71,14 +65,6 @@ enum LaunchServicesBridge {
         // Fallback: current handler only.
         if let current = defaultHandler(forURLScheme: scheme) { return [current] }
         return []
-    }
-
-    /// Set the default handler for a URL scheme. Returns the OSStatus (0 == ok).
-    @discardableResult
-    static func setDefaultHandler(forURLScheme scheme: String, bundleID: String) -> OSStatus {
-        let status = LSSetDefaultHandlerForURLScheme(scheme as CFString, bundleID as CFString)
-        if status != noErr { log.warn("setDefault urlScheme \(scheme) → \(bundleID) failed: \(status)") }
-        return status
     }
 
     // MARK: - Bundle id → display name + icon
