@@ -60,6 +60,22 @@ struct SubmenuPlan: Equatable {
         return min(Int(rel / step), count - 1)
     }
 
+    /// Whether `degrees` falls inside the run, with `tolerance` degrees of slack at
+    /// each end.
+    ///
+    /// The slack is what makes it useful for deciding "is the pointer heading for
+    /// this ring": someone cutting the corner toward the first child passes just
+    /// outside the run's edge, and a strict test would call that a miss.
+    func contains(degrees: Double, tolerance: Double = 0) -> Bool {
+        guard count > 0 else { return false }
+        if isFullRing { return true }
+        var rel = (degrees - start).truncatingRemainder(dividingBy: 360)
+        if rel < 0 { rel += 360 }
+        // Also accept the slack BEFORE the start, which wraps to just under 360.
+        if rel > 360 - tolerance { rel -= 360 }
+        return rel >= -tolerance && rel <= span + tolerance
+    }
+
     /// Interior boundaries between children — where the hairline dividers go. A
     /// full ring has one more than an arc (its two ends meet).
     var dividerCount: Int {
@@ -205,6 +221,79 @@ struct SubmenuDividers: Shape {
                                   y: c.y + (outerRadius - 1) * CGFloat(sin(a))))
         }
         return p
+    }
+}
+
+/// Is the pointer travelling OUT to the second ring, or just going around the
+/// first one?
+///
+/// On a ring the two are easy to tell apart, and telling them apart is the whole
+/// job: heading for a child is movement ALONG the radius, while browsing the
+/// first level is movement AROUND it — tangential, at a roughly constant
+/// distance from the centre. Asking only "did the distance grow?" cannot separate
+/// them, because a hand sweeping round the wheel pivots at the wrist, not at the
+/// wheel's centre, so the distance drifts in and out the whole way round and a
+/// stray outward pixel looks exactly like setting off for a child.
+///
+/// So this asks for a DIRECTION instead: the movement has to point outward and
+/// lie within `maxAngle` of straight out. A sweep around the ring is ~90° off
+/// that and never qualifies, however much the radius wobbles.
+///
+/// This is the same idea as the slope test in `jQuery-menu-aim` (the library that
+/// came out of taking Amazon's mega-menu apart), which compares the direction of
+/// the mouse vector against the directions to the submenu's corners. A ring only
+/// makes it cheaper: "toward the submenu" is just "away from the centre".
+enum WheelAim {
+
+    /// Two things have to hold, because neither is enough on its own.
+    ///
+    /// The DIRECTION has to be roughly outward — that alone throws out a sweep
+    /// around the ring. But the cone can't be tight, because reaching a child at
+    /// the far end of a wide arc is a genuinely slanted move, and a tight cone
+    /// would refuse exactly the gesture this exists to protect.
+    ///
+    /// So a wide cone is paired with real outward PROGRESS. That is what a sweep
+    /// can never fake: browsing the first level holds a roughly constant distance
+    /// from the centre — it wobbles, because a hand pivots at the wrist and not at
+    /// the wheel's centre, but it does not go anywhere — while reaching a child has
+    /// to cross the whole gap from the first ring to the second, some forty points.
+    /// Wobble is a few points and averages out; progress accumulates.
+    ///
+    /// - Parameters:
+    ///   - from: an EARLIER pointer sample, not the immediately previous one. A
+    ///     longer baseline is what keeps hand tremor from deciding the answer —
+    ///     `jQuery-menu-aim` keeps three samples for the same reason.
+    ///   - minDistance: movement shorter than this says nothing about intent.
+    ///   - minRadialGain: how much further from the centre the pointer must have
+    ///     actually got. Above the wobble of a sweep, far below a real reach.
+    ///   - maxAngle: how far off straight-out still counts, in degrees.
+    static func isHeadingOutward(from: CGPoint, to: CGPoint, centre: CGPoint,
+                                 minDistance: CGFloat = 4,
+                                 minRadialGain: CGFloat = 5,
+                                 maxAngle: Double = 60) -> Bool {
+        let move = CGPoint(x: to.x - from.x, y: to.y - from.y)
+        let distance = (move.x * move.x + move.y * move.y).squareRoot()
+        guard distance >= minDistance else { return false }
+
+        func radius(_ p: CGPoint) -> CGFloat {
+            let dx = p.x - centre.x, dy = p.y - centre.y
+            return (dx * dx + dy * dy).squareRoot()
+        }
+        guard radius(to) - radius(from) >= minRadialGain else { return false }
+
+        // The outward direction taken at the MIDPOINT of the movement, not at
+        // either end. Measured at the destination a long slanted move flatters
+        // itself — the move itself has swung the radial direction round to meet it —
+        // and measured at the start it does the opposite. The midpoint is the
+        // direction that actually describes the segment travelled.
+        let mid = CGPoint(x: (from.x + to.x) / 2, y: (from.y + to.y) / 2)
+        let out = CGPoint(x: mid.x - centre.x, y: mid.y - centre.y)
+        let radius = (out.x * out.x + out.y * out.y).squareRoot()
+        guard radius > 1 else { return false }   // at the centre there is no "outward"
+
+        // How much of the movement went straight out, as a fraction of all of it.
+        let outward = (move.x * out.x + move.y * out.y) / (radius * distance)
+        return outward >= CGFloat(cos(maxAngle * .pi / 180))
     }
 }
 

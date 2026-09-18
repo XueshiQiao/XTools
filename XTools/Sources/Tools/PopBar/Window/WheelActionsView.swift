@@ -183,6 +183,15 @@ struct WheelActionsView: View {
     /// When the ring will have finished moving. Until then a child cannot be
     /// picked — see `hit(at:)`.
     @State private var settledAt: Date?
+    /// The last three hover samples. Judging direction against the OLDEST of them —
+    /// two moves back, not the previous one — is what keeps hand tremor out of the
+    /// answer. `jQuery-menu-aim` keeps three and compares the same two ends.
+    @State private var recentHovers: [CGPoint] = []
+    /// While this is in the future, the pointer is treated as being on its way OUT
+    /// to the open ring, and slices it crosses do not steal it.
+    @State private var aimingUntil: Date?
+    /// Scopes the one re-check scheduled for when the aim grace runs out.
+    @State private var aimToken = 0
     /// id of the hovered child on the second ring (nil = none).
     /// Becomes true once the pointer has been within the ring at least once, so we only
     /// auto-hide on EXIT — not immediately when the wheel is clamped near a screen edge
@@ -219,6 +228,8 @@ struct WheelActionsView: View {
             submenu = nil
             expanded = false
             settledAt = nil
+            aimingUntil = nil
+            recentHovers = []
             openToken &+= 1
             hitRegion?.outerRadius = 0
         }
@@ -270,10 +281,12 @@ struct WheelActionsView: View {
                 // outside it — doesn't vanish on appear.
                 enteredRing = true
                 lastHover = loc
+                updateAim(at: loc)
                 apply(hit(at: loc))
             case .ended:
                 hovered = nil
                 hoveredChild = nil
+                recentHovers = []
                 collapseSubmenu()
                 // Only auto-hide on a GENUINE outward exit: the pointer's last
                 // tracked position must be at/past the wheel's OUTER edge.
@@ -637,12 +650,76 @@ struct WheelActionsView: View {
         return .outside
     }
 
+    /// How long a single outward sample keeps other slices from stealing the ring.
+    /// Renewed by every further outward sample, so it is a grace period, not a
+    /// lockout: stop moving, or turn back, and it lapses.
+    ///
+    /// 0.3s is the same figure `jQuery-menu-aim` uses (its `DELAY`), which is the
+    /// implementation of this trick that came out of taking Amazon's mega-menu
+    /// apart — so it is a number with some mileage on it rather than a guess.
+    private var aimGrace: TimeInterval { 0.3 }
+
+    /// Decide whether the pointer is currently ON ITS WAY to the open ring.
+    ///
+    /// This is the radial version of the trick Amazon's mega-menu uses (the "aim
+    /// triangle"): a submenu sits further out than the thing that opened it, so
+    /// reaching a child on the far side of the arc means cutting diagonally across
+    /// the slices in between. Judging each slice the moment the pointer touches it
+    /// closes the ring under the user's hand, every time, for the crime of taking
+    /// the short route.
+    ///
+    /// A ring makes the test simpler than a rectangle does. Two things together
+    /// mean "heading out there": the pointer is getting FURTHER from the centre,
+    /// and it is pointed somewhere within the arc's own angular span (plus a little
+    /// slack for corner-cutting). While both hold, whatever slice it crosses is
+    /// passed through rather than acted on.
+    ///
+    /// The grace period is the escape hatch, and it is why this cannot trap anyone:
+    /// it only ever renews while the pointer keeps moving outward. Pause on another
+    /// group, or turn back toward the centre, and it lapses within
+    /// `aimGrace` — and a check scheduled for that moment re-reads the position, so
+    /// a pointer that stopped does not have to be nudged to take effect.
+    private func updateAim(at point: CGPoint) {
+        recentHovers.append(point)
+        if recentHovers.count > 3 { recentHovers.removeFirst() }
+        guard expanded, let open = submenu, let earliest = recentHovers.first else { return }
+
+        let c = canvas / 2
+        let centre = CGPoint(x: c, y: c)
+        // Movement has to be aimed OUT along the radius, not around it. Going
+        // around is exactly what browsing the first level looks like, and it used
+        // to arm this by accident every time the radius happened to wobble outward.
+        guard WheelAim.isHeadingOutward(from: earliest, to: point, centre: centre) else { return }
+        // …and aimed at the arc that is actually open, not away from it.
+        let degrees = atan2(point.y - c, point.x - c) * 180 / .pi
+        guard open.plan.contains(degrees: degrees, tolerance: 12) else { return }
+
+        aimingUntil = Date().addingTimeInterval(aimGrace)
+        aimToken &+= 1
+        let token = aimToken
+        DispatchQueue.main.asyncAfter(deadline: .now() + aimGrace + 0.02) {
+            guard aimToken == token, expanded, let point = lastHover else { return }
+            apply(hit(at: point))
+        }
+    }
+
+    /// Whether a hover on `id` should be ignored because the pointer is only
+    /// passing over it on its way to the open ring.
+    private func isPassingThrough(_ id: String) -> Bool {
+        guard expanded, let open = submenu, open.parentID != id else { return false }
+        guard let until = aimingUntil else { return false }
+        return Date() < until
+    }
+
     /// Apply a hover result to the two highlight states + the submenu.
     private func apply(_ result: WheelHit) {
         switch result {
         case .parent(let i):
             guard actions.indices.contains(i) else { return }
             let action = actions[i]
+            // Cutting the corner toward a child: this slice is on the way, not the
+            // destination. Leave everything as it is.
+            if isPassingThrough(action.id) { return }
             if hovered != action.id { hovered = action.id }
             if hoveredChild != nil { hoveredChild = nil }
             if action.hasChildren {
@@ -767,6 +844,8 @@ struct WheelActionsView: View {
             withAnimation(openSpring) { expanded = false }
         }
         settledAt = nil
+        aimingUntil = nil
+        aimToken &+= 1    // cancel an aim re-check scheduled for a ring that is now shut
         hitRegion?.outerRadius = 0
     }
 
