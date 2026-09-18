@@ -39,8 +39,6 @@ final class ActionStore: ObservableObject {
 
     private static let webPreviewMigrationKey = "popbar.migratedWebPreview"
     private static let pathActionsMigrationKey = "popbar.migratedPathActions"
-    private static let demoGroupMigrationKey = "popbar.seededDemoGroup"
-    private static let sideGroupsMigrationKey = "popbar.seededSideGroups"
 
     init() {
         if let data = try? Data(contentsOf: fileURL),
@@ -61,8 +59,6 @@ final class ActionStore: ObservableObject {
         }
         migrateWebPreviewIfNeeded()
         migratePathActionsIfNeeded()
-        seedDemoGroupIfNeeded()
-        seedSideGroupsIfNeeded()
     }
 
     /// One-time, non-destructive append of the "Web Preview" action for existing
@@ -97,54 +93,6 @@ final class ActionStore: ObservableObject {
         guard !added.isEmpty else { return }
         save()
         Self.log.info("migrated: appended \(added.joined(separator: " + ")) to existing list")
-    }
-
-    /// One-time, append-only seed of a single demo GROUP so the wheel's second
-    /// ring has something to show before groups can be built in settings. Same
-    /// contract as the two migrations above: guarded by its own flag (delete it and
-    /// it stays deleted), skipped when any group already exists, and it only ever
-    /// grows the list — the copied actions stay in place at the top level too.
-    private func seedDemoGroupIfNeeded() {
-        guard !UserDefaults.standard.bool(forKey: Self.demoGroupMigrationKey) else { return }
-        UserDefaults.standard.set(true, forKey: Self.demoGroupMigrationKey)
-        guard !actions.contains(where: { $0.hasChildren }) else { return }
-        let group = DefaultActions.demoGroup(from: actions)
-        guard group.hasChildren else { return }   // nothing to put in it
-        actions.append(group)
-        save()
-        Self.log.info("seeded: appended demo group '\(group.title)' with \(group.children.count) child action(s)")
-    }
-
-    /// Two more demo groups, placed on the RIGHT-hand side of the ring, so both
-    /// shapes the submenu can take are reachable while trying it out: a short arc
-    /// (3 children) and the case where the children fill a whole turn and the ring
-    /// closes up (9 children × 40° = 360°).
-    ///
-    /// Insertion position is computed, not hard-coded: slices start at twelve
-    /// o'clock and run clockwise, so the slice whose bisector is nearest three
-    /// o'clock is a quarter of the way round the FINAL list. Append-only in the
-    /// sense that matters — every existing action is kept, and the copies inside the
-    /// groups are copies, not moves.
-    private func seedSideGroupsIfNeeded() {
-        guard !UserDefaults.standard.bool(forKey: Self.sideGroupsMigrationKey) else { return }
-        UserDefaults.standard.set(true, forKey: Self.sideGroupsMigrationKey)
-        let leaves = actions.filter { !$0.hasChildren && $0.kind != .group }
-        guard leaves.count >= 4, actions.filter({ $0.hasChildren }).count < 2 else { return }
-
-        let arcGroup = DefaultActions.group(title: L("popbar.action.group.convert"),
-                                            symbol: "arrow.left.arrow.right",
-                                            from: Array(leaves.dropFirst(4).prefix(3)))
-        let ringGroup = DefaultActions.group(title: L("popbar.action.group.all"),
-                                             symbol: "circle.grid.3x3",
-                                             from: Array(leaves.prefix(9)))
-        let groups = [arcGroup, ringGroup].filter { $0.hasChildren }
-        guard !groups.isEmpty else { return }
-
-        let total = actions.count + groups.count
-        let anchor = max(0, min(actions.count, Int((Double(total) / 4).rounded()) - 1))
-        actions.insert(contentsOf: groups, at: anchor)
-        save()
-        Self.log.info("seeded: inserted \(groups.count) side group(s) at index \(anchor) of \(total)")
     }
 
     // MARK: - Two-level list

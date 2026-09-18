@@ -200,41 +200,6 @@ enum DefaultActions {
         ]
     }
 
-    /// The seeded demo GROUP: one group holding copies of up to `limit` of the
-    /// user's existing actions, so the wheel's second ring has something real to
-    /// show before the settings UI can build groups by hand.
-    ///
-    /// Copies, never moves: the originals stay exactly where they were (nothing the
-    /// user configured is taken away), and deleting the group costs nothing.
-    static func demoGroup(from existing: [PopBarActionConfig], limit: Int = 4) -> PopBarActionConfig {
-        var group = PopBarActionConfig(title: L("popbar.action.group.demo"),
-                                       iconSymbol: "square.grid.2x2", kind: .group)
-        group.children = existing
-            .filter { !$0.hasChildren && $0.kind != .group }
-            .prefix(limit)
-            .map { original in
-                var copy = original
-                copy.id = UUID().uuidString   // a copy is its own action, not an alias
-                copy.children = []
-                return copy
-            }
-        return group
-    }
-
-    /// One more seeded group holding copies of `source`.
-    /// Same contract as `demoGroup` — copies, never moves.
-    static func group(title: String, symbol: String,
-                      from source: [PopBarActionConfig]) -> PopBarActionConfig {
-        var group = PopBarActionConfig(title: title, iconSymbol: symbol, kind: .group)
-        group.children = source.map { original in
-            var copy = original
-            copy.id = UUID().uuidString
-            copy.children = []
-            return copy
-        }
-        return group
-    }
-
     /// The seed / migration "Web Preview" action.
     static func webPreviewAction() -> PopBarActionConfig {
         PopBarActionConfig(title: L("popbar.action.webpreview"), iconSymbol: "safari", kind: .webPreview)

@@ -466,9 +466,6 @@
 "popbar.display.header" = "显示样式";
 "popbar.actions.footer" = "“复制”是真实功能；翻译、润色、解释目前返回占位文本——接入真实模型只需改一个文件。";
 "popbar.action.copy" = "复制";
-"popbar.action.group.demo" = "常用";
-"popbar.action.group.convert" = "转换";
-"popbar.action.group.all" = "全部";
 "popbar.action.translate" = "翻译";
 "popbar.action.polish" = "润色";
 "popbar.action.explain" = "解释";
