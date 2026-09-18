@@ -31,7 +31,7 @@ struct PopBarView: View {
             if !store.isTrusted { permissionSection }
             ocrSection
             actionsSection
-            if actions.actions.contains(where: { $0.kind == .webPreview }) {
+            if actions.actions.contains(where: { $0.kind == .webPreview || $0.children.contains { $0.kind == .webPreview } }) {
                 webPreviewSection
             }
             resultSection
@@ -45,7 +45,11 @@ struct PopBarView: View {
         .onReceive(trustPoll) { _ in store.refreshTrust() }
         .sheet(item: $editingAction) { action in
             ActionEditorView(action: action, llm: llm) { saved in
-                if actions.actions.contains(where: { $0.id == saved.id }) {
+                // Look in BOTH levels. `actions.actions` is only the top level, so
+                // saving an action that lives inside a group used to fall through to
+                // `add` and append a SECOND copy of it at the root, with the same id
+                // — after which deletes and drags resolved whichever copy came first.
+                if actions.action(id: saved.id) != nil {
                     actions.update(saved)
                 } else {
                     actions.add(saved)
@@ -168,34 +172,34 @@ struct PopBarView: View {
     // MARK: - Actions
 
     private var actionsSection: some View {
-        Section {
-            ForEach(Array(actions.actions.enumerated()), id: \.element.id) { index, action in
-                HStack(spacing: 8) {
-                    Button { editingAction = action } label: { actionRow(action) }
-                        .buttonStyle(.plain)
-                    reorderControls(index: index)
-                }
-                .contextMenu {
-                    Button(L("popbar.action.edit")) { editingAction = action }
-                    Button(L("popbar.action.delete"), role: .destructive) { actions.delete(id: action.id) }
-                }
-            }
+        PopBarActionListSection(
+            actions: actions,
+            onEdit: { editingAction = $0 },
+            rowContent: { AnyView(actionRow($0)) },
+            footerRow: { AnyView(actionsFooterRow) }
+        )
+    }
 
-            HStack {
-                Button {
-                    editingAction = PopBarActionConfig(title: "", iconSymbol: "sparkles", kind: .ai)
-                } label: {
-                    Label(L("popbar.actions.add"), systemImage: "plus")
-                }
-                Spacer()
-                Button(L("popbar.actions.reset")) { actions.resetToDefaults() }
-                    .foregroundStyle(.secondary)
+    /// The last row of the actions section: add an action, add a group, reset.
+    private var actionsFooterRow: some View {
+        HStack(spacing: 14) {
+            Button {
+                editingAction = PopBarActionConfig(title: "", iconSymbol: "sparkles", kind: .ai)
+            } label: {
+                Label(L("popbar.actions.add"), systemImage: "plus")
             }
-        } header: {
-            Text(L("popbar.actions.header"))
-        } footer: {
-            Text(L("popbar.actions.footer2"))
-                .fixedSize(horizontal: false, vertical: true)
+            // A group is made here rather than by dropping one action on another:
+            // it gets a name and an icon of its own up front, and the gesture that
+            // would otherwise create one is already spoken for (dropping onto a
+            // group row means "put it in THAT group").
+            Button {
+                editingAction = PopBarActionConfig(title: "", iconSymbol: "square.grid.2x2", kind: .group)
+            } label: {
+                Label(L("popbar.actions.addGroup"), systemImage: "rectangle.stack.badge.plus")
+            }
+            Spacer()
+            Button(L("popbar.actions.reset")) { actions.resetToDefaults() }
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -314,40 +318,6 @@ struct PopBarView: View {
         }
     }
 
-    /// Up/down chevrons to reorder a row, disabled at the list ends. Each button
-    /// hit-tests across its full padded bounds, not just the glyph.
-    @ViewBuilder
-    private func reorderControls(index: Int) -> some View {
-        let count = actions.actions.count
-        VStack(spacing: 0) {
-            reorderButton(symbol: "chevron.up", help: L("popbar.action.moveUp"),
-                          enabled: index > 0) {
-                // Move this row one slot earlier.
-                actions.move(from: IndexSet(integer: index), to: index - 1)
-            }
-            reorderButton(symbol: "chevron.down", help: L("popbar.action.moveDown"),
-                          enabled: index < count - 1) {
-                // toOffset is the index *before* the move, so to land after the
-                // next row we target index + 2.
-                actions.move(from: IndexSet(integer: index), to: index + 2)
-            }
-        }
-    }
-
-    private func reorderButton(symbol: String, help: String, enabled: Bool,
-                               _ action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(enabled ? Color.secondary : Color.secondary.opacity(0.3))
-                .frame(width: 24, height: 16)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(!enabled)
-        .help(help)
-    }
-
     /// A labeled radius slider for the wheel geometry settings (px value shown).
     private func wheelRadiusRow(label: String, symbol: String, value: Double,
                                 range: ClosedRange<Double>,
@@ -371,7 +341,10 @@ struct PopBarView: View {
             IconTile(symbol: action.iconSymbol, color: .indigo)
             VStack(alignment: .leading, spacing: 2) {
                 Text(action.title.isEmpty ? L("popbar.action.untitled") : action.title)
-                if action.isAI {
+                if action.kind == .group {
+                    Text(String(format: L("popbar.group.count"), action.children.count))
+                        .font(.caption).foregroundStyle(.secondary)
+                } else if action.isAI {
                     Text(modelLabel(action)).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }
             }
@@ -391,7 +364,9 @@ struct PopBarView: View {
 
     @ViewBuilder
     private func actionTag(_ action: PopBarActionConfig) -> some View {
-        if action.isLocal {
+        if action.kind == .group {
+            EmptyView()   // a group runs nothing, so both "REAL" and "AI" would be a lie
+        } else if action.isLocal {
             tag(L("popbar.tag.real"), .green)
         } else if llm.isConfigured(forProvider: action.modelOverride?.provider ?? llm.settings.provider) {
             tag(L("popbar.tag.ai"), .indigo)

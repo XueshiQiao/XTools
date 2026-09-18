@@ -24,6 +24,16 @@ struct ActionEditorView: View {
             Form {
                 Section {
                     TextField(L("popbar.editor.title"), text: $draft.title)
+                    // A group holds actions instead of doing anything itself, so it
+                    // has no kind to pick and no prompt to write. The kind is also
+                    // not OFFERED as a choice: turning a group back into an action
+                    // would orphan whatever is inside it.
+                    if draft.kind == .group {
+                        Text(L("popbar.editor.group.hint"))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
                     Picker(L("popbar.editor.kind"), selection: $draft.kind) {
                         Text(L("popbar.editor.kind.ai")).tag(PopBarActionConfig.Kind.ai)
                         Text(L("popbar.editor.kind.copy")).tag(PopBarActionConfig.Kind.copy)
@@ -35,6 +45,7 @@ struct ActionEditorView: View {
                         Text(L("popbar.editor.kind.pathHint"))
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                    }
                     }
                 }
 

@@ -180,6 +180,9 @@ struct WheelActionsView: View {
     /// When the ring was last told to fold shut. Used to tell "opening from nothing"
     /// from "opening while the previous one is still visibly folding away".
     @State private var collapsedAt: Date?
+    /// When the ring will have finished moving. Until then a child cannot be
+    /// picked — see `hit(at:)`.
+    @State private var settledAt: Date?
     /// id of the hovered child on the second ring (nil = none).
     /// Becomes true once the pointer has been within the ring at least once, so we only
     /// auto-hide on EXIT — not immediately when the wheel is clamped near a screen edge
@@ -215,6 +218,7 @@ struct WheelActionsView: View {
             enteredRing = false
             submenu = nil
             expanded = false
+            settledAt = nil
             openToken &+= 1
             hitRegion?.outerRadius = 0
         }
@@ -615,6 +619,16 @@ struct WheelActionsView: View {
         // a child must not read as leaving.
         if dist <= layout.submenuInnerRadius { return .keep }
         if dist <= layout.submenuOuterRadius + 6 {
+            // NOT while the ring is still moving. `plan` describes the ring once it
+            // has finished unfolding, but for the third of a second it spends
+            // growing out — or travelling to another group — the wedges are drawn
+            // somewhere else entirely: narrower, tucked further in, and packed
+            // around the axis. Answering from the finished plan during that window
+            // hands back a child the pointer is nowhere near, and a click then runs
+            // THAT action. So the second ring simply isn't live until it has
+            // settled; `scheduleSettleCheck` re-asks the moment it is, so a pointer
+            // that arrived early and stopped still lights up on its own.
+            guard let settled = settledAt, Date() >= settled else { return .keep }
             // Same frame the plan is built in: degrees where −90 is twelve o'clock.
             let degrees = atan2(dy, dx) * 180 / .pi
             if let i = open.plan.index(atDegrees: degrees) { return .child(i) }
@@ -658,7 +672,10 @@ struct WheelActionsView: View {
         if expanded, let current = submenu {
             // Already out: travel to the new group the SHORT way round.
             let next = makeSubmenu(action, mid: current.midDegrees + shortWay(from: current.midDegrees, to: target))
-            if submenu != next { withAnimation(openSpring) { submenu = next } }
+            if submenu != next {
+                withAnimation(openSpring) { submenu = next }
+                armSettle()
+            }
             return
         }
 
@@ -674,6 +691,7 @@ struct WheelActionsView: View {
                 submenu = next
                 expanded = true
             }
+            armSettle()
             return
         }
 
@@ -690,6 +708,26 @@ struct WheelActionsView: View {
             // to a different group (which schedules its own).
             guard openToken == token, let open = submenu, !open.children.isEmpty else { return }
             withAnimation(openSpring) { expanded = true }
+            armSettle()
+        }
+    }
+
+    /// How long the ring keeps moving after it is told to. The spring is
+    /// `response: 0.36, dampingFraction: 0.9`, which is done well inside this.
+    private var settleDelay: TimeInterval { 0.45 }
+
+    /// Mark the ring as "still moving", then re-run the hit test once it isn't.
+    ///
+    /// The second half matters: hover only reports when the pointer MOVES, so
+    /// someone who pushed out onto a child early and stopped there would sit on an
+    /// unlit wedge until they jiggled the mouse.
+    private func armSettle() {
+        openToken &+= 1
+        let token = openToken
+        settledAt = Date().addingTimeInterval(settleDelay)
+        DispatchQueue.main.asyncAfter(deadline: .now() + settleDelay + 0.02) {
+            guard openToken == token, expanded, let point = lastHover else { return }
+            apply(hit(at: point))
         }
     }
 
@@ -728,6 +766,7 @@ struct WheelActionsView: View {
             collapsedAt = Date()
             withAnimation(openSpring) { expanded = false }
         }
+        settledAt = nil
         hitRegion?.outerRadius = 0
     }
 

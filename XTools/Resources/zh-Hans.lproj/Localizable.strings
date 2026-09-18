@@ -538,6 +538,14 @@
 "popbar.action.untitled" = "未命名";
 "popbar.action.defaultModel" = "默认模型";
 "popbar.actions.add" = "添加动作";
+"popbar.actions.addGroup" = "新建分组";
+"popbar.actions.footer3" = "拖动调整顺序，拖到分组上就放进那个分组。点击编辑，右键删除。分组会在轮盘上展开成外面一圈。";
+"popbar.group.count" = "%d 个动作";
+"popbar.group.delete.title" = "删除这个分组？";
+"popbar.group.delete.message" = "「%@」里面有 %d 个动作。";
+"popbar.group.delete.all" = "分组和动作一起删";
+"popbar.group.delete.keep" = "只删分组，动作留下";
+"popbar.editor.group.hint" = "分组本身不执行任何操作，它只用来装别的动作：在列表里把动作拖进来，它们会在轮盘上展开成外面一圈。";
 "popbar.actions.reset" = "恢复默认";
 "popbar.actions.footer2" = "用箭头调整顺序 · 点击编辑 · 右键删除。每个动作可用默认模型，也可单独指定模型。";
 "popbar.autoheight.label" = "结果高度自适应内容";

@@ -538,6 +538,14 @@
 "popbar.action.untitled" = "Untitled";
 "popbar.action.defaultModel" = "Default model";
 "popbar.actions.add" = "Add Action";
+"popbar.actions.addGroup" = "New Group";
+"popbar.actions.footer3" = "Drag to reorder, or drop onto a group to put an action inside it. Click to edit, right-click to delete. Groups open as a second ring on the wheel.";
+"popbar.group.count" = "%d actions";
+"popbar.group.delete.title" = "Delete this group?";
+"popbar.group.delete.message" = "“%@” contains %d actions.";
+"popbar.group.delete.all" = "Delete Group and Actions";
+"popbar.group.delete.keep" = "Delete Group, Keep Actions";
+"popbar.editor.group.hint" = "A group holds other actions. Drag actions onto it in the list; on the wheel they open as a second ring.";
 "popbar.actions.reset" = "Reset to defaults";
 "popbar.actions.footer2" = "Use the arrows to reorder · click to edit · right-click to delete. Each action can use the default model or its own.";
 "popbar.autoheight.label" = "Grow result height to fit";
