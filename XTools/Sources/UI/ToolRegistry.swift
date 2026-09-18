@@ -28,6 +28,7 @@ enum ToolRegistry {
             // .devices
             NagaTool(),
             ROGKeyboardTool(),
+            DeviceTreeTool(),
             // Add future tools here.
         ]
     }

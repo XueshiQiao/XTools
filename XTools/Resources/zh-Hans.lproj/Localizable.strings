@@ -823,9 +823,63 @@
 "rog.error.invalidProfile" = "这把键盘上没有这个配置文件槽位（%ld）。";
 
 /* MARK: - Device Tree */
+"tool.devicetree.title" = "设备树";
+"devtree.thisMac" = "这台 Mac";
+"devtree.auto.title" = "自动刷新";
+"devtree.auto.subtitle" = "插拔硬件或显示器变化时自动重新扫描。";
+"devtree.scanning" = "扫描中…";
+"devtree.lastScan" = "上次扫描";
+"devtree.copy" = "复制成文本";
+"devtree.copied" = "已复制";
+"devtree.notDetected" = "未检测到";
+"devtree.count.devices" = "%ld 个设备";
 
+"devtree.section.thunderbolt" = "雷雳 / USB4";
+"devtree.section.usb" = "USB";
+"devtree.section.pci" = "PCIe";
+"devtree.section.displays" = "显示器";
+"devtree.section.bluetooth" = "蓝牙";
+"devtree.section.audio" = "音频";
+"devtree.section.cameras" = "摄像头";
+"devtree.section.network" = "网络接口";
 
+"devtree.usb.unknownController" = "USB 控制器";
+"devtree.tb.bus" = "%@ 号总线";
+"devtree.tb.nothingAttached" = "没接东西";
 
+"devtree.prop.vendor" = "厂商";
+"devtree.prop.serial" = "序列号";
+"devtree.prop.speed" = "链路速率";
+"devtree.prop.pciClass" = "PCI 类别码";
+"devtree.prop.resolution" = "分辨率";
+"devtree.prop.address" = "地址";
+"devtree.prop.deviceClass" = "设备类别";
+"devtree.prop.bsdName" = "系统接口名";
+"devtree.prop.firmware" = "固件";
+"devtree.prop.linkMode" = "链路模式";
 
+"devtree.badge.tunnelled" = "经雷雳隧道";
+"devtree.badge.builtIn" = "内置";
+"devtree.badge.mainDisplay" = "主屏";
+"devtree.badge.asleep" = "已休眠";
 
+"devtree.pci.storage" = "存储控制器";
+"devtree.pci.network" = "网络控制器";
+"devtree.pci.display" = "显示控制器";
+"devtree.pci.multimedia" = "多媒体控制器";
+"devtree.pci.systemPeripheral" = "系统外设";
+"devtree.pci.serialBus" = "串行总线控制器";
+"devtree.pci.wireless" = "无线控制器";
 
+"devtree.display.native" = "实际像素 %1$ld × %2$ld";
+"devtree.display.unnamed" = "显示器";
+"devtree.bt.connected" = "已连接";
+"devtree.bt.paired" = "已配对，未连接";
+"devtree.bt.unnamed" = "蓝牙设备";
+"devtree.audio.out" = "%ld 出";
+"devtree.audio.in" = "%ld 入";
+"devtree.audio.defaultOut" = "默认输出";
+"devtree.audio.defaultIn" = "默认输入";
+"devtree.net.active" = "在用";
+"devtree.net.noAddress" = "无地址";
+"devtree.prop.model" = "型号";

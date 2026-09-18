@@ -823,9 +823,63 @@
 "rog.error.invalidProfile" = "That profile slot (%ld) does not exist on this keyboard.";
 
 /* MARK: - Device Tree */
+"tool.devicetree.title" = "Device Tree";
+"devtree.thisMac" = "This Mac";
+"devtree.auto.title" = "Refresh automatically";
+"devtree.auto.subtitle" = "Rescan when hardware is plugged in or removed, or a display changes.";
+"devtree.scanning" = "Scanning…";
+"devtree.lastScan" = "Last scan";
+"devtree.copy" = "Copy as text";
+"devtree.copied" = "Copied";
+"devtree.notDetected" = "Nothing detected";
+"devtree.count.devices" = "%ld device(s)";
 
+"devtree.section.thunderbolt" = "Thunderbolt / USB4";
+"devtree.section.usb" = "USB";
+"devtree.section.pci" = "PCIe";
+"devtree.section.displays" = "Displays";
+"devtree.section.bluetooth" = "Bluetooth";
+"devtree.section.audio" = "Audio";
+"devtree.section.cameras" = "Cameras";
+"devtree.section.network" = "Network interfaces";
 
+"devtree.usb.unknownController" = "USB controller";
+"devtree.tb.bus" = "Bus %@";
+"devtree.tb.nothingAttached" = "Nothing attached";
 
+"devtree.prop.vendor" = "Vendor";
+"devtree.prop.serial" = "Serial number";
+"devtree.prop.speed" = "Link speed";
+"devtree.prop.pciClass" = "PCI class code";
+"devtree.prop.resolution" = "Resolution";
+"devtree.prop.address" = "Address";
+"devtree.prop.deviceClass" = "Device class";
+"devtree.prop.bsdName" = "BSD name";
+"devtree.prop.firmware" = "Firmware";
+"devtree.prop.linkMode" = "Link mode";
 
+"devtree.badge.tunnelled" = "via Thunderbolt";
+"devtree.badge.builtIn" = "built-in";
+"devtree.badge.mainDisplay" = "main";
+"devtree.badge.asleep" = "asleep";
 
+"devtree.pci.storage" = "Storage controller";
+"devtree.pci.network" = "Network controller";
+"devtree.pci.display" = "Display controller";
+"devtree.pci.multimedia" = "Multimedia controller";
+"devtree.pci.systemPeripheral" = "System peripheral";
+"devtree.pci.serialBus" = "Serial bus controller";
+"devtree.pci.wireless" = "Wireless controller";
 
+"devtree.display.native" = "%1$ld × %2$ld native";
+"devtree.display.unnamed" = "Display";
+"devtree.bt.connected" = "connected";
+"devtree.bt.paired" = "paired, not connected";
+"devtree.bt.unnamed" = "Bluetooth device";
+"devtree.audio.out" = "%ld out";
+"devtree.audio.in" = "%ld in";
+"devtree.audio.defaultOut" = "default output";
+"devtree.audio.defaultIn" = "default input";
+"devtree.net.active" = "active";
+"devtree.net.noAddress" = "no address";
+"devtree.prop.model" = "Model";
