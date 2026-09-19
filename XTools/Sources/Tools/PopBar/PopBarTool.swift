@@ -33,12 +33,22 @@ final class PopBarTool: XToolModule {
     func activate() {
         controller.startIfEnabled()
         controller.startOCRIfEnabled()   // screenshot-OCR hotkey is independent of the selection monitor
-        // Dev/screenshot affordance: pop a sample capsule shortly after launch.
-        if ProcessInfo.processInfo.environment["XTOOLS_POPBAR_PREVIEW"] == "1" {
+        // Dev/screenshot affordance: pop a sample popup shortly after launch, so the
+        // wheel can be looked at (and screenshotted) without selecting text by hand.
+        // Accepted as `open <app> --args --popbar-preview` — the same route the
+        // `--tab` flag takes, because `open` does not forward the shell environment —
+        // with the older env var still honored.
+        if Self.launchFlag("--popbar-preview")
+            || ProcessInfo.processInfo.environment["XTOOLS_POPBAR_PREVIEW"] == "1" {
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [controller] in
                 controller.showPreview()
             }
         }
+    }
+
+    /// Whether a bare `--flag` was passed at launch (`open … --args --flag`).
+    private static func launchFlag(_ flag: String) -> Bool {
+        CommandLine.arguments.contains(flag)
     }
 
     func shutdown() {

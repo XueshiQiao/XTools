@@ -224,7 +224,7 @@ final class PopBarPanel {
         model.streamingText = ""
         resultTopY = nil   // a fresh popup re-anchors; the result top re-locks on its first result fit
         setPinned(false)   // a fresh popup always starts unpinned
-        updateWheelHitTest()   // wheel ring hit-test is scoped to the actions phase
+        updateWheelChrome()   // ring hit-test + no window shadow, both scoped to the wheel
         // Let SwiftUI lay out the actions row, then size + place the window.
         DispatchQueue.main.async { [weak self] in
             self?.fitAndPlace()
@@ -244,20 +244,44 @@ final class PopBarPanel {
         // The shared loading/result chrome is a normal rectangular panel (wider than
         // the wheel). Clear the wheel's annular hit-test or its toolbar/text outside
         // the old ring would be dead (it only applies to the wheel's actions phase).
-        updateWheelHitTest()
+        updateWheelChrome()
         DispatchQueue.main.async { [weak self] in self?.fitAndPlace() }
     }
 
-    /// Scope the wheel's AppKit annular hit-test to the wheel's `.actions` phase
-    /// only. Any other phase (or the capsule style) hit-tests the whole rectangular
-    /// view, so the result/loading chrome stays fully clickable.
-    private func updateWheelHitTest() {
+    /// Everything that has to change when the panel is showing the wheel rather than
+    /// the rectangular capsule/result chrome: the hit-test region, and the window's
+    /// native shadow.
+    ///
+    /// **Hit-test.** The wheel's AppKit annular hit-test is scoped to the wheel's
+    /// `.actions` phase only. Any other phase (or the capsule style) hit-tests the
+    /// whole rectangular view, so the result/loading chrome stays fully clickable.
+    ///
+    /// **Shadow.** The native window shadow is turned OFF for the wheel, and only for
+    /// the wheel. macOS derives that shadow from the window's alpha, and the wheel's
+    /// alpha is a ring — so the shadow traces the ring's outline, including the hole,
+    /// and it is densest exactly at the boundary. At the boundary the ring's own
+    /// pixels are partly transparent, so the shadow shows THROUGH them as a dark
+    /// hairline, and how much of it shows depends on each pixel's coverage — which
+    /// varies along a curve. That is the "rough edge": a 1px outline whose darkness
+    /// flickers from pixel to pixel. Measured on a bright backdrop, the boundary
+    /// pixel went from darker than the ring itself (shadow on) to a clean ramp
+    /// between ring and backdrop (shadow off).
+    ///
+    /// A rectangular window never shows this, because its alpha is 1 everywhere
+    /// inside and the shadow stays behind it. The capsule and the result chrome are
+    /// rectangular, so they keep their shadow.
+    private func updateWheelChrome() {
         let onWheel = model.style.isWheel && isShowingActions
         hosting.ringHitTest = onWheel
             ? (inner: model.wheelLayout.innerRadius, outer: model.wheelLayout.outerRadius)
             : nil
         hosting.wheelHitRegion = onWheel ? model.wheelHitRegion : nil
         if !onWheel { model.wheelHitRegion.outerRadius = 0 }
+
+        if panel.hasShadow == onWheel {
+            panel.hasShadow = !onWheel
+            panel.invalidateShadow()
+        }
     }
 
     /// Push a streaming delta into an already-showing result panel. Caller
@@ -301,7 +325,7 @@ final class PopBarPanel {
     func setWheelLayout(_ layout: WheelLayout) {
         model.wheelLayout = layout
         guard panel.isVisible, model.style.isWheel, isShowingActions else { return }
-        updateWheelHitTest()
+        updateWheelChrome()
         DispatchQueue.main.async { [weak self] in self?.fitAndPlace() }
     }
 
