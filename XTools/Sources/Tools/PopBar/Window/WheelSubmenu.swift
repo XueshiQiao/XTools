@@ -239,38 +239,33 @@ struct SubmenuDividers: Shape {
 /// lie within `maxAngle` of straight out. A sweep around the ring is ~90° off
 /// that and never qualifies, however much the radius wobbles.
 ///
+/// Direction alone is not enough, because a slow sweep's wobble can point outward
+/// for a while. The other half is `OutwardRun`, which measures how far the pointer
+/// has actually pushed.
+///
 /// This is the same idea as the slope test in `jQuery-menu-aim` (the library that
 /// came out of taking Amazon's mega-menu apart), which compares the direction of
 /// the mouse vector against the directions to the submenu's corners. A ring only
 /// makes it cheaper: "toward the submenu" is just "away from the centre".
 enum WheelAim {
 
-    /// Two things have to hold, because neither is enough on its own.
-    ///
-    /// The DIRECTION has to be roughly outward — that alone throws out a sweep
-    /// around the ring. But the cone can't be tight, because reaching a child at
-    /// the far end of a wide arc is a genuinely slanted move, and a tight cone
-    /// would refuse exactly the gesture this exists to protect.
-    ///
-    /// So a wide cone is paired with real outward PROGRESS. That is what a sweep
-    /// can never fake: browsing the first level holds a roughly constant distance
-    /// from the centre — it wobbles, because a hand pivots at the wrist and not at
-    /// the wheel's centre, but it does not go anywhere — while reaching a child has
-    /// to cross the whole gap from the first ring to the second, some forty points.
-    /// Wobble is a few points and averages out; progress accumulates.
+    /// The cone can afford to be generous — reaching a child at the far end of a
+    /// wide arc is a genuinely slanted move, and a tight cone would refuse exactly
+    /// the gesture this exists to protect. What keeps a sweep out is not the width
+    /// of the cone but `OutwardRun`, which the caller checks alongside this.
     ///
     /// - Parameters:
-    ///   - from: an EARLIER pointer sample, not the immediately previous one. A
-    ///     longer baseline is what keeps hand tremor from deciding the answer —
-    ///     `jQuery-menu-aim` keeps three samples for the same reason.
+    ///   - from: the pointer's position a fixed stretch of TIME ago, not the
+    ///     immediately previous sample, and not a fixed number of samples ago.
+    ///     A longer baseline keeps hand tremor from deciding the answer; making it
+    ///     a duration rather than a sample count is what makes the answer the same
+    ///     for a slow reach and a quick one, instead of depending on how much
+    ///     ground the hand happened to cover between two events.
     ///   - minDistance: movement shorter than this says nothing about intent.
-    ///   - minRadialGain: how much further from the centre the pointer must have
-    ///     actually got. Above the wobble of a sweep, far below a real reach.
     ///   - maxAngle: how far off straight-out still counts, in degrees.
     static func isHeadingOutward(from: CGPoint, to: CGPoint, centre: CGPoint,
                                  minDistance: CGFloat = 4,
-                                 minRadialGain: CGFloat = 5,
-                                 maxAngle: Double = 60) -> Bool {
+                                 maxAngle: Double = 70) -> Bool {
         let move = CGPoint(x: to.x - from.x, y: to.y - from.y)
         let distance = (move.x * move.x + move.y * move.y).squareRoot()
         guard distance >= minDistance else { return false }
@@ -279,7 +274,8 @@ enum WheelAim {
             let dx = p.x - centre.x, dy = p.y - centre.y
             return (dx * dx + dy * dy).squareRoot()
         }
-        guard radius(to) - radius(from) >= minRadialGain else { return false }
+        // Over this stretch the pointer must at least not have come back in.
+        guard radius(to) >= radius(from) else { return false }
 
         // The outward direction taken at the MIDPOINT of the movement, not at
         // either end. Measured at the destination a long slanted move flatters
@@ -295,6 +291,179 @@ enum WheelAim {
         let outward = (move.x * out.x + move.y * out.y) / (radius * distance)
         return outward >= CGFloat(cos(maxAngle * .pi / 180))
     }
+
+    /// How far the pointer has pushed OUTWARD since it last turned back.
+    ///
+    /// This is the half of the test that a sweep around the first ring can never
+    /// fake, and the reason is that the two gestures differ in kind, not in speed:
+    /// a sweep's distance from the centre **wobbles within bounds** — a hand pivots
+    /// at the wrist, not at the wheel's centre, so the radius drifts in and out the
+    /// whole way round without going anywhere — while a reach has to **cross the
+    /// whole gap** between the rings, some forty points, and never comes back.
+    ///
+    /// So the anchor only ever moves when the pointer genuinely turns around. A
+    /// wobble therefore never accumulates past its own peak-to-peak swing, however
+    /// slowly the hand is moving, while a reach keeps adding to the total until it
+    /// clears the bar.
+    ///
+    /// Measuring PROGRESS rather than SPEED is what makes this indifferent to how
+    /// fast the hand is going, which is the whole point: the protection switches on
+    /// at the same place along the gesture whether the pointer is ambling or
+    /// flicking. A pointer that merely slowed down is not a pointer that changed
+    /// its mind.
+    ///
+    /// (Two simpler rules were tried against simulated gestures first and both
+    /// failed, in opposite directions. A fixed count of samples measures however
+    /// much ground the hand happened to cover between two events, so a quick reach
+    /// was protected and a slow one was not. A fixed stretch of time fixes that and
+    /// breaks the other side: over any window short enough to react in time, a slow
+    /// sweep's wobble is indistinguishable from a slow reach.)
+    struct OutwardRun {
+
+        /// Where the current push started, and the furthest out it has got. Both are
+        /// needed: the anchor is what progress is measured FROM, and the peak is what
+        /// says whether the pointer has turned back. Watching only the anchor cannot
+        /// see a turn at all — coming back in from 130 to 110 is still far outside an
+        /// anchor at 84, so a pointer that had already arrived and then started
+        /// browsing sideways would go on counting as "reaching".
+        private var anchor: CGFloat?
+        private var peak: CGFloat?
+
+        /// Feed every sample's distance from the centre; get back how far out the
+        /// pointer has pushed since this run began.
+        ///
+        /// - Parameter slack: how far back from its furthest point the pointer has to
+        ///   come before it counts as having turned around.
+        ///
+        ///   This has to clear a shaky hand. A hand tremor is a few hertz and a few
+        ///   points wide, and it is there during a reach just as much as during a
+        ///   sweep — so too tight a value reads every tremor dip as "changed their
+        ///   mind", restarts the run, and a slow reach by an unsteady hand never adds
+        ///   up to anything. Six points was the smallest value that left every
+        ///   simulated reach protected, tremor included, while still letting a sweep's
+        ///   own wobble restart the run before it could accumulate.
+        mutating func progress(radius: CGFloat, slack: CGFloat = 6) -> CGFloat {
+            guard let started = anchor, let furthest = peak else {
+                anchor = radius
+                peak = radius
+                return 0
+            }
+            if radius < furthest - slack {   // turned back — this push is over
+                anchor = radius
+                peak = radius
+                return 0
+            }
+            if radius > furthest { peak = radius }
+            return radius - started
+        }
+
+        mutating func reset() {
+            anchor = nil
+            peak = nil
+        }
+    }
+
+    /// The rolling answer to "is the pointer on its way out to the open ring?".
+    ///
+    /// Owns both halves of the test and the memory they need, so the whole
+    /// judgement is one pure value that can be driven by a list of positions and
+    /// timestamps — which is what its tests do. The view above it is left with only
+    /// the things that are genuinely SwiftUI: when to restart the run, and what to
+    /// do with a `true`.
+    ///
+    /// Feed it every hover sample. It answers `true` while BOTH hold:
+    ///
+    ///  - the pointer has pushed `minPush` points outward since it last turned back
+    ///    (`OutwardRun`), and
+    ///  - its movement across the last `window` of time points outward
+    ///    (`isHeadingOutward`).
+    ///
+    /// Neither is enough alone, and they fail different gestures, which is the
+    /// point: direction alone lets a slow sweep's wobble through, and progress alone
+    /// would keep saying yes once the pointer had arrived and started browsing
+    /// sideways out there.
+    struct Tracker {
+
+        /// How far back the direction test looks.
+        ///
+        /// It has to be a stretch of TIME rather than a count of samples, because a
+        /// count measures different amounts of movement depending on how fast the
+        /// hand is going. Three samples is about 25ms at a normal event rate: enough
+        /// travel to measure when the pointer is moving quickly, and barely two
+        /// pixels when it is not — which is how an earlier version came to protect a
+        /// quick reach for a child and not a slow one.
+        ///
+        /// A longer baseline also makes the direction test stricter rather than
+        /// looser, which is the opposite of what one might fear: wobble is
+        /// back-and-forth and cancels out over a stretch, so what is left is the
+        /// gesture the hand actually made. Over two samples a single wobbly step can
+        /// look radial; over 150ms of sliding around the ring, the net movement is
+        /// unmistakably tangential.
+        var window: TimeInterval = 0.15
+
+        /// Ignore a baseline shorter than this. At the very start of a gesture the
+        /// window holds almost nothing, and the direction of a two-pixel move is
+        /// noise.
+        var minSpan: TimeInterval = 0.08
+
+        /// How far out the pointer must have pushed before it counts as reaching for
+        /// a child, in points.
+        ///
+        /// It has to clear the widest wobble a sweep around the first ring can
+        /// produce — simulated gestures put a sloppy sweep's peak-to-peak swing near
+        /// seventeen points, which is what sets the floor — and stay well under the
+        /// gap between the rings, which is about forty. So it arms a little under
+        /// halfway across, with the pointer still inside its own slice and short of
+        /// the boundary it would have to cross for the ring to be stolen.
+        var minPush: CGFloat = 18
+
+        private struct Sample {
+            let point: CGPoint
+            let at: Date
+        }
+
+        private var samples: [Sample] = []
+        private var run = OutwardRun()
+
+        /// Begin a fresh run. The caller does this whenever a different ring becomes
+        /// the open one — including when none is — because the push that matters is
+        /// the one from a group's own slice out to ITS children. Without it the run
+        /// would still be anchored wherever the pointer entered the wheel, which is
+        /// the hollow centre the wheel opens around: by the time the pointer reached
+        /// the first ring it would already be eighty points "outward", every sweep
+        /// would clear the bar, and the test would be dead on arrival.
+        mutating func restart() {
+            samples.removeAll()
+            run.reset()
+        }
+
+        /// Feed one hover sample; get back whether the pointer is reaching outward.
+        mutating func isReaching(to point: CGPoint, at now: Date, centre: CGPoint) -> Bool {
+            samples.append(Sample(point: point, at: now))
+            // Drop what has aged out. The sample just appended can never be dropped,
+            // so the buffer is never empty; after a pause long enough to empty
+            // everything else it holds only that one, the baseline is zero-length,
+            // and `minSpan` rejects it — which is right, because a pointer that
+            // stopped is not on its way anywhere.
+            let cutoff = now.addingTimeInterval(-window)
+            samples.removeAll { $0.at < cutoff }
+            // A backstop, in case a clock ever moves backwards: the window normally
+            // holds a dozen or two samples, never this many.
+            if samples.count > 64 { samples.removeFirst(samples.count - 64) }
+
+            let dx = point.x - centre.x, dy = point.y - centre.y
+            let pushed = run.progress(radius: (dx * dx + dy * dy).squareRoot())
+
+            guard let earliest = samples.first else { return false }
+            guard now.timeIntervalSince(earliest.at) >= minSpan else { return false }
+            // Has the pointer actually GONE anywhere outward? This is the half a
+            // sweep around the first ring fails: its radius wobbles within bounds
+            // and never adds up, however slowly the hand moves.
+            guard pushed >= minPush else { return false }
+            // …and is it POINTING out along the radius, rather than around it?
+            return WheelAim.isHeadingOutward(from: earliest.point, to: point, centre: centre)
+        }
+    }
 }
 
 /// Live bridge from the SwiftUI wheel to the AppKit hit-test in `PopBarPanel`.
@@ -309,7 +478,21 @@ enum WheelAim {
 /// and read by `hitTest` on the same (main) thread; nothing re-renders off it.
 final class WheelHitRegion {
     /// Radius the wheel currently occupies, or 0 for "just the main ring".
+    ///
+    /// Deliberately the VISIBLE reach and not the overshoot slack beyond it: the
+    /// slack exists so the pointer can stray past the ring without the wheel
+    /// dismissing itself, and there is nothing drawn out there to click. Including
+    /// it here would swallow clicks on whatever the user can actually see behind
+    /// the wheel's transparent margin.
     var outerRadius: CGFloat = 0
+
+    /// How far the cursor is from the wheel's centre RIGHT NOW, in the wheel's own
+    /// units — set by the panel, because AppKit can answer this at any moment and
+    /// SwiftUI can only report where the pointer was when it last sampled.
+    ///
+    /// That difference is a whole frame of travel, which is the difference between
+    /// knowing someone left and guessing.
+    var cursorRadius: (() -> CGFloat?)?
 }
 
 /// One item on the second ring. Deliberately a plain value (not a

@@ -22,6 +22,9 @@ schemes:
     build:
       targets:
         XTools: all
+    test:
+      targets:
+        - XToolsTests
 
 targets:
   XTools:
@@ -58,3 +61,25 @@ targets:
         product: Aptabase
       - package: MarkdownUI
         product: MarkdownUI
+
+  # Unit tests for the parts of the app that are pure calculation. Deliberately NOT
+  # hosted in the app: XTools is a menu-bar app that installs global input monitors
+  # at launch, so running it as a test host would mean waking all of that (and its
+  # Accessibility prompts) on every `xcodebuild test`, on developer machines and in
+  # CI alike. Instead the handful of source files under test are compiled straight
+  # into the bundle — which they can be, because they are geometry and arithmetic
+  # with no dependency on the rest of the app. Adding a file here is the price of
+  # that, and it is the right trade while the list stays short.
+  XToolsTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - XTools/Tests
+      - path: XTools/Sources/Tools/PopBar/Window/WheelSubmenu.swift
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.xueshi.xtools.tests
+        GENERATE_INFOPLIST_FILE: YES
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
+        SWIFT_VERSION: "5.9"
+        CODE_SIGNING_ALLOWED: NO

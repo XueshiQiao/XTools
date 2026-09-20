@@ -42,6 +42,17 @@ jobs:
       - name: Generate Xcode Project
         run: xcodegen generate
 
+      # Before anything is built for release: the pure-logic tests. They run in a
+      # second or two, need no signing and no app host, so there is no reason for a
+      # tagged build to get as far as notarising something that fails them.
+      - name: Run Tests
+        run: |
+          xcodebuild test \
+            -project XTools.xcodeproj \
+            -scheme XTools \
+            -destination 'platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO
+
       - name: Install Apple Certificate
         if: ${{ env.HAS_APPLE_SECRETS == 'true' }}
         env:

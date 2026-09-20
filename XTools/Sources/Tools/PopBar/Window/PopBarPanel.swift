@@ -31,7 +31,9 @@ private final class FirstMouseHostingView<Content: View>: NSHostingView<Content>
     override var mouseDownCanMoveWindow: Bool { true }
 
     override func hitTest(_ point: NSPoint) -> NSView? {
-        guard let ring = ringHitTest else { return super.hitTest(point) }
+        guard let ring = ringHitTest else {
+            return super.hitTest(point)
+        }
         let p = convert(point, from: superview)   // → this view's coordinate space
         let dist = hypot(p.x - bounds.midX, p.y - bounds.midY)
 
@@ -151,6 +153,17 @@ final class PopBarPanel {
         hosting = FirstMouseHostingView(rootView: PopBarContentView(model: model))
         hosting.autoresizingMask = [.width, .height]
         panel.contentView = hosting
+
+        // The wheel fills the panel exactly (`PopBarContentView` gives it
+        // `.fixedSize()` and the window is sized to it), so the wheel's centre is the
+        // panel's centre and a distance measured in screen points is the same
+        // distance in the wheel's own units — no flipping, no conversion.
+        model.wheelHitRegion.cursorRadius = { [weak panel] in
+            guard let panel, panel.isVisible else { return nil }
+            let centre = CGPoint(x: panel.frame.midX, y: panel.frame.midY)
+            let cursor = NSEvent.mouseLocation
+            return hypot(cursor.x - centre.x, cursor.y - centre.y)
+        }
 
         // A background drag moves the window; remember it so later re-fits keep the
         // popup where the user put it. Ignore our own programmatic repositions.

@@ -58,7 +58,21 @@ struct WheelLayout: Equatable {
     /// auto-hide treats as "the pointer left the ring", so the wheel would vanish
     /// the moment a submenu opened. The extra area costs nothing: it is transparent
     /// and stays click-through (see `WheelHitRegion`).
-    var expandedDiameter: CGFloat { (submenuOuterRadius + pad) * 2 }
+    /// How far past the second ring's visible edge still counts as being on the
+    /// wheel.
+    ///
+    /// Reaching for a child is a push outward, and a push overshoots — the ring is
+    /// about fifty points wide and the hand does not stop on a line. Without this
+    /// the wheel is gone the instant the pointer passes the edge by a pixel, and the
+    /// whole selection starts again.
+    ///
+    /// It is deliberately a DISTANCE and not a delay. A delay would have to be paid
+    /// every time the wheel is dismissed on purpose, which makes getting rid of it
+    /// feel sticky; this costs nothing, because the pointer either is within reach
+    /// of the ring or it is not, and the answer is known the moment it moves.
+    var overshootSlack: CGFloat = 26
+
+    var expandedDiameter: CGFloat { (submenuOuterRadius + overshootSlack + pad) * 2 }
     /// Radius at which a slice's icon/label sits (the band's midline).
     var midRadius: CGFloat { (innerRadius + outerRadius) / 2 }
 }
@@ -183,10 +197,12 @@ struct WheelActionsView: View {
     /// When the ring will have finished moving. Until then a child cannot be
     /// picked — see `hit(at:)`.
     @State private var settledAt: Date?
-    /// The last three hover samples. Judging direction against the OLDEST of them —
-    /// two moves back, not the previous one — is what keeps hand tremor out of the
-    /// answer. `jQuery-menu-aim` keeps three and compares the same two ends.
-    @State private var recentHovers: [CGPoint] = []
+    /// Whether the pointer is on its way out to the open ring. Owns the sample
+    /// window and the outward-progress run; see `WheelAim.Tracker`.
+    @State private var aim = WheelAim.Tracker()
+    /// Which group's ring `aim` is currently measuring against, so the run can
+    /// restart whenever that changes.
+    @State private var aimRunParent: String?
     /// While this is in the future, the pointer is treated as being on its way OUT
     /// to the open ring, and slices it crosses do not steal it.
     @State private var aimingUntil: Date?
@@ -229,11 +245,21 @@ struct WheelActionsView: View {
             expanded = false
             settledAt = nil
             aimingUntil = nil
-            recentHovers = []
+            aim.restart()
+            aimRunParent = nil
             openToken &+= 1
             hitRegion?.outerRadius = 0
         }
     }
+
+    /// How opaque the invisible backing has to be.
+    ///
+    /// Not zero, because a fully transparent window pixel is not the window's: a
+    /// click on it goes to whatever is behind. Kept as low as it can be, and — more
+    /// importantly — never painted anywhere the ring does not already cover, because
+    /// anywhere else it IS visible: two parts in 255 still reads as a grey film on a
+    /// dark backdrop.
+    private var backingOpacity: Double { 0.008 }
 
     /// The single interactive surface. The wheel is ONE control: which slice (or
     /// which child on the second ring) the pointer is on is resolved from its
@@ -251,12 +277,23 @@ struct WheelActionsView: View {
     private var interactiveSurface: some View {
         let d = canvas
         return ZStack {
+            // EXACTLY the ring band, never a point further. Anything painted past
+            // the ring's outer edge is not covered by anything and the user sees it —
+            // a faint ring in the seam, plainly visible on a dark backdrop.
+            //
+            // Which is why the seam is NOT covered, even though the pointer crossing
+            // it is what ends the hover: an event landing on a window pixel with
+            // nothing painted in it is not ours to receive. That is handled where it
+            // does no harm instead — an exit reported while the pointer is still
+            // demonstrably on the wheel is ignored outright (see the hover `.ended`
+            // branch), so the ring stays open, the child stays lit, and hover picks
+            // up again by itself about seven milliseconds later on the far side.
             Annulus(innerRadius: layout.innerRadius, outerRadius: layout.outerRadius)
-                .fill(Color.white.opacity(0.02), style: FillStyle(eoFill: true))
+                .fill(Color.white.opacity(backingOpacity), style: FillStyle(eoFill: true))
             // Same treatment for the open submenu, painted to the ARC only so the
             // transparent space around it stays click-through.
             if let open = submenu, expanded {
-                submenuShape(open).fill(Color.white.opacity(0.02))
+                submenuShape(open).fill(Color.white.opacity(backingOpacity))
             }
         }
         // Tracked (hit-tested + hover) as a FULL disc out to the wheel's widest
@@ -282,26 +319,74 @@ struct WheelActionsView: View {
                 enteredRing = true
                 lastHover = loc
                 updateAim(at: loc)
-                apply(hit(at: loc))
+                let result = hit(at: loc)
+                apply(result)
             case .ended:
-                hovered = nil
-                hoveredChild = nil
-                recentHovers = []
-                collapseSubmenu()
+                // How far the wheel can reach AT ALL — not how far it happens to
+                // reach this instant.
+                //
+                // Hovering a group means its ring is coming out, so the pointer
+                // heading outward is heading somewhere that will be part of the
+                // wheel. Asking whether the ring is out YET made the answer depend
+                // on a race: push out during the moment between the hover and the
+                // ring appearing and the pointer was judged against the first ring's
+                // edge, which it had already passed. Judging it against the widest
+                // the wheel can ever be has no such moment — and it is the same
+                // number the hover tracking itself uses, so "inside the tracked
+                // area" and "on the wheel" can no longer disagree.
+                let reach = trackedReach
                 // Only auto-hide on a GENUINE outward exit: the pointer's last
-                // tracked position must be at/past the wheel's OUTER edge.
+                // tracked position must be at/past the wheel's outer edge.
                 // `onContinuousHover` tracks the whole square frame and ALSO fires
                 // `.ended` spuriously while the pointer is still well inside the
                 // wheel — notably when the ring is recycled/rebuilt for a new
-                // selection with the cursor near its centre (a view/tracking-area
-                // teardown, not a real exit). Logging the exit distance proved the
-                // split: false exits sit at dist ≪ outer (often dead centre), real
-                // exits at dist ≥ outer. Gating on the distance drops the spurious
-                // ones — the "centre→ring→centre / recycled-ring vanish" bug.
+                // selection (a view/tracking-area teardown, not a real exit).
+                // Logging the exit distance proved the split: false exits sit well
+                // inside the edge, real ones at or past it.
+                //
+                // The edge is whatever the wheel reaches NOW. It used to be the main
+                // ring's outer radius always, which was right while there was only
+                // one ring and wrong the moment a second one opened outside it: with
+                // a group open the wheel genuinely reaches ~58 points further, so
+                // every spurious exit out there — including one in the transparent
+                // seam BETWEEN the rings, two points past the old line — was read as
+                // "they left" and took the whole wheel down, mid-reach for a child.
+                // Measured: an exit reported at r=117.8 with the submenu open and the
+                // pointer not moving.
+                // Where the cursor IS, asked of AppKit — not where this view last
+                // saw it. Hover only reports on a sample, so the last one before an
+                // exit sits up to a frame of travel inside the edge, and a brisk
+                // flick away leaves it far enough inside to read as "still here".
+                // Measured before this: four exits in thirty-two were misread that
+                // way and left the wheel on screen with a frozen highlight until
+                // something else replaced it. The fallback is the old guess, for the
+                // case where the panel is gone by the time this runs.
                 let c = d / 2
-                let exitDist = lastHover.map { hypot($0.x - c, $0.y - c) } ?? 0
-                let genuineExit = exitDist >= layout.outerRadius
-                if autoHideOnExit && enteredRing && genuineExit { onExitRing() }
+                let exitDist = hitRegion?.cursorRadius?()
+                    ?? lastHover.map { hypot($0.x - c, $0.y - c) }
+                    ?? 0
+                let genuineExit = exitDist >= reach
+                // A spurious exit changes NOTHING. It used to tear the hover state
+                // down and fold the submenu away regardless, and only the auto-hide
+                // was gated on this — which is why, once the wheel stopped vanishing,
+                // the symptom became "the second ring appears and instantly goes
+                // away again": the teardown was still running, and with the ring gone
+                // every position past the main ring then read as off the wheel, so it
+                // could not come back either. Measured: exits reported at r≈117 with
+                // the pointer moving steadily outward and not going anywhere near the
+                // real edge at 174.
+                guard genuineExit else { break }
+
+                // A real exit, but not acted on yet: nothing is torn down until the
+                // grace has run out, so a pointer that overshot and came straight
+                // back finds the wheel exactly as it left it — same group open, same
+                // child under the cursor.
+                hovered = nil
+                hoveredChild = nil
+                aim.restart()
+                aimRunParent = nil
+                collapseSubmenu()
+                if autoHideOnExit && enteredRing { onExitRing() }
             }
         }
         .gesture(SpatialTapGesture(coordinateSpace: .local).onEnded { ev in
@@ -631,7 +716,7 @@ struct WheelActionsView: View {
         // The transparent seam between the two rings: crossing it on the way out to
         // a child must not read as leaving.
         if dist <= layout.submenuInnerRadius { return .keep }
-        if dist <= layout.submenuOuterRadius + 6 {
+        if dist <= layout.submenuOuterRadius + layout.overshootSlack {
             // NOT while the ring is still moving. `plan` describes the ring once it
             // has finished unfolding, but for the third of a second it spends
             // growing out — or travelling to another group — the wedges are drawn
@@ -680,16 +765,21 @@ struct WheelActionsView: View {
     /// `aimGrace` — and a check scheduled for that moment re-reads the position, so
     /// a pointer that stopped does not have to be nudged to take effect.
     private func updateAim(at point: CGPoint) {
-        recentHovers.append(point)
-        if recentHovers.count > 3 { recentHovers.removeFirst() }
-        guard expanded, let open = submenu, let earliest = recentHovers.first else { return }
-
         let c = canvas / 2
         let centre = CGPoint(x: c, y: c)
-        // Movement has to be aimed OUT along the radius, not around it. Going
-        // around is exactly what browsing the first level looks like, and it used
-        // to arm this by accident every time the radius happened to wobble outward.
-        guard WheelAim.isHeadingOutward(from: earliest, to: point, centre: centre) else { return }
+        // Keyed on the open ring rather than done inside `openSubmenu`, because that
+        // is called on every hover over an already-open group and no-ops; restarting
+        // the run there would restart it on every sample and nothing could ever add
+        // up. `expanded` is part of the key because `collapseSubmenu` deliberately
+        // KEEPS `submenu` set while the ring folds away.
+        let openRing = expanded ? submenu?.parentID : nil
+        if aimRunParent != openRing {
+            aimRunParent = openRing
+            aim.restart()
+        }
+        let reaching = aim.isReaching(to: point, at: Date(), centre: centre)
+
+        guard reaching, expanded, let open = submenu else { return }
         // …and aimed at the arc that is actually open, not away from it.
         let degrees = atan2(point.y - c, point.x - c) * 180 / .pi
         guard open.plan.contains(degrees: degrees, tolerance: 12) else { return }
@@ -698,7 +788,9 @@ struct WheelActionsView: View {
         aimToken &+= 1
         let token = aimToken
         DispatchQueue.main.asyncAfter(deadline: .now() + aimGrace + 0.02) {
-            guard aimToken == token, expanded, let point = lastHover else { return }
+            guard aimToken == token, expanded, let point = lastHover else {
+                return
+            }
             apply(hit(at: point))
         }
     }
@@ -719,7 +811,9 @@ struct WheelActionsView: View {
             let action = actions[i]
             // Cutting the corner toward a child: this slice is on the way, not the
             // destination. Leave everything as it is.
-            if isPassingThrough(action.id) { return }
+            if isPassingThrough(action.id) {
+                return
+            }
             if hovered != action.id { hovered = action.id }
             if hoveredChild != nil { hoveredChild = nil }
             if action.hasChildren {
@@ -803,7 +897,9 @@ struct WheelActionsView: View {
         let token = openToken
         settledAt = Date().addingTimeInterval(settleDelay)
         DispatchQueue.main.asyncAfter(deadline: .now() + settleDelay + 0.02) {
-            guard openToken == token, expanded, let point = lastHover else { return }
+            guard openToken == token, expanded, let point = lastHover else {
+                return
+            }
             apply(hit(at: point))
         }
     }
@@ -887,14 +983,14 @@ struct WheelActionsView: View {
     /// How far hover tracking reaches. Always the full disc when submenus exist, so
     /// pushing out from a slice onto its children never crosses a tracking boundary.
     private var trackedReach: CGFloat {
-        hasSubmenus ? layout.submenuOuterRadius : layout.outerRadius
+        hasSubmenus ? layout.submenuOuterRadius + layout.overshootSlack : layout.outerRadius
     }
 
     private var openSpring: Animation { .spring(response: 0.36, dampingFraction: 0.9) }
 
     /// The arc at its fully-open size. Used ONLY to paint the invisible click
     /// backing, which deliberately does not animate: the ring must be clickable the
-    /// moment it starts coming out, and at 2% white there is nothing to see.
+    /// moment it starts coming out, and at `backingOpacity` there is nothing to see.
     private func submenuShape(_ open: OpenSubmenu) -> RoundedRingSector {
         RoundedRingSector(startAngle: open.plan.start,
                           endAngle: open.plan.start + open.plan.span,
