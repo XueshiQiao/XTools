@@ -207,28 +207,26 @@ final class PopBarController {
         let anchor = previewAnchor()
         lastAnchor = anchor
         windows.showTransient(text: L("popbar.preview.sample"), url: nil, anchor: anchor, actions: actionStore.actions)
-        Self.log.info("showing preview capsule")
+        // The anchor is worth logging: the preview is meant to land dead centre of
+        // one screen, and "which screen" is the only thing that can be surprising.
+        Self.log.info("showing preview capsule at \(anchor)")
     }
 
-    /// Anchor the preview popup BESIDE the settings window so it never covers the
-    /// controls the user is dragging — to the window's right if there's room, else its
-    /// left, vertically centered on it. Falls back to the main screen's center when
-    /// there's no settings window (e.g. preview fired with the window closed).
+    /// Anchor the preview popup dead centre of the screen the settings window is
+    /// on — the same spot every time, on the display being looked at.
+    ///
+    /// It used to sit BESIDE the window (right if there was room, else left) so it
+    /// never covered the sliders being dragged. Centring gives that up on purpose:
+    /// a preview that lands in the same place every time is one that can be
+    /// filmed, and the window can always be moved aside while tuning.
+    ///
+    /// `NSWindow.screen` is the display holding most of the window, and is nil for
+    /// a window that is minimised or off screen — hence the fall back to the main
+    /// display, which also covers the preview being fired with no window at all.
     private func previewAnchor() -> CGPoint {
-        // Half-extent to reserve on each side: ~ the largest wheel radius + a margin,
-        // so even the biggest ring clears the window edge.
-        let reserve: CGFloat = 190
-        guard let w = NSApp.mainWindow ?? NSApp.keyWindow else {
-            let f = NSScreen.main?.frame ?? .zero
-            return CGPoint(x: f.midX, y: f.midY)
-        }
-        let f = w.frame
-        let visible = (NSScreen.screens.first { $0.frame.intersects(f) } ?? NSScreen.main)?.visibleFrame ?? f
-        let rightX = f.maxX + reserve
-        if rightX + reserve <= visible.maxX { return CGPoint(x: rightX, y: f.midY) }
-        let leftX = f.minX - reserve
-        if leftX - reserve >= visible.minX { return CGPoint(x: leftX, y: f.midY) }
-        return CGPoint(x: visible.midX, y: visible.midY)
+        let window = NSApp.mainWindow ?? NSApp.keyWindow
+        let f = (window?.screen ?? NSScreen.main)?.frame ?? .zero
+        return CGPoint(x: f.midX, y: f.midY)
     }
 
     /// Push a live auto-expand preference change (from settings) onto every open
