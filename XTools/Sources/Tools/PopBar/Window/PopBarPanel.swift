@@ -86,6 +86,26 @@ private final class FirstMouseHostingView<Content: View>: NSHostingView<Content>
 /// Main-thread only by convention (callers always invoke it on main).
 final class PopBarPanel {
 
+    /// How high the popup floats.
+    ///
+    /// `.floating` (3) is only above ordinary windows. It is not above the
+    /// transient overlays other apps put up — a sibling clipboard app's preview
+    /// panel sits at `.popUpMenu + 1`, and it covered the ring completely. A
+    /// selection popup that the window you just selected text in can hide is
+    /// useless, so this goes one step above that band.
+    ///
+    /// It deliberately stops below `.popUpMenu + 3`, where app-modal alerts live:
+    /// something that blocks its app should still win over a popup that is only
+    /// offering actions.
+    ///
+    /// Leaving the normal compositing band is documented to cost translucent
+    /// material its stable cached backdrop — a hairline along an edge, flicker
+    /// while moving. Checked before committing to it: the liquid-glass ring
+    /// renders byte-for-byte identically at this level and at `.floating`, so
+    /// there is nothing to trade away here. Worth re-checking if the skin ever
+    /// switches to a different material.
+    static let level = NSWindow.Level(rawValue: NSWindow.Level.popUpMenu.rawValue + 2)
+
     let model = PopBarPanelModel()
 
     private let panel: NSPanel
@@ -136,7 +156,7 @@ final class PopBarPanel {
             backing: .buffered, defer: false
         )
         panel.isFloatingPanel = true
-        panel.level = .floating
+        panel.level = Self.level
         panel.collectionBehavior = [.canJoinAllSpaces, .ignoresCycle]
         panel.isOpaque = false
         panel.backgroundColor = .clear
