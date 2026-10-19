@@ -883,3 +883,50 @@
 "devtree.net.active" = "active";
 "devtree.net.noAddress" = "no address";
 "devtree.prop.model" = "Model";
+
+// MARK: - CCUsage (Token Usage)
+"tool.ccusage.title" = "Token Usage";
+"dashboard.card.ccusage" = "Token Usage";
+"dashboard.ccusage.todayUnit" = "today";
+"dashboard.ccusage.todayTokens" = "Today: %@ tokens";
+"dashboard.ccusage.totalCost" = "All-time total: %@";
+
+"ccusage.interval.5s" = "Every 5s";
+"ccusage.interval.10s" = "Every 10s";
+"ccusage.interval.30s" = "Every 30s";
+"ccusage.interval.60s" = "Every 1m";
+"ccusage.interval.custom" = "Custom…";
+"ccusage.interval.manual" = "Manual";
+"ccusage.refresh.interval.help" = "Auto-refresh interval (active only while visible)";
+
+"ccusage.range.7d" = "7D";
+"ccusage.range.14d" = "14D";
+"ccusage.range.30d" = "30D";
+
+"ccusage.status.updated" = "Updated at %@";
+"ccusage.status.loading" = "Fetching usage data from ccusage…";
+"ccusage.status.idle" = "Ready";
+"ccusage.custom.every" = "Refresh every";
+"ccusage.custom.sec" = "sec";
+
+"ccusage.section.today" = "Today & Summary";
+"ccusage.today.cost" = "Today's Cost";
+"ccusage.today.vsYesterday" = "Yesterday %@ (%@)";
+"ccusage.today.tokens" = "Today's Tokens";
+"ccusage.metric.input" = "Input";
+"ccusage.metric.output" = "Output";
+"ccusage.metric.cacheCreate" = "Cache Write";
+"ccusage.metric.cacheRead" = "Cache Read";
+"ccusage.totals.summary" = "All-Time (%d active days): %@ · %@ tokens";
+
+"ccusage.section.trend" = "Daily Cost Trend";
+"ccusage.trend.subtitle" = "Click any bar to inspect that day's agent & model breakdown";
+
+"ccusage.section.breakdown" = "Breakdown (%@)";
+"ccusage.action.backToToday" = "Back to Today";
+"ccusage.breakdown.empty" = "No token usage recorded for this date.";
+"ccusage.breakdown.agents" = "By Agent";
+"ccusage.breakdown.models" = "By Model";
+"ccusage.model.unpriced" = "unpriced";
+
+"ccusage.section.history" = "Daily History (%d days)";

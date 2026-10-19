@@ -13,6 +13,7 @@ enum ToolRegistry {
             // .selection
             PopBarTool(llm: llm),
             // .liveActivity
+            CCUsageTool(),
             NowPlayingTool(),
             WakeLocksTool(),
             // .system

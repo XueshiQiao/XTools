@@ -14,6 +14,7 @@ struct DashboardView: View {
     var body: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 14) {
+                CCUsageCard(report: store.data.ccUsage)
                 MemoryCard(data: store.data)
                 if store.data.battery.isPresent { BatteryCard(battery: store.data.battery) }
                 WakeCard(count: store.data.wakeDisplayCount, holders: store.data.wakeDisplayList)
@@ -290,6 +291,21 @@ private struct DiskCard: View {
             MiniBar(fraction: usedFraction, color: .purple)
             Text(String(format: L("dashboard.disk.total"), byteText(total)))
                 .font(.system(size: 11)).foregroundStyle(.tertiary)
+        }
+    }
+}
+
+private struct CCUsageCard: View {
+    let report: CCUsageReport
+    var body: some View {
+        let today = report.todayEntry() ?? CCDailyEntry.zero(period: "")
+        CardShell(title: L("dashboard.card.ccusage"), symbol: "chart.bar.xaxis", tint: .orange,
+                  destination: .tool("ccusage")) {
+            Metric(value: CCFormat.cost(today.totalCost), unit: L("dashboard.ccusage.todayUnit"), color: .orange)
+            Text(String(format: L("dashboard.ccusage.todayTokens"), CCFormat.compactTokens(today.totalTokens)))
+                .font(.system(size: 12)).foregroundStyle(.secondary).monospacedDigit()
+            Text(String(format: L("dashboard.ccusage.totalCost"), CCFormat.cost(report.totals.totalCost)))
+                .font(.system(size: 11)).foregroundStyle(.tertiary).monospacedDigit()
         }
     }
 }

@@ -75,6 +75,7 @@ targets:
     platform: macOS
     sources:
       - XTools/Tests
+      - path: XTools/Sources/Tools/CCUsage/Model/CCUsageModels.swift
       - path: XTools/Sources/Tools/PopBar/Window/WheelSubmenu.swift
     settings:
       base:

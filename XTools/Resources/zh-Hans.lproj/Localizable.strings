@@ -883,3 +883,50 @@
 "devtree.net.active" = "在用";
 "devtree.net.noAddress" = "无地址";
 "devtree.prop.model" = "型号";
+
+// MARK: - CCUsage (Token Usage)
+"tool.ccusage.title" = "Token 用量";
+"dashboard.card.ccusage" = "Token 用量";
+"dashboard.ccusage.todayUnit" = "今日花费";
+"dashboard.ccusage.todayTokens" = "今日用量：%@ tokens";
+"dashboard.ccusage.totalCost" = "历史累计花费：%@";
+
+"ccusage.interval.5s" = "每 5 秒";
+"ccusage.interval.10s" = "每 10 秒";
+"ccusage.interval.30s" = "每 30 秒";
+"ccusage.interval.60s" = "每 1 分钟";
+"ccusage.interval.custom" = "自定义…";
+"ccusage.interval.manual" = "手动刷新";
+"ccusage.refresh.interval.help" = "自动刷新频率（仅在页面可见时运行）";
+
+"ccusage.range.7d" = "近 7 天";
+"ccusage.range.14d" = "近 14 天";
+"ccusage.range.30d" = "近 30 天";
+
+"ccusage.status.updated" = "上次更新：%@";
+"ccusage.status.loading" = "正在读取 ccusage 数据…";
+"ccusage.status.idle" = "就绪";
+"ccusage.custom.every" = "每隔";
+"ccusage.custom.sec" = "秒刷新";
+
+"ccusage.section.today" = "今日看板与总览";
+"ccusage.today.cost" = "今日花费";
+"ccusage.today.vsYesterday" = "昨日 %@ (%@)";
+"ccusage.today.tokens" = "今日总 Token";
+"ccusage.metric.input" = "输入 (Input)";
+"ccusage.metric.output" = "输出 (Output)";
+"ccusage.metric.cacheCreate" = "缓存写入";
+"ccusage.metric.cacheRead" = "缓存读取";
+"ccusage.totals.summary" = "历史累计（共 %d 个活跃日）：%@ · %@ tokens";
+
+"ccusage.section.trend" = "近期每日花费趋势";
+"ccusage.trend.subtitle" = "点击任意柱状条可切换查看当天的 Agent 与模型明细";
+
+"ccusage.section.breakdown" = "用量拆解 (%@)";
+"ccusage.action.backToToday" = "回到今日";
+"ccusage.breakdown.empty" = "该日期暂无 Token 消耗记录。";
+"ccusage.breakdown.agents" = "按 Agent 分布";
+"ccusage.breakdown.models" = "按模型分布";
+"ccusage.model.unpriced" = "未定价";
+
+"ccusage.section.history" = "历史每日明细（共 %d 天）";

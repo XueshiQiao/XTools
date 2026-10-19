@@ -15,6 +15,7 @@ struct DashboardData {
     var portsConnections = 0
     var diskFree: Int64 = 0
     var diskTotal: Int64 = 0
+    var ccUsage = CCUsageReport.empty
 
     /// Used physical RAM ≈ total − (total × free%). Mirrors the "X% free" framing.
     var memoryUsed: UInt64 {
@@ -76,6 +77,7 @@ final class DashboardStore: ObservableObject {
             let cap = Self.diskCapacity()
             d.diskFree = cap.free
             d.diskTotal = cap.total
+            d.ccUsage = CCUsageScanner.scanCached(maxAge: 25).report
             DispatchQueue.main.async {
                 self?.data = d
                 self?.isLoading = false
