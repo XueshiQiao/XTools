@@ -76,6 +76,7 @@ targets:
     sources:
       - XTools/Tests
       - path: XTools/Sources/Tools/CCUsage/Model/CCUsageModels.swift
+      - path: XTools/Sources/Tools/CCUsage/Service/CCUsageBinaryManager.swift
       - path: XTools/Sources/Tools/PopBar/Window/WheelSubmenu.swift
     settings:
       base:

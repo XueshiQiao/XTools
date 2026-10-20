@@ -13,6 +13,14 @@ final class CCUsageStore: ObservableObject {
     @Published private(set) var isRefreshing = false
     @Published private(set) var errorMessage: String?
 
+    /// Binary installation & update state.
+    @Published private(set) var isBinaryInstalled: Bool = CCUsageBinaryManager.isInstalled
+    @Published private(set) var isDownloadingBinary: Bool = false
+    @Published private(set) var downloadErrorMessage: String?
+    @Published private(set) var ccusageVersion: String?
+    @Published private(set) var isCheckingUpdate: Bool = false
+    @Published private(set) var updateStatusMessage: String?
+
     /// Which day period (`YYYY-MM-DD`) is currently focused for the Agent / Model breakdown.
     /// When `nil`, defaults to today (or the most recent active day if today is empty).
     @Published var selectedPeriod: String?
@@ -148,8 +156,7 @@ final class CCUsageStore: ObservableObject {
         pipelineRunning = shouldRun
         if shouldRun {
             log.info("CCUsage pipeline start (\(reason))")
-            refresh()
-            rescheduleTimer()
+            ensureBinaryThenStart()
         } else {
             log.info("CCUsage pipeline stop (\(reason))")
             timer?.cancel()
@@ -160,7 +167,7 @@ final class CCUsageStore: ObservableObject {
     private func rescheduleTimer() {
         timer?.cancel()
         timer = nil
-        guard pipelineRunning, let seconds = prefs.effectiveSeconds else { return }
+        guard pipelineRunning, isBinaryInstalled, let seconds = prefs.effectiveSeconds else { return }
         timer = Timer.publish(every: seconds, on: .main, in: .common)
             .autoconnect()
             .sink { [weak self] _ in
@@ -168,9 +175,109 @@ final class CCUsageStore: ObservableObject {
             }
     }
 
+    // MARK: - Binary Management (First-run Download & Check Update)
+
+    private func ensureBinaryThenStart() {
+        if CCUsageBinaryManager.isInstalled {
+            isBinaryInstalled = true
+            if ccusageVersion == nil {
+                work.async { [weak self] in
+                    let ver = CCUsageBinaryManager.installedVersion()
+                    DispatchQueue.main.async {
+                        self?.ccusageVersion = ver
+                    }
+                }
+            }
+            refresh()
+            rescheduleTimer()
+        } else {
+            isBinaryInstalled = false
+            downloadInitialBinary()
+        }
+    }
+
+    func downloadInitialBinary() {
+        guard !isDownloadingBinary else { return }
+        isDownloadingBinary = true
+        downloadErrorMessage = nil
+        log.info("ccusage binary not found; starting initial download")
+
+        work.async { [weak self] in
+            do {
+                let outcome = try CCUsageBinaryManager.installOrUpdate()
+                let version: String = {
+                    switch outcome {
+                    case .installed(let v), .upToDate(let v): return v
+                    case .updated(_, let to): return to
+                    }
+                }()
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    self.log.info("ccusage initial install succeeded: v\(version)")
+                    self.isDownloadingBinary = false
+                    self.isBinaryInstalled = true
+                    self.ccusageVersion = version
+                    self.downloadErrorMessage = nil
+                    self.refresh()
+                    self.rescheduleTimer()
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    self.log.error("ccusage initial install failed: \(error.localizedDescription)")
+                    self.isDownloadingBinary = false
+                    self.downloadErrorMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    func checkAndUpdateCCUsage() {
+        guard !isCheckingUpdate, !isDownloadingBinary else { return }
+        isCheckingUpdate = true
+        updateStatusMessage = L("ccusage.update.checking")
+        log.info("Checking for ccusage update")
+
+        work.async { [weak self] in
+            do {
+                let outcome = try CCUsageBinaryManager.installOrUpdate()
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    self.isCheckingUpdate = false
+                    self.isBinaryInstalled = true
+                    switch outcome {
+                    case .upToDate(let version):
+                        self.ccusageVersion = version
+                        self.updateStatusMessage = String(format: L("ccusage.update.upToDate"), version)
+                    case .updated(let from, let to):
+                        self.ccusageVersion = to
+                        self.updateStatusMessage = String(format: L("ccusage.update.updated"), from, to)
+                        self.refresh()
+                    case .installed(let version):
+                        self.ccusageVersion = version
+                        self.updateStatusMessage = String(format: L("ccusage.update.installed"), version)
+                        self.refresh()
+                        self.rescheduleTimer()
+                    }
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    self.log.error("ccusage update check failed: \(error.localizedDescription)")
+                    self.isCheckingUpdate = false
+                    self.updateStatusMessage = String(format: L("ccusage.update.failed"), error.localizedDescription)
+                }
+            }
+        }
+    }
+
     // MARK: - Refresh
 
     func refresh() {
+        guard isBinaryInstalled else {
+            downloadInitialBinary()
+            return
+        }
         guard !scanning else { return }
         scanning = true
         isRefreshing = true

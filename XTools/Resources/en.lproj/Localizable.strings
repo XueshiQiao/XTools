@@ -930,3 +930,18 @@
 "ccusage.model.unpriced" = "unpriced";
 
 "ccusage.section.history" = "Daily History (%d days)";
+
+"ccusage.download.title" = "Downloading ccusage…";
+"ccusage.download.subtitle" = "Fetching and verifying the official native ccusage binary for local token usage analysis.";
+"ccusage.download.failed" = "Failed to download ccusage";
+"ccusage.download.retry" = "Retry Download";
+"ccusage.error.notInstalled" = "ccusage binary is not installed yet.";
+
+"ccusage.footer.version" = "ccusage v%@";
+"ccusage.footer.versionUnknown" = "ccusage";
+"ccusage.footer.checkUpdate" = "Check Update";
+"ccusage.update.checking" = "Checking for updates…";
+"ccusage.update.upToDate" = "Up to date (v%@)";
+"ccusage.update.updated" = "Updated v%@ → v%@";
+"ccusage.update.installed" = "Installed v%@";
+"ccusage.update.failed" = "Update failed: %@";

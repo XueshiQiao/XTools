@@ -930,3 +930,18 @@
 "ccusage.model.unpriced" = "未定价";
 
 "ccusage.section.history" = "历史每日明细（共 %d 天）";
+
+"ccusage.download.title" = "正在下载 ccusage…";
+"ccusage.download.subtitle" = "正在从官方源下载并校验原生 ccusage 组件，完成后将自动展示本地 Token 用量。";
+"ccusage.download.failed" = "下载 ccusage 失败";
+"ccusage.download.retry" = "重新下载";
+"ccusage.error.notInstalled" = "尚未安装 ccusage 组件。";
+
+"ccusage.footer.version" = "ccusage v%@";
+"ccusage.footer.versionUnknown" = "ccusage";
+"ccusage.footer.checkUpdate" = "检查更新";
+"ccusage.update.checking" = "正在检查更新…";
+"ccusage.update.upToDate" = "已是最新版本 (v%@)";
+"ccusage.update.updated" = "已更新 v%@ → v%@";
+"ccusage.update.installed" = "已安装 v%@";
+"ccusage.update.failed" = "检查更新失败：%@";

@@ -98,4 +98,56 @@ final class CCUsageModelsTests: XCTestCase {
         XCTAssertEqual(CCFormat.compactTokens(393_130_163), "393.1M")
         XCTAssertEqual(CCFormat.compactTokens(3_139_297_314), "3.14B")
     }
+
+    func testManifestValidationAndIntegrityCheck() throws {
+        let validManifestJSON = """
+        {
+          "name": "@ccusage/ccusage-darwin-arm64",
+          "version": "20.0.36",
+          "dist": {
+            "shasum": "474cf39d0e78725aa551c84c205523acf1053034",
+            "tarball": "https://registry.npmjs.org/@ccusage/ccusage-darwin-arm64/-/ccusage-darwin-arm64-20.0.36.tgz",
+            "integrity": "sha512-vG0jeRvKee/WJLwISk6j3OH1uzDHjgwTLD4ozZIP17ccMwmNj9+XFiCLulfqPAUw5DXAM7sfdCoZ/6VSev/FOw==",
+            "attestations": {
+              "provenance": {
+                "predicateType": "https://slsa.dev/provenance/v1"
+              }
+            }
+          },
+          "_npmUser": {
+            "trustedPublisher": {
+              "id": "github"
+            }
+          }
+        }
+        """.data(using: .utf8)!
+
+        let manifest = try CCUsageBinaryManager.parseAndValidateManifest(
+            validManifestJSON,
+            expectedPackage: "@ccusage/ccusage-darwin-arm64"
+        )
+        XCTAssertEqual(manifest.version, "20.0.36")
+
+        // Reject manifest without GitHub SLSA provenance
+        let untrustedJSON = """
+        {
+          "name": "@ccusage/ccusage-darwin-arm64",
+          "version": "20.0.36",
+          "dist": {
+            "shasum": "474cf39d0e78725aa551c84c205523acf1053034",
+            "tarball": "https://registry.npmjs.org/@ccusage/ccusage-darwin-arm64/-/ccusage-darwin-arm64-20.0.36.tgz"
+          }
+        }
+        """.data(using: .utf8)!
+
+        XCTAssertThrowsError(try CCUsageBinaryManager.parseAndValidateManifest(
+            untrustedJSON,
+            expectedPackage: "@ccusage/ccusage-darwin-arm64"
+        )) { error in
+            XCTAssertEqual(error as? CCUsageBinaryManager.ManagerError, .untrustedProvenance)
+        }
+
+        // Reject tampered tarball payload
+        XCTAssertThrowsError(try CCUsageBinaryManager.verifyTarballIntegrity(Data("tampered".utf8), dist: manifest.dist))
+    }
 }

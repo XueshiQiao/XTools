@@ -2,11 +2,13 @@ import SwiftUI
 import AppKit
 
 /// Native macOS visual dashboard for `ccusage daily`:
+/// - First-launch automatic download & verification state if `ccusage` is not installed yet
 /// - Refresh control bar (5s / 10s / 30s / 60s / Custom seconds / Manual) + live status indicator
 /// - Today's Hero Summary (Today's Cost, vs Yesterday delta, Total Tokens, Input/Output/Cache breakdown, All-Time Totals)
 /// - Recent N-day Cost Trend interactive bar chart (click any bar to inspect that day's breakdown)
 /// - Agent & Model Breakdown for the selected day (with proportional bars)
 /// - Expandable Daily History table (showing all recorded days, click to expand per-agent & per-model details)
+/// - Bottom footer displaying the current `ccusage` version and a `Check Update` button
 struct CCUsageView: View {
 
     @ObservedObject var store: CCUsageStore
@@ -21,14 +23,19 @@ struct CCUsageView: View {
 
     var body: some View {
         Form {
-            refreshHeaderSection
-            if let err = store.errorMessage, store.report.daily.isEmpty {
-                errorSection(err)
+            if !store.isBinaryInstalled {
+                initialDownloadSection
+            } else {
+                refreshHeaderSection
+                if let err = store.errorMessage, store.report.daily.isEmpty {
+                    errorSection(err)
+                }
+                todayHeroSection
+                trendChartSection
+                focusedBreakdownSection
+                dailyHistorySection
+                versionFooterSection
             }
-            todayHeroSection
-            trendChartSection
-            focusedBreakdownSection
-            dailyHistorySection
         }
         .formStyle(.grouped)
         .navigationTitle(L("tool.ccusage.title"))
@@ -42,13 +49,14 @@ struct CCUsageView: View {
                 .pickerStyle(.menu)
                 .fixedSize()
                 .help(L("ccusage.refresh.interval.help"))
+                .disabled(!store.isBinaryInstalled)
 
                 Button {
                     store.refresh()
                 } label: {
                     Label(L("launch.refresh"), systemImage: "arrow.clockwise")
                 }
-                .disabled(store.isRefreshing)
+                .disabled(store.isRefreshing || store.isDownloadingBinary)
             }
         }
         .onAppear {
@@ -61,6 +69,56 @@ struct CCUsageView: View {
         .background(CCWindowAccessor { [weak store] window in
             store?.attach(window: window)
         })
+    }
+
+    // MARK: - 0. Initial Binary Download View
+
+    private var initialDownloadSection: some View {
+        Section {
+            VStack(spacing: 14) {
+                if store.isDownloadingBinary {
+                    ProgressView()
+                        .controlSize(.regular)
+                        .padding(.top, 8)
+                    Text(L("ccusage.download.title"))
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.primary)
+                    Text(L("ccusage.download.subtitle"))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 420)
+                        .padding(.bottom, 8)
+                } else if let err = store.downloadErrorMessage {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 26))
+                        .foregroundStyle(.orange)
+                        .padding(.top, 8)
+                    Text(L("ccusage.download.failed"))
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.primary)
+                    Text(err)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 440)
+                    Button {
+                        store.downloadInitialBinary()
+                    } label: {
+                        Label(L("ccusage.download.retry"), systemImage: "arrow.clockwise")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .padding(.bottom, 8)
+                } else {
+                    ProgressView()
+                        .controlSize(.regular)
+                        .padding(.vertical, 12)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 20)
+        }
     }
 
     // MARK: - 1. Refresh & Status Control Strip
@@ -582,6 +640,56 @@ struct CCUsageView: View {
             }
         } header: {
             Text(String(format: L("ccusage.section.history"), rows.count))
+        }
+    }
+
+    // MARK: - 6. Bottom Version & Check Update Footer
+
+    private var versionFooterSection: some View {
+        Section {
+            HStack(spacing: 10) {
+                Image(systemName: "terminal")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+
+                if let ver = store.ccusageVersion {
+                    Text(String(format: L("ccusage.footer.version"), ver))
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(L("ccusage.footer.versionUnknown"))
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
+
+                if let msg = store.updateStatusMessage {
+                    Text("·")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                    Text(msg)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                if store.isCheckingUpdate {
+                    ProgressView()
+                        .controlSize(.small)
+                        .scaleEffect(0.75)
+                }
+
+                Button {
+                    store.checkAndUpdateCCUsage()
+                } label: {
+                    Label(L("ccusage.footer.checkUpdate"), systemImage: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 11))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .disabled(store.isCheckingUpdate || store.isDownloadingBinary)
+            }
         }
     }
 
