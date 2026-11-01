@@ -17,6 +17,7 @@ enum ToolRegistry {
             NowPlayingTool(),
             WakeLocksTool(),
             // .system
+            SystemDoctorTool(),
             PowerInsightsTool(),
             DNSToolsTool(),
             DefaultAppsTool(),

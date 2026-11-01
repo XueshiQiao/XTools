@@ -945,3 +945,86 @@
 "ccusage.update.updated" = "Updated v%@ → v%@";
 "ccusage.update.installed" = "Installed v%@";
 "ccusage.update.failed" = "Update failed: %@";
+
+
+// MARK: - System Doctor (WindowServer & IPC Inspection)
+"tool.sysdoc.title" = "System Doctor";
+"sysdoc.action.scanNow" = "Scan Now";
+"sysdoc.status.scanning" = "Running read-only 1s delta sample…";
+"sysdoc.status.allHealthy" = "All Checks Healthy";
+"sysdoc.status.anomaliesFound" = "%d Anomalies Detected";
+"sysdoc.empty" = "No inspection snapshot yet";
+"sysdoc.unit.ports" = "ports";
+
+"sysdoc.severity.healthy" = "Healthy";
+"sysdoc.severity.notice" = "Notice";
+"sysdoc.severity.warning" = "Elevated";
+"sysdoc.severity.critical" = "High";
+
+"sysdoc.role.compositor" = "Compositor";
+"sysdoc.role.systemUIDaemon" = "System UI";
+"sysdoc.role.userApp" = "App";
+"sysdoc.role.systemDaemon" = "Daemon";
+
+"sysdoc.section.overview" = "WindowServer & Compositor Health";
+"sysdoc.section.overview.footer" = "Uses a two-step top delta sample (discarding the since-boot first frame) to read true 1-second instantaneous CPU and Mach port counts. Strictly read-only — never signals any process.";
+"sysdoc.headline.status.title" = "Inspection Status";
+"sysdoc.headline.status.sub" = "Read-only checks for Mach port leaks, overlay windows, and runaway orphans";
+"sysdoc.headline.status.updated" = "Last sampled at %@ (read-only)";
+"sysdoc.headline.wsCPU.title" = "WindowServer Live CPU";
+"sysdoc.headline.wsCPU.sub" = "Instantaneous desktop compositor CPU usage";
+"sysdoc.headline.wsPorts.title" = "WindowServer Mach Ports";
+"sysdoc.headline.wsPorts.sub" = "Baseline: 20,000–30,000; leaked client send rights pin WindowServer receive rights 1:1";
+"sysdoc.headline.menubar.title" = "Menu Bar Sync & System Idle";
+"sysdoc.headline.menubar.sub" = "loginwindow + MenuBarAgent cross-display menu bar replicant overhead";
+
+"sysdoc.section.anomalies" = "Detected Anomalies (Read-Only)";
+"sysdoc.anomalies.none.title" = "No Anomalies Detected";
+"sysdoc.anomalies.none.sub" = "Mach port counts, on-screen window layers, and background CPU are within normal baselines.";
+
+"sysdoc.section.topPorts" = "Top 10 Mach Port Holders";
+"sysdoc.section.topPorts.footer" = "Processes allocate Mach ports for CA::Render::Fence sync, IOSurface buffers, and CoreAudio listeners. Sustained counts above 10,000 indicate leaked handles.";
+
+"sysdoc.port.diag.ws.healthy" = "Compositor port count is within baseline";
+"sysdoc.port.diag.ws.warning" = "WindowServer holds %d ports (elevated); check client processes below for port leaks";
+"sysdoc.port.diag.ws.critical" = "WindowServer holds %d ports (high); leaked client sync ports are bloating the kernel IPC table";
+"sysdoc.port.diag.uidaemon.healthy" = "System UI daemon port count is normal";
+"sysdoc.port.diag.uidaemon.warning" = "%@ holds %d ports (normal < 1,500), often accumulated across sleep/wake or display hotplug";
+"sysdoc.port.diag.uidaemon.critical" = "%@ leaked %d ports, pinning an equal number of WindowServer receive rights";
+"sysdoc.port.diag.app.healthy" = "Application port count is normal";
+"sysdoc.port.diag.daemon.healthy" = "Daemon port count is normal";
+"sysdoc.port.diag.app.warning" = "Holding %d Mach ports (elevated); graphics or audio handles may not be released";
+"sysdoc.port.diag.app.critical" = "Holding %d Mach ports (severe leak); increases WindowServer IPC overhead";
+
+"sysdoc.section.windows" = "On-Screen Elevated Windows (Layer ≠ 0)";
+"sysdoc.section.windows.footer" = "Read via public CGWindowListCopyWindowInfo (no Screen Recording permission required). Standard app windows use Layer 0; status items use Layer 25; fullscreen overlays use ≥ 100.";
+"sysdoc.win.empty" = "No active elevated-layer windows detected";
+"sysdoc.win.countBadge" = "%d windows";
+"sysdoc.win.screenArea" = "screen";
+"sysdoc.win.diag.normal" = "Layer %d · %d×%d pt";
+"sysdoc.win.diag.highLayer" = "High-layer overlay window (Layer %d · %d×%d pt)";
+"sysdoc.win.diag.fullscreenOverlay" = "Fullscreen overlay (Layer %d · %d×%d pt), owner CPU %.1f%% — likely a stuck capture/overlay surface";
+"sysdoc.win.diag.floatingRedraw" = "Floating/Dock panel (Layer %d) actively redrawing (owner CPU %.1f%%); glass backdrops amplify WindowServer load";
+"sysdoc.win.diag.statusBarRedraw" = "Status bar item (Layer 25) actively updating (owner CPU %.1f%%, MenuSync %.1f%%)";
+
+"sysdoc.proc.diag.orphanCLI" = "Orphaned CLI process (PPID=1, parent exited) sustaining %.1f%% CPU";
+"sysdoc.proc.diag.highCPU" = "High-CPU background process (PPID=%d) sustaining %.1f%% CPU";
+
+"sysdoc.section.schedule" = "Periodic Read-Only Schedule & History";
+"sysdoc.schedule.title" = "Background Check Interval";
+"sysdoc.schedule.sub" = "Periodically records a read-only snapshot in the background without terminating or signaling any process";
+"sysdoc.interval.manual" = "Manual Only";
+"sysdoc.interval.15m" = "Every 15 Minutes";
+"sysdoc.interval.30m" = "Every 30 Minutes";
+"sysdoc.interval.1h" = "Every 1 Hour";
+
+"sysdoc.history.header" = "Recent Inspection History";
+"sysdoc.history.empty" = "No history entries yet";
+"sysdoc.history.topClient" = "Top client port holder: %@ (%@ ports)";
+"sysdoc.history.anomalyBadge" = "%d anomalies";
+"sysdoc.history.clear" = "Clear History";
+
+"sysdoc.menu.copyPID" = "Copy PID (%d)";
+"sysdoc.menu.copyPath" = "Copy Executable Path";
+"sysdoc.menu.copyCommand" = "Copy Command Line";
+"sysdoc.menu.revealInFinder" = "Reveal in Finder";

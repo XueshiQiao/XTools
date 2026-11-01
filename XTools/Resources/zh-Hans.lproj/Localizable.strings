@@ -945,3 +945,86 @@
 "ccusage.update.updated" = "已更新 v%@ → v%@";
 "ccusage.update.installed" = "已安装 v%@";
 "ccusage.update.failed" = "检查更新失败：%@";
+
+
+// MARK: - System Doctor (WindowServer & IPC Inspection)
+"tool.sysdoc.title" = "系统巡检";
+"sysdoc.action.scanNow" = "立即巡检";
+"sysdoc.status.scanning" = "正在执行只读采样（约 1.5 秒）…";
+"sysdoc.status.allHealthy" = "各项指标正常";
+"sysdoc.status.anomaliesFound" = "发现 %d 项异常指标";
+"sysdoc.empty" = "尚未采集巡检数据";
+"sysdoc.unit.ports" = "Mach Ports";
+
+"sysdoc.severity.healthy" = "正常";
+"sysdoc.severity.notice" = "提示";
+"sysdoc.severity.warning" = "偏高";
+"sysdoc.severity.critical" = "异常";
+
+"sysdoc.role.compositor" = "图形合成器";
+"sysdoc.role.systemUIDaemon" = "系统 UI 守护";
+"sysdoc.role.userApp" = "常驻应用";
+"sysdoc.role.systemDaemon" = "系统服务";
+
+"sysdoc.section.overview" = "WindowServer 与图形合成健康度";
+"sysdoc.section.overview.footer" = "采用两段式 top 差分采样（丢弃首帧开机均值），只读获取当前 1 秒内的真实瞬时 CPU 与内核 IPC Mach Ports 水位，不向任何进程发送信号。";
+"sysdoc.headline.status.title" = "巡检结论";
+"sysdoc.headline.status.sub" = "检查 Mach Ports 泄漏、异常置顶层与失控孤儿进程";
+"sysdoc.headline.status.updated" = "上次采样于 %@（纯只读模式）";
+"sysdoc.headline.wsCPU.title" = "WindowServer 瞬时 CPU";
+"sysdoc.headline.wsCPU.sub" = "桌面图形合成器实时负载";
+"sysdoc.headline.wsPorts.title" = "WindowServer Mach Ports";
+"sysdoc.headline.wsPorts.sub" = "内核进程间通信句柄（非网络端口）· 正常基线 20,000 ~ 30,000";
+"sysdoc.headline.menubar.title" = "多屏菜单栏同步与整机空闲率";
+"sysdoc.headline.menubar.sub" = "loginwindow + MenuBarAgent 跨屏状态栏位图同步开销";
+
+"sysdoc.section.anomalies" = "当前发现的异常项（只读诊断）";
+"sysdoc.anomalies.none.title" = "未发现明显异常项";
+"sysdoc.anomalies.none.sub" = "Mach Ports 水位、在屏窗口层级及后台进程 CPU 均在合理基线内。";
+
+"sysdoc.section.topPorts" = "Mach Ports 持有量 Top 10";
+"sysdoc.section.topPorts.footer" = "Mach Ports 是 macOS 内核进程间通信（IPC）句柄，与网络端口无关。进程每次申请图层同步栅栏（CA::Render::Fence）、显存表面（IOSurface）或音频通知都会占用一对 Mach Port。";
+
+"sysdoc.port.diag.ws.healthy" = "图形合成器 Mach Ports 水位正常";
+"sysdoc.port.diag.ws.warning" = "WindowServer 持有 %d 个 Mach Ports（偏高），请检查下方是否有客户端进程发生泄漏";
+"sysdoc.port.diag.ws.critical" = "WindowServer 持有 %d 个 Mach Ports（严重偏高），客户端泄漏的大量同步句柄正拖慢内核 IPC 查表";
+"sysdoc.port.diag.uidaemon.healthy" = "系统 UI 守护进程 Mach Ports 数量正常";
+"sysdoc.port.diag.uidaemon.warning" = "%@ 持有 %d 个 Mach Ports（正常 < 1,500），多由睡眠唤醒或显示器插拔累积引起";
+"sysdoc.port.diag.uidaemon.critical" = "%@ 累计泄漏 %d 个 Mach Ports，正同步占用等量的 WindowServer 内核句柄";
+"sysdoc.port.diag.app.healthy" = "应用 Mach Ports 数量在正常范围内";
+"sysdoc.port.diag.daemon.healthy" = "系统服务 Mach Ports 数量在正常范围内";
+"sysdoc.port.diag.app.warning" = "当前持有 %d 个 Mach Ports（偏高），长期运行未释放图形或音频句柄";
+"sysdoc.port.diag.app.critical" = "当前持有 %d 个 Mach Ports（严重泄漏），会显著增加 WindowServer IPC 通信负担";
+
+"sysdoc.section.windows" = "在屏非标准层级窗口（Layer ≠ 0）";
+"sysdoc.section.windows.footer" = "通过公开 CGWindowList 接口只读读取（无需屏幕录制权限）。普通应用窗口为 Layer 0；状态栏为 Layer 25；全屏置顶遮罩通常 ≥ 100。";
+"sysdoc.win.empty" = "当前没有检测到非标准层级的活跃窗口";
+"sysdoc.win.countBadge" = "%d 个窗口";
+"sysdoc.win.screenArea" = "屏幕面积";
+"sysdoc.win.diag.normal" = "层级 %d · 尺寸 %d×%d pt";
+"sysdoc.win.diag.highLayer" = "高层级置顶窗口（Layer %d · %d×%d pt）";
+"sysdoc.win.diag.fullscreenOverlay" = "全屏置顶遮罩层（Layer %d · %d×%d pt），宿主进程当前 CPU %.1f%%，疑似未销毁的截图/录屏透明层";
+"sysdoc.win.diag.floatingRedraw" = "浮动/Dock 层面板（Layer %d）正在高频刷新（进程 CPU %.1f%%），若含液态玻璃背景会连带拉高 WindowServer";
+"sysdoc.win.diag.statusBarRedraw" = "状态栏图标（Layer 25）高频更新（进程 CPU %.1f%%，跨屏菜单栏同步 %.1f%%）";
+
+"sysdoc.proc.diag.orphanCLI" = "孤儿命令行进程（PPID=1，父进程已退出），当前持续占用 %.1f%% CPU";
+"sysdoc.proc.diag.highCPU" = "高负载后台进程（PPID=%d），当前持续占用 %.1f%% CPU";
+
+"sysdoc.section.schedule" = "定期只读巡检与历史记录";
+"sysdoc.schedule.title" = "后台自动巡检频率";
+"sysdoc.schedule.sub" = "定期在后台执行一次只读采样并记录水位趋势，绝不自动终止或干预任何进程";
+"sysdoc.interval.manual" = "仅手动巡检";
+"sysdoc.interval.15m" = "每 15 分钟";
+"sysdoc.interval.30m" = "每 30 分钟";
+"sysdoc.interval.1h" = "每 1 小时";
+
+"sysdoc.history.header" = "最近巡检水位记录";
+"sysdoc.history.empty" = "暂无历史记录";
+"sysdoc.history.topClient" = "最大客户端持有者：%@（%@ Mach Ports）";
+"sysdoc.history.anomalyBadge" = "%d 项异常";
+"sysdoc.history.clear" = "清空历史记录";
+
+"sysdoc.menu.copyPID" = "复制 PID (%d)";
+"sysdoc.menu.copyPath" = "复制可执行文件路径";
+"sysdoc.menu.copyCommand" = "复制完整启动命令行";
+"sysdoc.menu.revealInFinder" = "在 Finder 中显示";
