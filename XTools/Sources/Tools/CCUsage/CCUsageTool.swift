@@ -11,6 +11,14 @@ final class CCUsageTool: XToolModule {
 
     let store = CCUsageStore()
 
+    func activate() {
+        store.startAutoUpdates()
+    }
+
+    func shutdown() {
+        store.stopAutoUpdates()
+    }
+
     func makeRootView() -> AnyView {
         AnyView(CCUsageView(store: store))
     }

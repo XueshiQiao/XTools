@@ -20,6 +20,8 @@ final class CCUsageStore: ObservableObject {
     @Published private(set) var ccusageVersion: String?
     @Published private(set) var isCheckingUpdate: Bool = false
     @Published private(set) var updateStatusMessage: String?
+    /// A background auto-update is in flight (the "Check for Update" button is disabled meanwhile).
+    @Published private(set) var isAutoUpdating: Bool = false
 
     /// Which day period (`YYYY-MM-DD`) is currently focused for the Agent / Model breakdown.
     /// When `nil`, defaults to today (or the most recent active day if today is empty).
@@ -35,6 +37,21 @@ final class CCUsageStore: ObservableObject {
     private var timer: AnyCancellable?
     private var bag = Set<AnyCancellable>()
     private var scanning = false
+
+    /// Every install/update of the managed binary (first-run download, the manual button and the
+    /// background auto-update) runs on this serial queue, so a download never holds up a scan on `work`.
+    private let updateQueue = DispatchQueue(label: "me.xueshi.xtools.ccusage.update", qos: .utility)
+    /// Background auto-update, started by `CCUsageTool.activate()` for the whole app lifetime,
+    /// independent of whether the tab is visible.
+    private var autoUpdateTimer: AnyCancellable?
+    private var autoUpdatesEnabled = false
+    /// How often the store asks "is a check due yet?". The actual npm request happens at most
+    /// once per `CCUsageBinaryManager.autoUpdateInterval`; a failed check is retried on the next tick.
+    private static let autoUpdateTickSeconds: TimeInterval = 60 * 60
+    /// Delay before the first check after launch, so it doesn't compete with app start-up.
+    private static let autoUpdateLaunchDelay: TimeInterval = 20
+    /// Delay after the Mac wakes, so the network has time to come back.
+    private static let autoUpdateWakeDelay: TimeInterval = 15
 
     // Visibility tracking so we don't spawn `ccusage` every 5s when the window is closed/hidden.
     private var viewVisible = false
@@ -69,6 +86,7 @@ final class CCUsageStore: ObservableObject {
         if let token = occlusionObserver { NotificationCenter.default.removeObserver(token) }
         workspaceObservers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
         timer?.cancel()
+        autoUpdateTimer?.cancel()
     }
 
     // MARK: - Derived convenience properties
@@ -148,6 +166,12 @@ final class CCUsageStore: ObservableObject {
         on(NSWorkspace.screensDidWakeNotification, { $0.screensAwake = true }, "screens woke")
         on(NSWorkspace.willSleepNotification, { $0.screensAwake = false }, "system sleeping")
         on(NSWorkspace.didWakeNotification, { $0.screensAwake = true }, "system woke")
+        // The hourly timer doesn't advance while asleep; after a long sleep, check again soon after waking.
+        workspaceObservers.append(nc.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            DispatchQueue.main.asyncAfter(deadline: .now() + CCUsageStore.autoUpdateWakeDelay) {
+                self?.autoUpdateIfDue()
+            }
+        })
     }
 
     private func reevaluatePipeline(_ reason: String) {
@@ -197,12 +221,12 @@ final class CCUsageStore: ObservableObject {
     }
 
     func downloadInitialBinary() {
-        guard !isDownloadingBinary else { return }
+        guard !isDownloadingBinary, !isCheckingUpdate, !isAutoUpdating else { return }
         isDownloadingBinary = true
         downloadErrorMessage = nil
         log.info("ccusage binary not found; starting initial download")
 
-        work.async { [weak self] in
+        updateQueue.async { [weak self] in
             do {
                 let outcome = try CCUsageBinaryManager.installOrUpdate()
                 let version: String = {
@@ -214,6 +238,7 @@ final class CCUsageStore: ObservableObject {
                 DispatchQueue.main.async {
                     guard let self else { return }
                     self.log.info("ccusage initial install succeeded: v\(version)")
+                    self.prefs.lastUpdateCheck = Date()
                     self.isDownloadingBinary = false
                     self.isBinaryInstalled = true
                     self.ccusageVersion = version
@@ -233,16 +258,17 @@ final class CCUsageStore: ObservableObject {
     }
 
     func checkAndUpdateCCUsage() {
-        guard !isCheckingUpdate, !isDownloadingBinary else { return }
+        guard !isCheckingUpdate, !isDownloadingBinary, !isAutoUpdating else { return }
         isCheckingUpdate = true
         updateStatusMessage = L("ccusage.update.checking")
         log.info("Checking for ccusage update")
 
-        work.async { [weak self] in
+        updateQueue.async { [weak self] in
             do {
                 let outcome = try CCUsageBinaryManager.installOrUpdate()
                 DispatchQueue.main.async {
                     guard let self else { return }
+                    self.prefs.lastUpdateCheck = Date()
                     self.isCheckingUpdate = false
                     self.isBinaryInstalled = true
                     switch outcome {
@@ -266,6 +292,72 @@ final class CCUsageStore: ObservableObject {
                     self.log.error("ccusage update check failed: \(error.localizedDescription)")
                     self.isCheckingUpdate = false
                     self.updateStatusMessage = String(format: L("ccusage.update.failed"), error.localizedDescription)
+                }
+            }
+        }
+    }
+
+    // MARK: - Automatic Update
+
+    /// Starts the background auto-update schedule. Called from `CCUsageTool.activate()` at launch.
+    func startAutoUpdates() {
+        guard !autoUpdatesEnabled else { return }
+        autoUpdatesEnabled = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.autoUpdateLaunchDelay) { [weak self] in
+            self?.autoUpdateIfDue()
+        }
+        autoUpdateTimer = Timer.publish(every: Self.autoUpdateTickSeconds, tolerance: 60, on: .main, in: .common)
+            .autoconnect()
+            .sink { [weak self] _ in self?.autoUpdateIfDue() }
+    }
+
+    /// Stops the background auto-update schedule. Called from `CCUsageTool.shutdown()`.
+    func stopAutoUpdates() {
+        autoUpdatesEnabled = false
+        autoUpdateTimer?.cancel()
+        autoUpdateTimer = nil
+    }
+
+    /// Silently updates an already-installed `ccusage` when the last successful check is older
+    /// than `CCUsageBinaryManager.autoUpdateInterval`. A missing binary is left to the first-run
+    /// download path (`downloadInitialBinary`), which runs when the tab is opened.
+    private func autoUpdateIfDue() {
+        guard autoUpdatesEnabled else { return }
+        guard !isAutoUpdating, !isCheckingUpdate, !isDownloadingBinary else { return }
+        guard CCUsageBinaryManager.isInstalled else { return }
+        guard CCUsageBinaryManager.isUpdateCheckDue(lastCheck: prefs.lastUpdateCheck, now: Date()) else { return }
+
+        isAutoUpdating = true
+        log.info("Auto-checking for ccusage update")
+
+        updateQueue.async { [weak self] in
+            let result = Result { try CCUsageBinaryManager.installOrUpdate() }
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.isAutoUpdating = false
+                switch result {
+                case .success(let outcome):
+                    self.prefs.lastUpdateCheck = Date()
+                    self.isBinaryInstalled = true
+                    switch outcome {
+                    case .upToDate(let version):
+                        self.log.info("ccusage auto-update: already up to date (v\(version))")
+                        self.ccusageVersion = version
+                    case .updated(let from, let to):
+                        self.log.info("ccusage auto-update: v\(from) → v\(to)")
+                        self.ccusageVersion = to
+                        self.updateStatusMessage = String(format: L("ccusage.update.updated"), from, to)
+                        if self.pipelineRunning { self.refresh() }
+                    case .installed(let version):
+                        self.log.info("ccusage auto-update: installed v\(version)")
+                        self.ccusageVersion = version
+                        self.updateStatusMessage = String(format: L("ccusage.update.installed"), version)
+                        if self.pipelineRunning { self.refresh() }
+                        self.rescheduleTimer()
+                    }
+                case .failure(let error):
+                    // Don't record the check time, so the next hourly tick tries again.
+                    self.log.error("ccusage auto-update failed: \(error.localizedDescription)")
                 }
             }
         }

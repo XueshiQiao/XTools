@@ -49,6 +49,7 @@ final class CCUsagePreferences: ObservableObject {
         static let preset = "ccusage.refreshPreset"
         static let customSeconds = "ccusage.customRefreshSeconds"
         static let trendRange = "ccusage.trendRange"
+        static let lastUpdateCheck = "ccusage.lastUpdateCheck"
     }
 
     private let defaults: UserDefaults
@@ -71,6 +72,13 @@ final class CCUsagePreferences: ObservableObject {
 
     @Published var trendRange: CCTrendRange {
         didSet { defaults.set(trendRange.rawValue, forKey: Key.trendRange) }
+    }
+
+    /// When the managed `ccusage` binary was last successfully checked against npm
+    /// (automatic or manual). Drives the once-a-day background auto-update.
+    var lastUpdateCheck: Date? {
+        get { defaults.object(forKey: Key.lastUpdateCheck) as? Date }
+        set { defaults.set(newValue, forKey: Key.lastUpdateCheck) }
     }
 
     /// Effective timer interval in seconds, or `nil` when set to manual.

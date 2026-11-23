@@ -126,7 +126,8 @@ enum CCUsageBinaryManager {
         proc.arguments = ["--version"]
         let outPipe = Pipe()
         proc.standardOutput = outPipe
-        proc.standardError = Pipe()
+        // Never read, so don't use a Pipe: a full pipe buffer would block the child (and `waitUntilExit`).
+        proc.standardError = FileHandle.nullDevice
         do {
             try proc.run()
         } catch {
@@ -196,8 +197,26 @@ enum CCUsageBinaryManager {
 
     // MARK: - Download & Update Operations
 
+    /// How often the app checks npm for a newer `ccusage` on its own (ccusage ships every few days).
+    static let autoUpdateInterval: TimeInterval = 24 * 60 * 60
+
+    /// Whether an automatic update check is due. A missing last-check date, or one in the
+    /// future (the clock was moved back), counts as due.
+    static func isUpdateCheckDue(lastCheck: Date?, now: Date, interval: TimeInterval = autoUpdateInterval) -> Bool {
+        guard let lastCheck else { return true }
+        let elapsed = now.timeIntervalSince(lastCheck)
+        return elapsed < 0 || elapsed >= interval
+    }
+
+    /// Serializes install/update runs: the first-run download, the manual "Check for Update"
+    /// button and the background auto-update may otherwise replace the binary at the same time.
+    private static let installLock = NSLock()
+
     /// Fetches the latest official release manifest and installs or updates the binary if needed.
     static func installOrUpdate() throws -> UpdateOutcome {
+        installLock.lock()
+        defer { installLock.unlock() }
+
         let currentVersion = installedVersion()
         let manifestData = try fetchData(from: latestManifestURL)
         let manifest = try parseAndValidateManifest(manifestData)

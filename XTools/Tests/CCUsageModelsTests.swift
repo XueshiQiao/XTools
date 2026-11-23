@@ -150,4 +150,18 @@ final class CCUsageModelsTests: XCTestCase {
         // Reject tampered tarball payload
         XCTAssertThrowsError(try CCUsageBinaryManager.verifyTarballIntegrity(Data("tampered".utf8), dist: manifest.dist))
     }
+
+    func testAutoUpdateCheckIsDue() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let day: TimeInterval = 24 * 60 * 60
+
+        // Never checked before → due.
+        XCTAssertTrue(CCUsageBinaryManager.isUpdateCheckDue(lastCheck: nil, now: now, interval: day))
+        // Checked an hour ago → not due.
+        XCTAssertFalse(CCUsageBinaryManager.isUpdateCheckDue(lastCheck: now.addingTimeInterval(-3600), now: now, interval: day))
+        // Exactly one interval ago → due.
+        XCTAssertTrue(CCUsageBinaryManager.isUpdateCheckDue(lastCheck: now.addingTimeInterval(-day), now: now, interval: day))
+        // Last check is in the future (clock moved back) → due, so a bad date can't block updates forever.
+        XCTAssertTrue(CCUsageBinaryManager.isUpdateCheckDue(lastCheck: now.addingTimeInterval(3600), now: now, interval: day))
+    }
 }

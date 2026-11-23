@@ -674,7 +674,7 @@ struct CCUsageView: View {
 
                 Spacer()
 
-                if store.isCheckingUpdate {
+                if store.isCheckingUpdate || store.isAutoUpdating {
                     ProgressView()
                         .controlSize(.small)
                         .scaleEffect(0.75)
@@ -688,7 +688,7 @@ struct CCUsageView: View {
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
-                .disabled(store.isCheckingUpdate || store.isDownloadingBinary)
+                .disabled(store.isCheckingUpdate || store.isDownloadingBinary || store.isAutoUpdating)
             }
         }
     }
