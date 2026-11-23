@@ -5,11 +5,35 @@
     <link>https://github.com/XueshiQiao/XTools</link>
     <language>en</language>
     <item>
-      <title>Version 26.07.14</title>
+      <title>Version 26.11.15</title>
       <description><![CDATA[<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
 <body>
+
+<h3>What's New in 26.11.15</h3>
+<ul>
+  <li><b>New tool — Token Usage:</b> See what your AI coding agents (Claude Code, Codex and others) cost each day: today's spend and tokens against yesterday, a 7 / 14 / 30-day trend, and a breakdown by agent and by model — plus a card on the Dashboard. XTools downloads and verifies the official ccusage component by itself and now keeps it up to date automatically, so newly released models show their real names.</li>
+  <li><b>New tool — System Doctor:</b> A read-only health check for a sluggish desktop: WindowServer's live CPU, its Mach port count (where leaks show up first), and other common culprits. It only observes and never signals any process.</li>
+  <li><b>New tool — Device Tree:</b> Everything plugged into this Mac, laid out the way it is actually connected — which keyboard hangs off which dock, and which dock off which Thunderbolt port.</li>
+  <li><b>New tool — ROG Keyboard:</b> For an ROG keyboard shared between this Mac and a Windows PC: whenever the keyboard is on this Mac — when it comes back over USB, or when XTools starts — the Mac profile is put back automatically. Both profiles are also one click away in the menu bar.</li>
+  <li><b>Pop Bar is now its own app, QDuo:</b> The selection popup (select text anywhere and your actions pop up at the cursor) and Screenshot OCR have moved out of XTools into the standalone app <a href="https://xueshi.dev/qduo/">QDuo</a>, and are no longer part of XTools. The Pop Bar page in the sidebar now tells you where it went — it opens QDuo if it is installed, or shows how to get it: <code>brew install --cask XueshiQiao/tap/qduo</code>. QDuo keeps its own settings, so your old Pop Bar actions don't carry over.</li>
+  <li><b>Tmux:</b> Save your session (tmux-resurrect) with one click from the palette's title bar.</li>
+  <li><b>Default Apps:</b> After you change a default and confirm the system prompt, the row shows the new app right away.</li>
+  <li><b>Sidebar &amp; install:</b> Tools are grouped into five blocks in the sidebar, and XTools can now be installed with Homebrew: <code>brew install --cask XueshiQiao/tap/xtools</code>.</li>
+</ul>
+
+<h3>26.11.15 更新内容</h3>
+<ul>
+  <li><b>新工具 · Token 用量：</b>看你的 AI 编程助手（Claude Code、Codex 等）每天花了多少钱：今天的花费和 Token 数，和昨天对比；近 7 / 14 / 30 天的趋势；按 Agent、按模型拆开的明细。仪表盘上也有对应的卡片。XTools 会自己下载并校验官方的 ccusage 组件，现在还会每天自动更新它，新出的模型也能显示真实的名字。</li>
+  <li><b>新工具 · 系统巡检：</b>桌面变卡的时候用来体检：WindowServer 此刻的 CPU 占用、Mach Ports 数量（泄漏最先在这里露出来）以及其他常见原因。只读取数据，不会给任何进程发信号。</li>
+  <li><b>新工具 · 设备树：</b>按真实的连接关系，列出插在这台 Mac 上的所有设备：哪个键盘接在哪个扩展坞上，哪个扩展坞接在哪个雷雳口上。</li>
+  <li><b>新工具 · ROG 键盘：</b>给同时连着这台 Mac 和一台 Windows 电脑的 ROG 键盘用：只要键盘回到这台 Mac 上，不管是重新插上 USB，还是 XTools 刚启动，都会自动切回 Mac 用的配置。菜单栏里也能一键切换两套配置。</li>
+  <li><b>划词胶囊独立成了 QDuo：</b>划词胶囊（在任意 app 里选中文字，光标旁弹出你配的动作）和截图取字，已经从 XTools 里搬出去，做成了独立的 app <a href="https://xueshi.dev/qduo/">QDuo</a>，XTools 里不再带这两个功能。侧边栏的「划词胶囊」页面会告诉你去哪里找它：装了 QDuo 就直接打开，没装就给出安装方法：<code>brew install --cask XueshiQiao/tap/qduo</code>。QDuo 有自己的一套设置，以前在 XTools 里配的划词动作不会自动带过去。</li>
+  <li><b>Tmux：</b>在快捷面板的标题栏点一下，就能保存 session（tmux-resurrect）。</li>
+  <li><b>默认打开方式：</b>改了默认 app、在系统弹窗里确认之后，这一行马上显示新的 app。</li>
+  <li><b>侧边栏与安装：</b>侧边栏里的工具分成了五组；XTools 现在可以用 Homebrew 安装：<code>brew install --cask XueshiQiao/tap/xtools</code>。</li>
+</ul>
 
 <h3>What's New in 26.07.14</h3>
 <ul>
@@ -154,11 +178,11 @@
 
 </body>
 </html>]]></description>
-      <pubDate>Sat, 25 Jul 2026 10:26:41 +0000</pubDate>
-      <sparkle:version>14</sparkle:version>
-      <sparkle:shortVersionString>26.07.14</sparkle:shortVersionString>
+      <pubDate>Mon, 23 Nov 2026 02:54:01 +0000</pubDate>
+      <sparkle:version>15</sparkle:version>
+      <sparkle:shortVersionString>26.11.15</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://github.com/XueshiQiao/XTools/releases/download/v26.07.14/XTools.dmg" length="9602011" type="application/octet-stream" sparkle:edSignature="TRmUBmqk/4EBzlNQayYfSB8iMln9AqFTutUerDEkq+c7UjMATbzbOMqwb5rAfC6FotpenH61hUw3EhbNCHvTDQ==" />
+      <enclosure url="https://github.com/XueshiQiao/XTools/releases/download/v26.11.15/XTools.dmg" length="10042647" type="application/octet-stream" sparkle:edSignature="IiQKSykq/heWULWBU4JC4wV3tsV5KyHVBH3ab84qgUBQ1GBuhwJBBPTh5LiadA2qWJlZqQ3VmkAUzFcR4A6aCQ==" />
     </item>
   </channel>
 </rss>
