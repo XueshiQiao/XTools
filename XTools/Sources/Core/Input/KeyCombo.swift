@@ -24,10 +24,6 @@ struct KeyCombo: Codable, Equatable {
         return result
     }
 
-    /// Default trigger for Screenshot OCR: ⌘⇧S.
-    static let defaultScreenOCR = KeyCombo(keyCode: UInt32(kVK_ANSI_S),
-                                           carbonModifiers: UInt32(cmdKey | shiftKey))
-
     // MARK: - Key glyph table
 
     /// Static virtual-key-code → glyph map. Deliberately a plain dictionary: it

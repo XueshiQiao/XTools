@@ -75,9 +75,9 @@ targets:
     platform: macOS
     sources:
       - XTools/Tests
+      - path: XTools/Sources/Core/Input/KeyCombo.swift
       - path: XTools/Sources/Tools/CCUsage/Model/CCUsageModels.swift
       - path: XTools/Sources/Tools/CCUsage/Service/CCUsageBinaryManager.swift
-      - path: XTools/Sources/Tools/PopBar/Window/WheelSubmenu.swift
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: me.xueshi.xtools.tests

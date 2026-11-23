@@ -13,11 +13,12 @@ A macOS menu-bar app that hosts a growing collection of small system utilities, 
 ```
 XTools/Sources/
 ├─ App/        main.swift · AppDelegate · MenuBarController · UpdateController
-├─ Core/       FileLog · LocalizationOverride · Preferences · Analytics      (shared infra)
+├─ Core/       FileLog · LocalizationOverride · Preferences · Analytics · LLM · Input (hotkeys, Accessibility)   (shared infra)
 ├─ UI/         AppChrome (visual language) · MainWindowController + MainView ·
 │              GeneralPage · AboutPage · XTool (protocol) · ToolRegistry · AppState
 └─ Tools/
-   └─ LaunchManager/   ← the first tool, fully self-contained
+   ├─ LaunchManager/   ← the first tool, fully self-contained
+   └─ PopBar/          ← placeholder page only: Pop Bar moved to the standalone QDuo app
 ```
 
 ### The tool abstraction (how to add a tool)
@@ -51,7 +52,6 @@ scripts/run.sh --tab now-playing  # …and pre-select a tool tab (for screenshot
 - **Always launch via `open`**, never a raw-binary/`nohup` direct-exec — the latter comes up behind other windows and won't foreground cleanly. The window opens on launch regardless (no env var needed).
 - To pre-select a tab for a screenshot: `open <app> --args --tab <tool-id>` (e.g. `--tab now-playing`). The app reads `--tab` from argv; the legacy `XTOOLS_TAB` env var still works too.
 - Tests: `xcodebuild test -project XTools.xcodeproj -scheme XTools -destination 'platform=macOS'` (a second or two). The `XToolsTests` target is **not** hosted in the app — XTools installs global input monitors at launch, so a test host would wake all of that on every run. Files under test are compiled straight into the bundle instead, which means **a new file under test has to be added to the target's `sources` in `project.yml`**. Keep it to code that is pure calculation; anything needing the live app belongs in a UI check you hand the user.
-- To look at the PopBar popup (capsule or wheel) without selecting text by hand: `open <app> --args --popbar-preview`. It pops the sample popup ~2s after launch, beside the settings window. The older `XTOOLS_POPBAR_PREVIEW=1` env var still works, but `open` does not forward the shell environment, so the flag is the reliable one.
 
 ## Release / CI
 - `.github/workflows/build.yml` (modeled on AnyDrag): PRs to `main` and manual `workflow_dispatch` validate an unsigned universal build; pushing a `v*` tag does the full **sign → notarize → DMG → Sparkle-sign → appcast.xml → GitHub Release**. Steps degrade gracefully when secrets are absent.

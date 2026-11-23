@@ -18,7 +18,7 @@ struct HotKeyRecorderField: View {
         Button {
             if isRecording { stopRecording() } else { startRecording() }
         } label: {
-            Text(isRecording ? L("popbar.ocr.hotkey.recording") : combo.display)
+            Text(isRecording ? L("hotkey.recording") : combo.display)
                 .font(.system(size: 12, weight: .medium, design: .monospaced))
                 .foregroundStyle(isRecording ? Color.accentColor : Color.primary)
                 .frame(minWidth: 100)

@@ -444,69 +444,19 @@
 "dashboard.swap.sub" = "on disk · not part of RAM";
 "dashboard.placeholder" = "Claude usage, CPU, network…\ncoming soon";
 
-/* ───────────── PopBar (划词胶囊) ───────────── */
+/* ───────────── Pop Bar → moved to QDuo ───────────── */
 "tool.popbar.title" = "Pop Bar";
+"popbar.moved.title" = "Pop Bar is now its own app: QDuo";
+"popbar.moved.body" = "The selection popup — select text anywhere and your actions pop up at the cursor, plus Screenshot OCR — has moved out of XTools into a standalone app called QDuo. XTools no longer watches your selections. New features and fixes only land in QDuo.";
+"popbar.moved.settingsNote" = "QDuo keeps its own settings, so your old Pop Bar actions don't carry over automatically. API keys you set on the AI Models page stay in XTools.";
+"popbar.moved.open" = "Open QDuo";
+"popbar.moved.installed" = "QDuo is installed.";
+"popbar.moved.download" = "Download QDuo";
+"popbar.moved.brew" = "Or install with Homebrew:";
+"popbar.moved.copy" = "Copy";
+"popbar.moved.copied" = "Copied";
 
-"popbar.enable.title" = "Selection pop bar";
-"popbar.enable.subtitle" = "Select text in any app to pop up a capsule of quick actions at the cursor.";
-
-"popbar.status.title" = "Status";
-"popbar.status.on" = "Active";
-"popbar.status.off" = "Off";
-"popbar.status.needsPermission" = "Needs permission";
-
-"popbar.perm.header" = "Permission";
-"popbar.perm.title" = "Accessibility access required";
-"popbar.perm.body" = "Pop Bar needs Accessibility access to detect selections and read the selected text. No data leaves your Mac.";
-"popbar.perm.grant" = "Grant Access…";
-"popbar.perm.open" = "Open Settings";
-
-"popbar.actions.header" = "Actions";
-"popbar.result.header" = "Result";
-"popbar.display.header" = "Display style";
-"popbar.actions.footer" = "Copy is real. Translate, Polish and Explain return placeholder text for now — wiring a real model in is a one-file change.";
-"popbar.action.copy" = "Copy";
-"popbar.action.translate" = "Translate";
-"popbar.action.polish" = "Polish";
-"popbar.action.explain" = "Explain";
-"popbar.tag.real" = "REAL";
-"popbar.tag.fake" = "DEMO";
-
-"popbar.preview.button" = "Preview popup";
-"popbar.preview.sample" = "The quick brown fox jumps over the lazy dog.";
-
-"popbar.style.label" = "Display style";
-"popbar.style.capsule" = "Capsule";
-"popbar.style.wheel" = "Wheel";
-"popbar.style.liquid" = "Liquid";
-"popbar.style.footer" = "Capsule shows a horizontal bar above the selection; Wheel and Liquid show a ring centered on the cursor (Liquid is a bright frosted-glass skin).";
-"popbar.wheel.outer" = "Outer radius";
-"popbar.wheel.inner" = "Inner radius";
-"popbar.wheel.subSeam" = "Submenu gap";
-"popbar.wheel.subThickness" = "Submenu thickness";
-"popbar.wheel.showIcons" = "Show icons";
-"popbar.wheel.showLabels" = "Show labels";
-"popbar.wheel.autoHide" = "Auto-hide when the pointer leaves the ring";
-
-"popbar.loading" = "Working…";
-
-"popbar.about.body" = "How it works: a global input monitor detects a drag- or double-click selection, an ordered chain of strategies reads the selected text (Accessibility first, a clipboard copy as fallback), and a non-activating floating panel shows the actions — without stealing focus from the source app.";
-
-"popbar.fake.translate" = "Translation (demo)";
-"popbar.fake.polish" = "Polished (demo)";
-"popbar.fake.explain" = "Explanation (demo)";
-"popbar.fake.note" = "This is placeholder output. Connect a real model to replace it.";
-
-"popbar.pin" = "Pin";
-"popbar.unpin" = "Unpin";
-"popbar.close" = "Close";
-"popbar.copy.result" = "Copy result";
-"popbar.tag.ai" = "AI";
-
-/* Reused labels for PopBar's per-action model override picker */
-"popbar.llm.provider" = "Provider";
-"popbar.llm.model" = "Model";
-"popbar.llm.thinking" = "Thinking";
+"hotkey.recording" = "Press keys… (Esc to cancel)";
 
 /* AI Models page (app-level, shared by every tool) */
 "models.default.header" = "Default model";
@@ -524,86 +474,6 @@
 "models.key.clear" = "Clear";
 "models.key.notNeeded" = "Not required";
 "models.key.footer" = "One key per provider, stored in your macOS Keychain. Any tool can use a provider once its key is set. Ollama needs no key.";
-
-"popbar.error.prefix" = "Request failed";
-"popbar.error.empty" = "(empty response)";
-"popbar.error.nokey" = "No API key set for this action's provider. Add one on the AI Models page.";
-"popbar.error.noprompt" = "This action has no prompt.";
-
-"popbar.action.edit" = "Edit";
-"popbar.action.delete" = "Delete";
-"popbar.action.untitled" = "Untitled";
-"popbar.action.defaultModel" = "Default model";
-"popbar.actions.add" = "Add Action";
-"popbar.actions.addGroup" = "New Group";
-"popbar.actions.footer3" = "Drag to reorder, or drop onto a group to put an action inside it. Click to edit, right-click to delete. Groups open as a second ring on the wheel.";
-"popbar.group.count" = "%d actions";
-"popbar.group.delete.title" = "Delete this group?";
-"popbar.group.delete.message" = "“%@” contains %d actions.";
-"popbar.group.delete.all" = "Delete Group and Actions";
-"popbar.group.delete.keep" = "Delete Group, Keep Actions";
-"popbar.editor.group.hint" = "A group holds other actions. Drag actions onto it in the list; on the wheel they open as a second ring.";
-"popbar.actions.reset" = "Reset to defaults";
-"popbar.actions.footer2" = "Use the arrows to reorder · click to edit · right-click to delete. Each action can use the default model or its own.";
-"popbar.autoheight.label" = "Grow result height to fit";
-"popbar.autoheight.footer" = "When on, the result panel grows taller to fit its content (up to a limit, then scrolls). When off, it keeps a fixed compact size. Width is unchanged.";
-"popbar.fontsize.label" = "Result text size";
-"popbar.fontsize.footer" = "Sets the base font size of the result text. Applies live to any open result.";
-"popbar.action.moveUp" = "Move up";
-"popbar.action.moveDown" = "Move down";
-"popbar.tag.needsKey" = "NEEDS KEY";
-
-"popbar.editor.title" = "Title";
-"popbar.editor.kind" = "Type";
-"popbar.editor.kind.ai" = "AI prompt";
-"popbar.editor.kind.copy" = "Copy";
-"popbar.editor.icon" = "Icon";
-"popbar.editor.prompt" = "System prompt";
-"popbar.editor.customModel" = "Use a custom model for this action";
-"popbar.editor.save" = "Save";
-"popbar.editor.cancel" = "Cancel";
-"popbar.editor.nokeyWarn" = "No API key for %@ — set it on the AI Models page.";
-"popbar.editor.kind.webpreview" = "Web preview";
-"popbar.editor.kind.quicklook" = "Preview a file (Quick Look)";
-"popbar.editor.kind.reveal" = "Show in Finder";
-"popbar.editor.kind.pathHint" = "Acts on the selected text when it is a path to a file or folder that exists on this Mac — for example ~/Downloads/photo.png.";
-
-/* Local path actions (Quick Look + Finder) */
-"popbar.action.quicklook" = "Preview";
-"popbar.action.reveal" = "Show in Finder";
-"popbar.error.nopath" = "The selected text isn't a file or folder that exists on this Mac.";
-"popbar.error.unsupported" = "This action was created by a newer version of XTools and can't run here. Update the app to use it.";
-
-/* Web preview action + mini-browser */
-"popbar.action.webpreview" = "Web Preview";
-"popbar.error.nolink" = "No link found in the selection.";
-"popbar.webpreview.section" = "Web preview";
-"popbar.webpreview.fallback" = "Search the web when no link is found";
-"popbar.webpreview.fallback.footer" = "When the selection has no link, the Web Preview action searches the web for the selected text instead. Turn off to just show a “no link” note.";
-"popbar.webpreview.engine" = "Search engine";
-"popbar.webpreview.back" = "Back";
-"popbar.webpreview.forward" = "Forward";
-"popbar.webpreview.reload" = "Reload";
-"popbar.webpreview.copyurl" = "Copy link";
-"popbar.webpreview.openbrowser" = "Open in browser";
-"popbar.webpreview.window.title" = "Web Preview";
-
-/* MARK: - PopBar · Screenshot OCR */
-"popbar.ocr.header" = "Screenshot Text (OCR)";
-"popbar.ocr.footer" = "Press the shortcut, drag a box over anything on screen, and its text is recognized and shown in the capsule — great for images, video frames, or apps where text can't be selected.";
-"popbar.ocr.enable.title" = "Screenshot Text";
-"popbar.ocr.enable.subtitle" = "Grab text from any screen region via OCR";
-"popbar.ocr.hotkey.label" = "Shortcut";
-"popbar.ocr.hotkey.recording" = "Press keys… (Esc to cancel)";
-"popbar.ocr.hotkey.occupied" = "That shortcut is already in use — try another.";
-"popbar.ocr.autocopy.label" = "Also copy recognized text to clipboard";
-"popbar.ocr.perm.title" = "Screen Recording permission needed";
-"popbar.ocr.perm.body" = "macOS requires Screen Recording access to read pixels from the screen. Recognized text stays on your Mac; screenshots are never saved.";
-"popbar.ocr.perm.grant" = "Grant Access";
-"popbar.ocr.perm.open" = "Open Settings";
-"popbar.ocr.noText" = "No text found";
-"popbar.ocr.captureFailed" = "Couldn't capture the screen";
-"popbar.ocr.overlay.hint" = "Drag to select an area to recognize · Esc to cancel";
 
 /* MARK: - Process Insight */
 "tool.processes.title" = "Process Insight";

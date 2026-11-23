@@ -11,7 +11,7 @@ enum ToolRegistry {
     static func makeAllTools(llm: LLMService) -> [any XToolModule] {
         [
             // .selection
-            PopBarTool(llm: llm),
+            PopBarTool(),
             // .liveActivity
             CCUsageTool(),
             NowPlayingTool(),

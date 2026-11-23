@@ -12,7 +12,7 @@ final class AppState: ObservableObject {
     let updateController: UpdateController
 
     /// The app-level shared LLM service. Created once at launch and injected into
-    /// any tool that needs a model (e.g. PopBar). One Source of Truth for LLM
+    /// any tool that needs a model (e.g. Process Insight). One Source of Truth for LLM
     /// config; also backs the AI Models settings page.
     let llm: LLMService
 

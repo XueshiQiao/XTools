@@ -5,7 +5,7 @@
 
 <p align="center">
   <b>One macOS app for the dozen small things you normally open Terminal for —<br/>
-  ghost processes, wake locks, listening ports, tmux sessions — plus an AI popup on any text you select.</b>
+  ghost processes, wake locks, listening ports, tmux sessions.</b>
 </p>
 
 <p align="center">
@@ -58,7 +58,6 @@ Everything is configured in the app — there are no config files to hand-edit.
 | Tool | What it answers |
 |---|---|
 | **Dashboard** | Memory, battery, wake locks, audio, ports and disk at a glance |
-| **Pop Bar** | Select text anywhere → a popup of AI actions at the cursor |
 | **Now Playing** | Which apps are actually playing audio right now? |
 | **Wake Locks** | What is keeping my Mac (or its display) awake? |
 | **Power & Battery** | How healthy is my battery, and what are my sleep settings? |
@@ -72,28 +71,11 @@ Everything is configured in the app — there are no config files to hand-edit.
 | **Naga Keys** | Turn the Razer Naga's side buttons into shortcuts I choose |
 | **ROG Keyboard** | Keep an ASUS ROG Falcata on its Mac profile |
 
-### 💬 Pop Bar — select text, get a popup
+### 💬 Pop Bar → now its own app, [QDuo](https://github.com/XueshiQiao/qduo)
 
-<img src="screenshots/XTools-popbar-wheel.png" width="260" align="right" alt="Pop Bar wheel" />
-
-Select text in **any** app and a small popup appears at the cursor with your own actions
-on it. Three built-in AI actions ship by default — Translate, Polish, Explain — and you
-can add as many as you like: each action is a title, an icon, and a prompt you write
-yourself, with its own model if you want one.
-
-- **Three looks** — a horizontal **capsule** above the selection, or a **wheel** / **liquid**
-  ring centred on the cursor. The ring pictured is my own set of actions, in my own
-  language — that's the point of it.
-- **Streaming results** rendered as live Markdown, in a panel that grows to fit.
-- **Web Preview** — if the selection carries a link, open it in a built-in mini browser;
-  if it doesn't, search the web for the selected text instead.
-- **Screenshot Text (OCR)** — press a shortcut, drag a box over anything on screen, and
-  its text is recognized and handed to the same actions. Works on images, video frames,
-  and apps that won't let you select text.
-- Bring your own model: **OpenAI**, **DeepSeek**, **Doubao (Ark)**, **Qwen (DashScope)**,
-  or a local **Ollama**. API keys live in your **Keychain**, never in a config file.
-
-<br clear="right"/>
+Pop Bar (select text, get a popup of your own AI actions at the cursor; plus Screenshot
+Text) has moved out of XTools into a standalone app, **[QDuo](https://xueshi.dev/qduo/)**.
+XTools no longer includes it. Install with `brew install --cask XueshiQiao/tap/qduo`.
 
 ### ⚡ Launch Manager — the app quit, its helpers didn't
 
@@ -211,8 +193,7 @@ them are required to launch the app.
 
 | Permission | Needed by | Why |
 |---|---|---|
-| **Accessibility** | Pop Bar, Naga Keys | Read the selected text; see the key presses to remap |
-| **Screen Recording** | Pop Bar → Screenshot Text | Read pixels from the screen to run OCR on them |
+| **Accessibility** | Naga Keys | See the key presses to remap |
 | **Input Monitoring** | Naga Keys | Tell the Naga's key presses apart from your keyboard's |
 | **Admin password** | Launch Manager, DNS | One prompt, on demand, for root daemons and `/etc/hosts` |
 
@@ -221,11 +202,10 @@ the whole job, and the sandbox forbids both.
 
 ### Privacy
 
-- **Pop Bar and Process Insight are the only tools that send anything anywhere**, and only
-  the text you selected or the process you picked, to the model provider you configured.
-  Point them at a local Ollama and nothing leaves the machine at all.
+- **Process Insight is the only tool that sends anything anywhere**, and only
+  the process you picked, to the model provider you configured.
+  Point it at a local Ollama and nothing leaves the machine at all.
 - API keys are stored in the **macOS Keychain**.
-- OCR runs on-device (Apple's Vision framework). Screenshots are never written to disk.
 - Anonymous usage stats can be switched off in **About**. No analytics backend is
   configured in the current build, so nothing is being sent today anyway.
 

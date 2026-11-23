@@ -3,7 +3,7 @@ import Carbon.HIToolbox
 /// Carbon `RegisterEventHotKey` wrapper: registers a **consuming**, system-wide
 /// hotkey. Unlike an `NSEvent` global monitor, this swallows the combo so the
 /// front app never sees it — the right primitive for a global trigger like
-/// Screenshot OCR (⌘⇧S).
+/// the Tmux palette's hotkey.
 ///
 /// Main-thread by convention (callers create/invalidate on main). A single
 /// process-wide Carbon event handler is installed once and routes every hotkey
@@ -11,7 +11,7 @@ import Carbon.HIToolbox
 /// `self`.
 final class GlobalHotKey {
 
-    private static let log = FileLog("PopBar.OCR")
+    private static let log = FileLog("HotKey")
 
     /// Shared four-char signature for every hotkey we register ('XTHK').
     private static let signature = OSType(0x5854_484B)   // 'X','T','H','K'

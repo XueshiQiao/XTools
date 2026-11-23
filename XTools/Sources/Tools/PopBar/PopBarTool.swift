@@ -1,16 +1,15 @@
 import SwiftUI
+import AppKit
 
-/// PopBar: select text anywhere → a small capsule of customizable, AI-flavored
-/// actions pops up at the cursor. Self-contained in `Sources/Tools/PopBar/`.
+/// Pop Bar used to live here: select text anywhere → a capsule of actions pops up
+/// at the cursor, plus Screenshot OCR. It has since moved out into its own app,
+/// **QDuo** (github.com/XueshiQiao/qduo), and the implementation was removed from
+/// XTools. What remains is this sidebar entry, so people who knew the tool find
+/// out where it went instead of finding it silently gone.
 ///
-/// The tool owns the app-lifetime `PopBarController` (started in `activate()` so
-/// the popup works even with the window closed) and the settings store.
-///
-/// Layers (each independently replaceable):
-///  - Trigger  — `GlobalInputMonitor` + gesture recognizers
-///  - Selection — `SelectionResolver` over pluggable `SelectionStrategy`s
-///  - Window   — `PopBarPanel` (non-activating floating capsule)
-///  - Action   — `ActionRegistry` (Copy real; Translate/Polish/Explain faked)
+/// No background work: XTools no longer watches the selection. The old
+/// `popbar.*` UserDefaults are left untouched (QDuo does not read them, but they
+/// are the user's data and cost nothing to keep).
 final class PopBarTool: XToolModule {
 
     let id = "popbar"
@@ -19,42 +18,106 @@ final class PopBarTool: XToolModule {
     let color = Color.indigo
     let group = ToolGroup.selection
 
-    /// The app-level shared LLM service, injected by `ToolRegistry`. PopBar no
-    /// longer owns the model config — it lives on the AI Models page.
-    private let llm: LLMService
-    private let actionStore = ActionStore()
-    private lazy var controller = PopBarController(llm: llm, actionStore: actionStore)
-    private lazy var store = PopBarStore(controller: controller)
+    func makeRootView() -> AnyView { AnyView(PopBarMovedView()) }
+}
 
-    init(llm: LLMService) {
-        self.llm = llm
-    }
+/// The "this moved to QDuo" page: what happened, and a way to get QDuo — open it
+/// when it is installed, otherwise its download page and a Homebrew one-liner.
+private struct PopBarMovedView: View {
 
-    func activate() {
-        controller.startIfEnabled()
-        controller.startOCRIfEnabled()   // screenshot-OCR hotkey is independent of the selection monitor
-        // Dev/screenshot affordance: pop a sample popup shortly after launch, so the
-        // wheel can be looked at (and screenshotted) without selecting text by hand.
-        // Accepted as `open <app> --args --popbar-preview` — the same route the
-        // `--tab` flag takes, because `open` does not forward the shell environment —
-        // with the older env var still honored.
-        if Self.launchFlag("--popbar-preview")
-            || ProcessInfo.processInfo.environment["XTOOLS_POPBAR_PREVIEW"] == "1" {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [controller] in
-                controller.showPreview()
+    private static let qduoBundleID = "me.xueshi.qduo"
+    private static let downloadURL = URL(string: "https://xueshi.dev/qduo/")!
+    /// Full tap path on purpose: Homebrew refuses a short cask name from a tap
+    /// the user has not trusted yet, but accepts one named in full.
+    private static let brewCommand = "brew install --cask XueshiQiao/tap/qduo"
+
+    /// Re-read whenever the page appears, so installing QDuo and coming back
+    /// flips the page to "Open QDuo" without restarting XTools.
+    @State private var qduoURL: URL?
+    @State private var copied = false
+
+    var body: some View {
+        Form {
+            Section {
+                VStack(spacing: 12) {
+                    icon
+                    Text(L("popbar.moved.title"))
+                        .font(.title3).fontWeight(.semibold)
+                        .multilineTextAlignment(.center)
+                    Text(L("popbar.moved.body"))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
             }
+
+            Section {
+                if let qduoURL {
+                    HStack {
+                        iconLabel("checkmark.circle.fill", .green, L("popbar.moved.installed"))
+                        Spacer()
+                        Button(L("popbar.moved.open")) { open(qduoURL) }
+                            .buttonStyle(.borderedProminent)
+                    }
+                } else {
+                    HStack {
+                        iconLabel("arrow.down.circle.fill", .indigo, L("popbar.moved.download"))
+                        Spacer()
+                        Button(L("popbar.moved.download")) { NSWorkspace.shared.open(Self.downloadURL) }
+                            .buttonStyle(.borderedProminent)
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(L("popbar.moved.brew")).font(.callout).foregroundStyle(.secondary)
+                        HStack {
+                            Text(Self.brewCommand)
+                                .font(.system(.callout, design: .monospaced))
+                                .textSelection(.enabled)
+                            Spacer()
+                            Button(copied ? L("popbar.moved.copied") : L("popbar.moved.copy")) { copyBrewCommand() }
+                        }
+                    }
+                }
+            } footer: {
+                Text(L("popbar.moved.settingsNote"))
+                    .font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .formStyle(.grouped)
+        .navigationTitle(L("tool.popbar.title"))
+        .onAppear { refresh() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            refresh()
         }
     }
 
-    /// Whether a bare `--flag` was passed at launch (`open … --args --flag`).
-    private static func launchFlag(_ flag: String) -> Bool {
-        CommandLine.arguments.contains(flag)
+    /// QDuo's own icon when it is installed; the tool's symbol otherwise.
+    @ViewBuilder private var icon: some View {
+        if let qduoURL {
+            Image(nsImage: NSWorkspace.shared.icon(forFile: qduoURL.path))
+                .resizable().frame(width: 72, height: 72)
+        } else {
+            Image(systemName: "text.bubble.fill")
+                .font(.system(size: 40))
+                .foregroundStyle(.indigo)
+                .frame(width: 72, height: 72)
+        }
     }
 
-    func shutdown() {
-        controller.stop()
-        controller.stopScreenOCR()   // OCR isn't torn down by stop() (independent lifecycle)
+    private func refresh() {
+        qduoURL = NSWorkspace.shared.urlForApplication(withBundleIdentifier: Self.qduoBundleID)
     }
 
-    func makeRootView() -> AnyView { AnyView(PopBarView(store: store, llm: llm, actions: actionStore)) }
+    private func open(_ url: URL) {
+        NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+    }
+
+    private func copyBrewCommand() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(Self.brewCommand, forType: .string)
+        copied = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { copied = false }
+    }
 }

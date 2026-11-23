@@ -444,69 +444,19 @@
 "dashboard.swap.sub" = "在磁盘 · 不算进内存";
 "dashboard.placeholder" = "Claude usage、CPU、网络…\n即将加入";
 
-/* ───────────── PopBar 划词胶囊 ───────────── */
+/* ───────────── 划词胶囊 → 已搬到 QDuo ───────────── */
 "tool.popbar.title" = "划词胶囊";
+"popbar.moved.title" = "划词胶囊已经独立成一个 app：QDuo";
+"popbar.moved.body" = "划词胶囊（在任何地方选中文字，光标旁弹出你的动作；以及截图取字）已经从 XTools 里搬出来，做成了独立的 app —— QDuo。XTools 不再监听你的划词。以后的新功能和修复都只在 QDuo 里做。";
+"popbar.moved.settingsNote" = "QDuo 有自己的一套设置，原来在这里配的动作不会自动带过去。「AI 模型」页里填的 API key 仍然留在 XTools。";
+"popbar.moved.open" = "打开 QDuo";
+"popbar.moved.installed" = "你已经装了 QDuo。";
+"popbar.moved.download" = "下载 QDuo";
+"popbar.moved.brew" = "或者用 Homebrew 安装：";
+"popbar.moved.copy" = "复制";
+"popbar.moved.copied" = "已复制";
 
-"popbar.enable.title" = "划词工具条";
-"popbar.enable.subtitle" = "在任意 App 选中文本，即在光标处弹出一条快捷动作胶囊。";
-
-"popbar.status.title" = "状态";
-"popbar.status.on" = "已开启";
-"popbar.status.off" = "已关闭";
-"popbar.status.needsPermission" = "需要授权";
-
-"popbar.perm.header" = "权限";
-"popbar.perm.title" = "需要辅助功能权限";
-"popbar.perm.body" = "划词胶囊需要辅助功能（Accessibility）权限来检测选中并读取选中文本。所有数据都不会离开你的 Mac。";
-"popbar.perm.grant" = "授予权限…";
-"popbar.perm.open" = "打开设置";
-
-"popbar.actions.header" = "动作";
-"popbar.result.header" = "结果";
-"popbar.display.header" = "显示样式";
-"popbar.actions.footer" = "“复制”是真实功能；翻译、润色、解释目前返回占位文本——接入真实模型只需改一个文件。";
-"popbar.action.copy" = "复制";
-"popbar.action.translate" = "翻译";
-"popbar.action.polish" = "润色";
-"popbar.action.explain" = "解释";
-"popbar.tag.real" = "真实";
-"popbar.tag.fake" = "演示";
-
-"popbar.preview.button" = "预览弹窗";
-"popbar.preview.sample" = "敏捷的棕色狐狸跳过了那只懒狗。";
-
-"popbar.style.label" = "显示样式";
-"popbar.style.capsule" = "胶囊";
-"popbar.style.wheel" = "轮盘";
-"popbar.style.liquid" = "水玻璃";
-"popbar.style.footer" = "胶囊在选区上方横向展开；轮盘 / 水玻璃以光标为圆心成环（水玻璃是明亮磨砂玻璃皮肤）。";
-"popbar.wheel.outer" = "外环半径";
-"popbar.wheel.inner" = "内环半径";
-"popbar.wheel.subSeam" = "二级菜单间距";
-"popbar.wheel.subThickness" = "二级菜单环厚";
-"popbar.wheel.showIcons" = "显示图标";
-"popbar.wheel.showLabels" = "显示文字";
-"popbar.wheel.autoHide" = "鼠标移出圆环时自动隐藏";
-
-"popbar.loading" = "处理中…";
-
-"popbar.about.body" = "工作原理：全局输入监听检测到拖拽或双击选中后，一条有序的策略链读取选中文本（优先 Accessibility，失败则用剪贴板复制兜底），再由一个不抢焦点的浮动面板展示动作——全程不夺走源 App 的焦点。";
-
-"popbar.fake.translate" = "翻译（演示）";
-"popbar.fake.polish" = "润色（演示）";
-"popbar.fake.explain" = "解释（演示）";
-"popbar.fake.note" = "这是占位输出。接入真实模型后会替换为实际结果。";
-
-"popbar.pin" = "固定";
-"popbar.unpin" = "取消固定";
-"popbar.close" = "关闭";
-"popbar.copy.result" = "复制结果";
-"popbar.tag.ai" = "AI";
-
-/* PopBar 单动作模型覆盖选择器复用的标签 */
-"popbar.llm.provider" = "服务商";
-"popbar.llm.model" = "模型";
-"popbar.llm.thinking" = "思考";
+"hotkey.recording" = "按下按键…（Esc 取消）";
 
 /* AI 模型页面（应用级，所有工具共享） */
 "models.default.header" = "默认模型";
@@ -524,86 +474,6 @@
 "models.key.clear" = "清除";
 "models.key.notNeeded" = "无需密钥";
 "models.key.footer" = "每个服务商一个密钥，保存在 macOS 钥匙串中。密钥设置后，任何工具都能使用该服务商。Ollama 无需密钥。";
-
-"popbar.error.prefix" = "请求失败";
-"popbar.error.empty" = "（空响应）";
-"popbar.error.nokey" = "该动作所用服务商还没设置 API 密钥。请在「AI 模型」页面添加。";
-"popbar.error.noprompt" = "该动作没有提示词。";
-
-"popbar.action.edit" = "编辑";
-"popbar.action.delete" = "删除";
-"popbar.action.untitled" = "未命名";
-"popbar.action.defaultModel" = "默认模型";
-"popbar.actions.add" = "添加动作";
-"popbar.actions.addGroup" = "新建分组";
-"popbar.actions.footer3" = "拖动调整顺序，拖到分组上就放进那个分组。点击编辑，右键删除。分组会在轮盘上展开成外面一圈。";
-"popbar.group.count" = "%d 个动作";
-"popbar.group.delete.title" = "删除这个分组？";
-"popbar.group.delete.message" = "「%@」里面有 %d 个动作。";
-"popbar.group.delete.all" = "分组和动作一起删";
-"popbar.group.delete.keep" = "只删分组，动作留下";
-"popbar.editor.group.hint" = "分组本身不执行任何操作，它只用来装别的动作：在列表里把动作拖进来，它们会在轮盘上展开成外面一圈。";
-"popbar.actions.reset" = "恢复默认";
-"popbar.actions.footer2" = "用箭头调整顺序 · 点击编辑 · 右键删除。每个动作可用默认模型，也可单独指定模型。";
-"popbar.autoheight.label" = "结果高度自适应内容";
-"popbar.autoheight.footer" = "开启后，结果面板会随内容变高以容纳更多文字（达到上限后改为滚动）；关闭则保持固定的紧凑尺寸。宽度始终不变。";
-"popbar.fontsize.label" = "结果文字大小";
-"popbar.fontsize.footer" = "设置结果文字的基础字号。对已打开的结果即时生效。";
-"popbar.action.moveUp" = "上移";
-"popbar.action.moveDown" = "下移";
-"popbar.tag.needsKey" = "需密钥";
-
-"popbar.editor.title" = "标题";
-"popbar.editor.kind" = "类型";
-"popbar.editor.kind.ai" = "AI 提示词";
-"popbar.editor.kind.copy" = "复制";
-"popbar.editor.icon" = "图标";
-"popbar.editor.prompt" = "系统提示词";
-"popbar.editor.customModel" = "为该动作单独指定模型";
-"popbar.editor.save" = "保存";
-"popbar.editor.cancel" = "取消";
-"popbar.editor.nokeyWarn" = "%@ 还没设置密钥 —— 请在「AI 模型」页面添加。";
-"popbar.editor.kind.webpreview" = "网页预览";
-"popbar.editor.kind.quicklook" = "预览文件（快速查看）";
-"popbar.editor.kind.reveal" = "在 Finder 中显示";
-"popbar.editor.kind.pathHint" = "当选中的文字是这台 Mac 上真实存在的文件或文件夹路径时生效，例如 ~/Downloads/photo.png。";
-
-/* 本地路径动作（快速查看 + Finder） */
-"popbar.action.quicklook" = "预览";
-"popbar.action.reveal" = "在 Finder 中显示";
-"popbar.error.nopath" = "选中的文字不是这台 Mac 上存在的文件或文件夹。";
-"popbar.error.unsupported" = "这个动作是更新版本的 XTools 创建的，当前版本运行不了。升级后即可使用。";
-
-/* 网页预览动作 + 迷你浏览器 */
-"popbar.action.webpreview" = "网页预览";
-"popbar.error.nolink" = "选区里没有找到链接。";
-"popbar.webpreview.section" = "网页预览";
-"popbar.webpreview.fallback" = "找不到链接时改为搜索网页";
-"popbar.webpreview.fallback.footer" = "当选区里没有链接时，「网页预览」动作会改用选中的文字搜索网页。关闭则只提示「未找到链接」。";
-"popbar.webpreview.engine" = "搜索引擎";
-"popbar.webpreview.back" = "后退";
-"popbar.webpreview.forward" = "前进";
-"popbar.webpreview.reload" = "刷新";
-"popbar.webpreview.copyurl" = "复制链接";
-"popbar.webpreview.openbrowser" = "在浏览器中打开";
-"popbar.webpreview.window.title" = "网页预览";
-
-/* MARK: - PopBar · Screenshot OCR */
-"popbar.ocr.header" = "截图取词 (OCR)";
-"popbar.ocr.footer" = "按下快捷键，在屏幕上框选任意区域，即可识别其中的文字并弹出胶囊——适合图片、视频画面，或选不中文字的应用。";
-"popbar.ocr.enable.title" = "截图取词";
-"popbar.ocr.enable.subtitle" = "通过 OCR 从任意屏幕区域取字";
-"popbar.ocr.hotkey.label" = "快捷键";
-"popbar.ocr.hotkey.recording" = "按下按键…（Esc 取消）";
-"popbar.ocr.hotkey.occupied" = "该快捷键已被占用，请换一个。";
-"popbar.ocr.autocopy.label" = "同时把识别文本复制到剪贴板";
-"popbar.ocr.perm.title" = "需要「屏幕录制」权限";
-"popbar.ocr.perm.body" = "macOS 需要屏幕录制权限才能读取屏幕像素。识别文本只保留在本机，截图不会被保存。";
-"popbar.ocr.perm.grant" = "去授权";
-"popbar.ocr.perm.open" = "打开设置";
-"popbar.ocr.noText" = "未识别到文本";
-"popbar.ocr.captureFailed" = "截屏失败";
-"popbar.ocr.overlay.hint" = "拖拽框选要识别的区域 · Esc 取消";
 
 /* MARK: - Process Insight */
 "tool.processes.title" = "进程洞察";

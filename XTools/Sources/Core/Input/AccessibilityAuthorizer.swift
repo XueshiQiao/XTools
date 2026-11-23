@@ -1,9 +1,9 @@
 import AppKit
 import ApplicationServices
 
-/// Thin wrapper around the Accessibility (process-trust) permission that the
-/// whole tool depends on: without it we can neither monitor global input nor read
-/// the selection. No extra entitlement is involved — just this TCC grant.
+/// Thin wrapper around the Accessibility (process-trust) permission, which any
+/// tool that watches or rewrites global input needs (e.g. Naga's side-button
+/// remapping). No extra entitlement is involved — just this TCC grant.
 enum AccessibilityAuthorizer {
 
     /// Whether the app currently has the Accessibility permission. Cheap; safe to
