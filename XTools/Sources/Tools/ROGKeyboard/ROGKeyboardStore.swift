@@ -6,13 +6,16 @@ enum ROGSwitchReason {
     /// The keyboard came back to the Mac on its own and the tool acted without
     /// being asked.
     case autoReturn
+    /// XTools started with the keyboard already on the Mac but still on the
+    /// Windows profile — it came back while XTools was not running to catch it.
+    case startupCorrection
     case mac
     case windows
     case manual
 
     var localizedRole: String {
         switch self {
-        case .autoReturn, .mac: return L("rog.role.mac")
+        case .autoReturn, .startupCorrection, .mac: return L("rog.role.mac")
         case .windows:          return L("rog.role.windows")
         case .manual:           return L("rog.role.manual")
         }
@@ -20,7 +23,20 @@ enum ROGSwitchReason {
 
     /// Nobody clicked anything, so the notification is the only evidence the tool
     /// did its job — including when its job turned out to be nothing.
-    var isAutomatic: Bool { self == .autoReturn }
+    var isAutomatic: Bool { self == .autoReturn || self == .startupCorrection }
+
+    /// Notification text (a format taking role and profile name) for a switch
+    /// that landed, and for one that turned out to be unnecessary.
+    var switchedKey: String {
+        switch self {
+        case .autoReturn:        return "rog.notify.autoSwitched"
+        case .startupCorrection: return "rog.notify.startupSwitched"
+        default:                 return "rog.notify.switched"
+        }
+    }
+    var unchangedKey: String {
+        isAutomatic ? "rog.notify.autoUnchanged" : "rog.notify.unchanged"
+    }
 }
 
 /// UI model and coordinator for the ROG Keyboard tool.
@@ -109,8 +125,19 @@ final class ROGKeyboardStore: ObservableObject {
         }
         notifier.requestAuthorization()
         monitor.onAlreadyPresent = { [weak self] in
-            // Present at launch is not an arrival: read the state, change nothing.
-            self?.refresh()
+            guard let self else { return }
+            // Present at launch is not an arrival, so a profile the user picked
+            // by hand is left alone — re-asserting the Mac profile on every launch
+            // would quietly undo it. The one state that is never wanted is the
+            // keyboard sitting on this Mac with the Windows profile: it came back
+            // while XTools was not running (quit, restarting, an old build), and
+            // nothing was there to switch it. Correct exactly that.
+            guard self.autoSwitchEnabled, self.macProfile != self.windowsProfile else {
+                self.refresh()
+                return
+            }
+            self.applyProfile(self.macProfile, reason: .startupCorrection,
+                              onlyIfCurrentIs: self.windowsProfile)
         }
         monitor.onAttached = { [weak self] in
             guard let self else { return }
@@ -161,9 +188,21 @@ final class ROGKeyboardStore: ObservableObject {
 
     /// Switches the keyboard and announces it. The announcement is not optional —
     /// see `ROGNotifier`.
-    private func applyProfile(_ number: Int, reason: ROGSwitchReason) {
+    /// - Parameter onlyIfCurrentIs: when set, switch only if the keyboard is on
+    ///   this profile right now; otherwise just record the state, silently.
+    private func applyProfile(_ number: Int, reason: ROGSwitchReason, onlyIfCurrentIs required: Int? = nil) {
         run { [weak self] device in
             let state = try device.readState()
+            if let required, state.info.currentProfile != required {
+                Self.log.info("\(reason) — on \(ROGProfileNaming.label(wire: state.info.currentProfile, count: state.info.profileCount)), not the Windows profile — leaving it alone")
+                return { [weak self] in
+                    guard let self else { return }
+                    self.isConnected = true
+                    self.link = state.link
+                    self.info = state.info
+                    self.errorMessage = nil
+                }
+            }
             guard ROGProfile.isValid(number, count: state.info.profileCount) else {
                 throw ROGError.invalidProfile(number)
             }
@@ -178,7 +217,7 @@ final class ROGKeyboardStore: ObservableObject {
                 Self.log.info("\(reason) — already on \(wanted), nothing to change")
                 self?.notifier.post(
                     title: L("rog.notify.title"),
-                    body: String(format: L(reason.isAutomatic ? "rog.notify.autoUnchanged" : "rog.notify.unchanged"),
+                    body: String(format: L(reason.unchangedKey),
                                  reason.localizedRole, wanted))
                 return { [weak self] in
                     self?.info = state.info
@@ -194,7 +233,7 @@ final class ROGKeyboardStore: ObservableObject {
             self?.notifier.post(
                 title: L("rog.notify.title"),
                 body: landed
-                    ? String(format: L(reason.isAutomatic ? "rog.notify.autoSwitched" : "rog.notify.switched"),
+                    ? String(format: L(reason.switchedKey),
                              reason.localizedRole, wanted)
                     : String(format: L("rog.notify.failed"), wanted, actual))
             return { [weak self] in

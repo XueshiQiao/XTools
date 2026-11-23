@@ -801,6 +801,7 @@
 "rog.notify.unchanged" = "本来就是%1$@（%2$@），没有改动";
 "rog.notify.autoSwitched" = "键盘回到 Mac —— 已切到%1$@（%2$@）";
 "rog.notify.autoUnchanged" = "键盘回到 Mac —— 本来就是%1$@（%2$@）";
+"rog.notify.startupSwitched" = "键盘接在 Mac 上却停在 Windows 档 —— 已切到%1$@（%2$@）";
 "rog.notify.failed" = "切换没生效：请求「%1$@」，键盘停在「%2$@」";
 
 "rog.role.mac" = "Mac 档";

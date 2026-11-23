@@ -801,6 +801,7 @@
 "rog.notify.unchanged" = "Already on the %1$@ (%2$@) — nothing changed";
 "rog.notify.autoSwitched" = "Keyboard is back — switched to the %1$@ (%2$@)";
 "rog.notify.autoUnchanged" = "Keyboard is back — already on the %1$@ (%2$@)";
+"rog.notify.startupSwitched" = "Keyboard was on this Mac but still on the Windows profile — switched to the %1$@ (%2$@)";
 "rog.notify.failed" = "Switch did not take: asked for %1$@, the keyboard is on %2$@";
 
 "rog.role.mac" = "Mac profile";
